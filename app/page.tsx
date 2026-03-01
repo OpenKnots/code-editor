@@ -423,10 +423,37 @@ function EditorLayout() {
           />
         </button>
 
-        {/* Editor area */}
+        {/* Editor + Terminal column */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <EditorTabs />
-          <CodeEditor />
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <CodeEditor />
+          </div>
+          <TerminalPanel
+            visible={terminalVisible}
+            height={terminalHeight}
+            onHeightChange={setTerminalHeight}
+          />
+          {engineVisible && (
+            <div className="shrink-0 border-t border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden" style={{ height: 280 }}>
+              <div className="flex items-center justify-between h-7 px-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                  <Icon icon="lucide:cpu" width={11} height={11} />
+                  Engine
+                </div>
+                <button
+                  onClick={() => setEngineVisible(false)}
+                  className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                  title="Close"
+                >
+                  <Icon icon="lucide:x" width={11} height={11} />
+                </button>
+              </div>
+              <div className="h-[calc(100%-1.75rem)] overflow-auto">
+                <EnginePanel />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right panel edge trigger — always visible, sits at the left edge of the agent section */}
@@ -514,34 +541,9 @@ function EditorLayout() {
         }}
       />
 
-      {/* Terminal Panel (⌘\`) */}
-      <TerminalPanel
-        visible={terminalVisible}
-        height={terminalHeight}
-        onHeightChange={setTerminalHeight}
-      />
 
-      {/* Gateway Engine Panel */}
-      {engineVisible && (
-        <div className="shrink-0 border-t border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden" style={{ height: 320 }}>
-          <div className="flex items-center justify-between h-8 px-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-secondary)]">
-              <Icon icon="lucide:cpu" width={12} height={12} />
-              Gateway Engine
-            </div>
-            <button
-              onClick={() => setEngineVisible(false)}
-              className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-              title="Close"
-            >
-              <Icon icon="lucide:x" width={12} height={12} />
-            </button>
-          </div>
-          <div className="h-[calc(100%-2rem)] overflow-auto">
-            <EnginePanel />
-          </div>
-        </div>
-      )}
+
+
 
       {/* Status bar */}
       <footer className="flex items-center justify-between px-3 h-6 border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[9px] text-[var(--text-tertiary)] shrink-0">
