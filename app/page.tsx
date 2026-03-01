@@ -147,8 +147,8 @@ export default function EditorLayout() {
       // Fetch from GitHub
       if (repo) {
         try {
-          const content = await fetchFileContents(repo.fullName, path, repo.branch)
-          openFile(path, typeof content === 'string' ? content : '', sha ?? '')
+          const result = await fetchFileContents(repo.fullName, path, repo.branch)
+          openFile(path, result.content, result.sha ?? sha ?? '')
           setView('editor')
         } catch (err) {
           console.error('Failed to open file:', path, err)
