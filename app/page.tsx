@@ -26,6 +26,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher'
 const QuickOpen = dynamic(() => import('@/components/quick-open').then(m => m.QuickOpen), { ssr: false })
 const ShortcutsOverlay = dynamic(() => import('@/components/shortcuts-overlay').then(m => m.ShortcutsOverlay), { ssr: false })
 import type { CommandId } from '@/components/command-palette'
+import { GitPanel } from '@/components/git-panel'
 import { RepoPickerModal } from '@/components/repo-picker-modal'
 import { GlobalSearch } from '@/components/global-search'
 const CommandPalette = dynamic(() => import('@/components/command-palette').then(m => m.CommandPalette), { ssr: false })
@@ -116,6 +117,7 @@ function EditorLayout() {
   const [changesVisible, setChangesVisible] = useState(false)
   const [globalSearchVisible, setGlobalSearchVisible] = useState(false)
   const [repoPickerVisible, setRepoPickerVisible] = useState(false)
+  const [gitPanelVisible, setGitPanelVisible] = useState(false)
   const [terminalVisible, setTerminalVisible] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState(260)
   const [engineVisible, setEngineVisible] = useState(false)
@@ -366,7 +368,7 @@ function EditorLayout() {
     else if (id === 'agent') setAgentOpen(v => !v)
     else if (id === 'terminal') setTerminalVisible(v => !v)
     else if (id === 'engine') setEngineVisible(v => !v)
-    else if (id === 'changes') setChangesVisible(v => !v)
+    else if (id === 'changes') setGitPanelVisible(v => !v)
     else if (id === 'search') setGlobalSearchVisible(true)
   }, [])
 
@@ -587,6 +589,12 @@ function EditorLayout() {
           const event = new CustomEvent('file-select', { detail: { path, sha } })
           window.dispatchEvent(event)
         }}
+      />
+
+      {/* Git Panel (1Code-style) */}
+      <GitPanel
+        open={gitPanelVisible}
+        onClose={() => setGitPanelVisible(false)}
       />
 
       {/* Repo Picker Modal */}

@@ -190,17 +190,35 @@ export function DetailsPanel() {
             {/* Changes */}
             <Section id="changes" icon="lucide:git-commit-horizontal" title={`Changes on ${branchName}`} badge={dirtyFiles.length || undefined}>
               {dirtyFiles.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
+                  {/* Stats */}
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="text-[var(--color-additions)] font-mono">+{dirtyFiles.reduce((s, f) => s + Math.max(0, f.content.split('\n').length - f.originalContent.split('\n').length), 0)}</span>
+                    <span className="text-[var(--color-deletions)] font-mono">-{dirtyFiles.reduce((s, f) => s + Math.max(0, f.originalContent.split('\n').length - f.content.split('\n').length), 0)}</span>
+                  </div>
+                  {/* File checkboxes */}
                   {dirtyFiles.map(f => (
-                    <button
-                      key={f.path}
-                      onClick={() => window.dispatchEvent(new CustomEvent('file-select', { detail: { path: f.path, sha: f.sha } }))}
-                      className="w-full flex items-center gap-2 px-2 py-1 rounded text-left hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                    >
-                      <span className="text-[9px] font-mono font-bold text-[var(--warning,#eab308)]">M</span>
+                    <label key={f.path} className="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-[var(--bg-subtle)] cursor-pointer">
+                      <input type="checkbox" defaultChecked className="accent-[var(--brand)] rounded" />
+                      <Icon icon="lucide:file-code-2" width={10} height={10} className="text-[var(--text-tertiary)] shrink-0" />
                       <span className="text-[10px] font-mono text-[var(--text-secondary)] truncate">{f.path}</span>
-                    </button>
+                    </label>
                   ))}
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-git-panel'))}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-semibold bg-[var(--brand)] text-white hover:opacity-90 transition-opacity cursor-pointer"
+                    >
+                      Commit & Push {dirtyFiles.length} file{dirtyFiles.length !== 1 ? 's' : ''}
+                    </button>
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-git-panel'))}
+                      className="px-3 py-1.5 rounded-lg text-[10px] font-medium text-[var(--text-secondary)] bg-[var(--bg)] border border-[var(--border)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                    >
+                      View Diff
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-[10px] text-[var(--text-disabled)]">No changes</p>
