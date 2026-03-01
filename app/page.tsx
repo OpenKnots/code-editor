@@ -27,6 +27,7 @@ const QuickOpen = dynamic(() => import('@/components/quick-open').then(m => m.Qu
 const ShortcutsOverlay = dynamic(() => import('@/components/shortcuts-overlay').then(m => m.ShortcutsOverlay), { ssr: false })
 import type { CommandId } from '@/components/command-palette'
 import { GitPanel } from '@/components/git-panel'
+import { SettingsPanel } from '@/components/settings-panel'
 import { RepoPickerModal } from '@/components/repo-picker-modal'
 import { GlobalSearch } from '@/components/global-search'
 const CommandPalette = dynamic(() => import('@/components/command-palette').then(m => m.CommandPalette), { ssr: false })
@@ -118,6 +119,7 @@ function EditorLayout() {
   const [globalSearchVisible, setGlobalSearchVisible] = useState(false)
   const [repoPickerVisible, setRepoPickerVisible] = useState(false)
   const [gitPanelVisible, setGitPanelVisible] = useState(false)
+  const [settingsVisible, setSettingsVisible] = useState(false)
   const [terminalVisible, setTerminalVisible] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState(260)
   const [engineVisible, setEngineVisible] = useState(false)
@@ -412,7 +414,7 @@ function EditorLayout() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Workspace Sidebar — always visible */}
         <WorkspaceSidebar
-          activeId={activeChatId}
+          activeId={activeChatId ?? ''}
           onSelect={(id) => {
             setActiveChatId(id)
             window.dispatchEvent(new CustomEvent('switch-chat', { detail: { id } }))
@@ -425,6 +427,7 @@ function EditorLayout() {
           }}
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(v => !v)}
+          repoName={repo?.fullName || local.rootPath?.split('/').pop()}
         />
 
         {/* Fresh start — clean centered prompt, no chrome */}
@@ -593,6 +596,12 @@ function EditorLayout() {
           const event = new CustomEvent('file-select', { detail: { path, sha } })
           window.dispatchEvent(event)
         }}
+      />
+
+      {/* Settings */}
+      <SettingsPanel
+        open={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
       />
 
       {/* Git Panel (1Code-style) */}
