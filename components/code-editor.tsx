@@ -497,7 +497,11 @@ export function CodeEditor() {
   )
 
   if (!file) {
-    return <WelcomeView />
+    return (
+      <div className="flex-1 flex flex-col min-h-0">
+        <WelcomeView />
+      </div>
+    )
   }
 
   return (

@@ -38,7 +38,7 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-[var(--bg)] px-6">
-      <div className="w-full max-w-[600px]">
+      <div className="w-full max-w-[640px]">
         {/* Brand + prompt */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[color-mix(in_srgb,var(--brand)_20%,var(--bg-elevated))] to-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-4 shadow-lg">

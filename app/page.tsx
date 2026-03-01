@@ -234,6 +234,10 @@ function EditorLayout() {
     if (!local.localMode) return
     const handler = async (e: Event) => {
       const { path } = (e as CustomEvent).detail
+      if (path === 'untitled') {
+        openFile(path, '', undefined, { kind: 'text' })
+        return
+      }
       try {
         const media = getMediaMeta(path)
         if (media) {
@@ -425,7 +429,7 @@ function EditorLayout() {
 
         {/* Fresh start — clean centered prompt, no chrome */}
         {isFreshStart ? (
-          <div className="flex-1 flex min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)]">
             <AgentPanel />
           </div>
         ) : (
