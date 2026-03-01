@@ -146,6 +146,7 @@ export function CodeEditor() {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('code-editor:read-only') === 'true'
   })
+  const [selToolbar, setSelToolbar] = useState<{ visible: boolean; top: number; left: number; text: string; sl: number; el: number }>({ visible: false, top: 0, left: 0, text: '', sl: 0, el: 0 })
   const [inlineEdit, setInlineEdit] = useState<{
     visible: boolean
     position: { top: number; left: number }
@@ -230,6 +231,31 @@ export function CodeEditor() {
       window.dispatchEvent(new CustomEvent('cursor-change', {
         detail: { line: e.position.lineNumber, col: e.position.column }
       }))
+    })
+
+    // ⌘L: Send selection to agent chat
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyL, () => {
+      const sel = editor.getSelection()
+      const model = editor.getModel()
+      if (!sel || sel.isEmpty() || !model) return
+      window.dispatchEvent(new CustomEvent('add-to-chat', {
+        detail: { path: activeFile || 'untitled', content: model.getValueInRange(sel), startLine: sel.startLineNumber, endLine: sel.endLineNumber }
+      }))
+    })
+
+    // Selection toolbar
+    editor.onDidChangeCursorSelection((e) => {
+      const sel = e.selection
+      const model = editor.getModel()
+      if (!sel || sel.isEmpty() || !model) {
+        setSelToolbar(p => p.visible ? { ...p, visible: false } : p)
+        return
+      }
+      const pos = editor.getScrolledVisiblePosition(sel.getStartPosition())
+      const dom = editor.getDomNode()
+      if (!pos || !dom) return
+      const rect = dom.getBoundingClientRect()
+      setSelToolbar({ visible: true, top: rect.top + pos.top - 36, left: rect.left + pos.left, text: model.getValueInRange(sel), sl: sel.startLineNumber, el: sel.endLineNumber })
     })
     editor.focus()
 
@@ -635,6 +661,34 @@ export function CodeEditor() {
       </div>
 
 
+      {/* Selection action toolbar */}
+      {selToolbar.visible && selToolbar.text && (
+        <div
+          className="fixed z-[100] flex items-center gap-0.5 px-1 py-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl"
+          style={{ top: Math.max(8, selToolbar.top), left: Math.max(8, selToolbar.left) }}
+          onMouseDown={e => e.preventDefault()}
+        >
+          {[
+            { icon: 'lucide:message-square', tip: 'Add to Chat (⌘L)', ev: 'add-to-chat', detail: { path: activeFile || 'untitled', content: selToolbar.text, startLine: selToolbar.sl, endLine: selToolbar.el } },
+            { icon: 'lucide:pencil', tip: 'Edit (⌘K)', ev: 'inline-edit-request', detail: { text: selToolbar.text } },
+            { icon: 'lucide:book-open', tip: 'Explain', ev: 'add-to-chat', detail: { path: activeFile || 'untitled', content: selToolbar.text, startLine: selToolbar.sl, endLine: selToolbar.el }, agentCmd: '/explain ' },
+            { icon: 'lucide:bug', tip: 'Fix', ev: 'add-to-chat', detail: { path: activeFile || 'untitled', content: selToolbar.text, startLine: selToolbar.sl, endLine: selToolbar.el }, agentCmd: '/fix ' },
+          ].map(item => (
+            <button
+              key={item.tip}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent(item.ev, { detail: item.detail }))
+                if ((item as any).agentCmd) window.dispatchEvent(new CustomEvent('set-agent-input', { detail: { text: (item as any).agentCmd } }))
+                setSelToolbar(p => ({ ...p, visible: false }))
+              }}
+              title={item.tip}
+              className="flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+            >
+              <Icon icon={item.icon} width={12} height={12} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

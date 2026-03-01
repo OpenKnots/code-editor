@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
 import { useRepo } from '@/context/repo-context'
+import { useLocal } from '@/context/local-context'
 import { MarkdownPreview } from '@/components/markdown-preview'
 import { DiffViewer } from '@/components/diff-viewer'
 import { parseEditProposals, type EditProposal } from '@/lib/edit-parser'
@@ -132,10 +133,15 @@ function AgentConnectPrompt() {
 export function AgentPanel() {
   const { sendRequest, onEvent, status } = useGateway()
   const { files, activeFile, getFile, openFile, updateFileContent } = useEditor()
-  const { repo } = useRepo()
+  const { repo, tree: repoTree } = useRepo()
+  const local = useLocal()
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
+  const [contextAttachments, setContextAttachments] = useState<Array<{ type: 'file' | 'selection'; path: string; content: string; startLine?: number; endLine?: number }>>([])
+  const [atMenuOpen, setAtMenuOpen] = useState(false)
+  const [atQuery, setAtQuery] = useState('')
+  const [atMenuIdx, setAtMenuIdx] = useState(0)
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
   const [sending, setSending] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -151,6 +157,29 @@ export function AgentPanel() {
   const sessionInitRef = useRef(false)
   const sentKeysRef = useRef(new Set<string>())
   const [streamBuffer, setStreamBuffer] = useState('')
+
+  // Build flat file list for @ mentions
+  const allFilePaths = useMemo(() => {
+    if (local.localMode && local.localTree.length > 0) {
+      return local.localTree.filter(e => !e.is_dir).map(e => e.path)
+    }
+    return repoTree.filter(n => n.type === 'blob').map(n => n.path)
+  }, [local.localMode, local.localTree, repoTree])
+
+  const atResults = useMemo(() => {
+    if (!atQuery) return allFilePaths.slice(0, 8)
+    const q = atQuery.toLowerCase()
+    return allFilePaths
+      .filter(p => p.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aName = a.split('/').pop()!.toLowerCase()
+        const bName = b.split('/').pop()!.toLowerCase()
+        const aStarts = aName.startsWith(q) ? 0 : 1
+        const bStarts = bName.startsWith(q) ? 0 : 1
+        return aStarts - bStarts || a.length - b.length
+      })
+      .slice(0, 8)
+  }, [atQuery, allFilePaths])
 
   const isConnected = status === 'connected'
 
@@ -338,6 +367,74 @@ export function AgentPanel() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, streamBuffer])
+
+  // ─── @ mention file selection ──────────────────────────────
+  const selectAtFile = useCallback(async (filePath: string) => {
+    // Replace @query with @filename in input
+    const textarea = inputRef.current
+    if (textarea) {
+      const cursor = textarea.selectionStart ?? input.length
+      const before = input.slice(0, cursor)
+      const after = input.slice(cursor)
+      const newBefore = before.replace(/@[\w./\-]*$/, '')
+      setInput(newBefore + after)
+    }
+
+    // Load file content and add as context attachment
+    const existing = getFile(filePath)
+    if (existing) {
+      setContextAttachments(prev => {
+        if (prev.some(a => a.path === filePath && a.type === 'file')) return prev
+        return [...prev, { type: 'file', path: filePath, content: existing.content }]
+      })
+    } else {
+      // Try to read from open files or fetch
+      setContextAttachments(prev => {
+        if (prev.some(a => a.path === filePath && a.type === 'file')) return prev
+        return [...prev, { type: 'file', path: filePath, content: `[File: ${filePath} — content will be fetched on send]` }]
+      })
+    }
+    setAtMenuOpen(false)
+    setAtQuery('')
+    inputRef.current?.focus()
+  }, [input, getFile])
+
+  // ─── ⌘L: Send selection to agent panel ────────────────────
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        path: string
+        content: string
+        startLine: number
+        endLine: number
+      }
+      if (!detail) return
+      setContextAttachments(prev => [
+        ...prev,
+        {
+          type: 'selection',
+          path: detail.path,
+          content: detail.content,
+          startLine: detail.startLine,
+          endLine: detail.endLine,
+        },
+      ])
+      inputRef.current?.focus()
+    }
+    window.addEventListener('add-to-chat', handler)
+    return () => window.removeEventListener('add-to-chat', handler)
+  }, [])
+
+  // ─── Listen for set-agent-input events ─────────────────────
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent).detail?.text as string
+      if (text) setInput(text)
+      inputRef.current?.focus()
+    }
+    window.addEventListener('set-agent-input', handler)
+    return () => window.removeEventListener('set-agent-input', handler)
+  }, [])
 
   // ─── Build per-message context ────────────────────────────────
   const buildContext = useCallback(() => {
@@ -826,11 +923,94 @@ export function AgentPanel() {
       {/* Input */}
       <div className="px-3 pb-3 pt-1 shrink-0">
         <div className="relative group/input">
+          {/* @ mention dropdown */}
+          {atMenuOpen && atResults.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-1 max-h-[200px] overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl z-50">
+              {atResults.map((path, i) => {
+                const name = path.split('/').pop() || path
+                const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
+                return (
+                  <button
+                    key={path}
+                    onMouseDown={(e) => { e.preventDefault(); selectAtFile(path) }}
+                    className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-[11px] transition-colors cursor-pointer ${
+                      i === atMenuIdx
+                        ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+                    }`}
+                  >
+                    <Icon icon="lucide:file-text" width={12} height={12} className="text-[var(--text-tertiary)] shrink-0" />
+                    <span className="font-mono truncate">{name}</span>
+                    {dir && <span className="text-[9px] text-[var(--text-disabled)] truncate ml-auto">{dir}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Context attachment chips */}
+          {contextAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-1.5">
+              {contextAttachments.map((att, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] border border-[color-mix(in_srgb,var(--brand)_25%,transparent)] text-[var(--brand)]"
+                >
+                  <Icon
+                    icon={att.type === 'selection' ? 'lucide:text-cursor-input' : 'lucide:file-text'}
+                    width={9} height={9}
+                  />
+                  {att.type === 'selection'
+                    ? `${att.path.split('/').pop()}:${att.startLine}-${att.endLine}`
+                    : att.path.split('/').pop()
+                  }
+                  <button
+                    onClick={() => setContextAttachments(prev => prev.filter((_, j) => j !== i))}
+                    className="hover:text-[var(--text-primary)] cursor-pointer"
+                  >
+                    <Icon icon="lucide:x" width={8} height={8} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           <textarea
             ref={inputRef}
             value={input}
-            onChange={e => { setInput(e.target.value); setActiveSuggestionIdx(-1) }}
-            onKeyDown={handleKeyDown}
+            onChange={e => {
+              const val = e.target.value
+              setInput(val)
+              setActiveSuggestionIdx(-1)
+              // Detect @ trigger
+              const cursor = e.target.selectionStart ?? val.length
+              const before = val.slice(0, cursor)
+              const atMatch = before.match(/@([\w./\-]*)$/)
+              if (atMatch) {
+                setAtMenuOpen(true)
+                setAtQuery(atMatch[1])
+                setAtMenuIdx(0)
+              } else {
+                setAtMenuOpen(false)
+                setAtQuery('')
+              }
+            }}
+            onKeyDown={(e) => {
+              // @ menu navigation
+              if (atMenuOpen) {
+                if (e.key === 'ArrowDown') { e.preventDefault(); setAtMenuIdx(i => Math.min(i + 1, atResults.length - 1)); return }
+                if (e.key === 'ArrowUp') { e.preventDefault(); setAtMenuIdx(i => Math.max(i - 1, 0)); return }
+                if (e.key === 'Tab' || e.key === 'Enter') {
+                  if (atResults.length > 0) {
+                    e.preventDefault()
+                    selectAtFile(atResults[atMenuIdx])
+                    return
+                  }
+                }
+                if (e.key === 'Escape') { e.preventDefault(); setAtMenuOpen(false); return }
+              }
+              handleKeyDown(e)
+            }}
             placeholder={activeFile ? `Ask about ${activeFile.split('/').pop()}...` : 'Ask or type /command...'}
             rows={1}
             className="w-full resize-none rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] px-3 py-2.5 pr-10 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)] focus:shadow-[0_0_0_1px_color-mix(in_srgb,var(--brand)_20%,transparent)] transition-all"
