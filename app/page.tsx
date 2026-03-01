@@ -134,6 +134,7 @@ function EditorLayout() {
   const [isMacTauri, setIsMacTauri] = useState(false)
 
   const dirtyCount = files.filter(f => f.dirty).length
+  const isFreshStart = files.length === 0 && !activeFile
 
   const saveActiveFile = useCallback(async () => {
     if (!repo || !activeFile) return
@@ -379,8 +380,8 @@ function EditorLayout() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Top bar */}
-      <header data-tauri-drag-region className={`flex items-center justify-between h-9 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0 ${isTauriDesktop ? 'tauri-drag-region' : ''} ${isMacTauri ? 'pl-20 pr-4' : 'px-4'}`}>
+      {/* Top bar — hidden in fresh start */}
+      {!isFreshStart && <header data-tauri-drag-region className={`flex items-center justify-between h-9 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0 ${isTauriDesktop ? 'tauri-drag-region' : ''} ${isMacTauri ? 'pl-20 pr-4' : 'px-4'}`}>
         <div className="flex items-center gap-2.5">
           <div className={isTauriDesktop ? 'tauri-no-drag' : ''}>
             <SourceSwitcher />
@@ -396,14 +397,14 @@ function EditorLayout() {
             <ThemeSwitcher />
           </div>
         </div>
-      </header>
+      </header>}
 
       {/* Gateway connect banner — prominent when disconnected */}
       <GatewayConnectBanner />
 
       {/* Main content */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Workspace Sidebar — chat history (1Code-style) */}
+        {/* Workspace Sidebar — always visible */}
         <WorkspaceSidebar
           activeId={activeChatId}
           onSelect={(id) => {
@@ -420,6 +421,13 @@ function EditorLayout() {
           onToggle={() => setSidebarCollapsed(v => !v)}
         />
 
+        {/* Fresh start — clean centered prompt, no chrome */}
+        {isFreshStart ? (
+          <div className="flex-1 flex min-h-0 overflow-hidden">
+            <AgentPanel />
+          </div>
+        ) : (
+        <>
         {/* Activity Bar */}
         <ActivityBar
           active=""
@@ -567,6 +575,8 @@ function EditorLayout() {
           </>
         )}
       </div>{/* end workspace panels */}
+        </>
+        )}
       </div>{/* end main content row */}
 
       {/* Quick Open (⌘P) */}
@@ -652,10 +662,10 @@ function EditorLayout() {
 
 
       {/* Change Summary Bar — slides up when agent makes edits */}
-      <ChangeSummaryBar onReview={() => setDiffReviewVisible(true)} />
+      {!isFreshStart && <ChangeSummaryBar onReview={() => setDiffReviewVisible(true)} />}
 
-      {/* Status bar */}
-      <footer className="flex items-center justify-between px-3 h-6 border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[9px] text-[var(--text-tertiary)] shrink-0">
+      {/* Status bar — hidden in fresh start */}
+      {!isFreshStart && <footer className="flex items-center justify-between px-3 h-6 border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[9px] text-[var(--text-tertiary)] shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="relative">
             <button
@@ -754,7 +764,7 @@ function EditorLayout() {
           <div className="w-px h-3 bg-[var(--border)]" />
           <span className="text-[var(--text-disabled)]">v0.1.0</span>
         </div>
-      </footer>
+      </footer>}
     </div>
   )
 }

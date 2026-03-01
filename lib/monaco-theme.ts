@@ -11,25 +11,23 @@ function getCSSVar(name: string, fallback: string): string {
   return value || fallback
 }
 
+function expandShortHex(color: string): string {
+  const trimmed = color.trim()
+  if (!trimmed.startsWith('#')) return trimmed
+  const hex = trimmed.slice(1)
+  if (/^[0-9a-fA-F]{3}$/.test(hex) || /^[0-9a-fA-F]{4}$/.test(hex)) {
+    return '#' + hex.split('').map((c) => c + c).join('')
+  }
+  return trimmed
+}
+
 function toMonacoTokenHex(color: string, fallback: string): string {
-  const normalized = color.trim()
+  const normalized = expandShortHex(color)
   const fallbackNormalized = fallback.replace('#', '')
   if (!normalized) return fallbackNormalized
 
   const hex = normalized.replace('#', '')
   if (/^[0-9a-fA-F]{6}$/.test(hex) || /^[0-9a-fA-F]{8}$/.test(hex)) return hex
-  if (/^[0-9a-fA-F]{3}$/.test(hex)) {
-    return hex
-      .split('')
-      .map((c) => c + c)
-      .join('')
-  }
-  if (/^[0-9a-fA-F]{4}$/.test(hex)) {
-    return hex
-      .split('')
-      .map((c) => c + c)
-      .join('')
-  }
 
   return fallbackNormalized
 }
@@ -41,16 +39,16 @@ function isDarkMode(): boolean {
 
 export function registerEditorTheme(monaco: { editor: typeof editor }) {
   const dark = isDarkMode()
-  const bg = getCSSVar('--bg', dark ? '#0a0a0a' : '#fafafa')
-  const bgSubtle = getCSSVar('--bg-subtle', dark ? '#141414' : '#f5f5f5')
-  const bgElevated = getCSSVar('--bg-elevated', dark ? '#111111' : '#ffffff')
-  const border = getCSSVar('--border', dark ? '#222222' : '#e5e5e5')
-  const fg = getCSSVar('--text-primary', dark ? '#e5e5e5' : '#171717')
-  const fgSecondary = getCSSVar('--text-secondary', dark ? '#999999' : '#525252')
-  const fgTertiary = getCSSVar('--text-tertiary', dark ? '#666666' : '#a3a3a3')
-  const brand = getCSSVar('--brand', '#ca3a29')
-  const additions = getCSSVar('--color-additions', dark ? '#22c55e' : '#16a34a')
-  const deletions = getCSSVar('--color-deletions', dark ? '#ef4444' : '#dc2626')
+  const bg = expandShortHex(getCSSVar('--bg', dark ? '#0a0a0a' : '#fafafa'))
+  const bgSubtle = expandShortHex(getCSSVar('--bg-subtle', dark ? '#141414' : '#f5f5f5'))
+  const bgElevated = expandShortHex(getCSSVar('--bg-elevated', dark ? '#111111' : '#ffffff'))
+  const border = expandShortHex(getCSSVar('--border', dark ? '#222222' : '#e5e5e5'))
+  const fg = expandShortHex(getCSSVar('--text-primary', dark ? '#e5e5e5' : '#171717'))
+  const fgSecondary = expandShortHex(getCSSVar('--text-secondary', dark ? '#999999' : '#525252'))
+  const fgTertiary = expandShortHex(getCSSVar('--text-tertiary', dark ? '#666666' : '#a3a3a3'))
+  const brand = expandShortHex(getCSSVar('--brand', '#ca3a29'))
+  const additions = expandShortHex(getCSSVar('--color-additions', dark ? '#22c55e' : '#16a34a'))
+  const deletions = expandShortHex(getCSSVar('--color-deletions', dark ? '#ef4444' : '#dc2626'))
 
   const lightTokens: editor.ITokenThemeRule[] = [
     { token: 'comment', foreground: toMonacoTokenHex(fgTertiary, 'a3a3a3'), fontStyle: 'italic' },
