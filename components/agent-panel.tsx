@@ -1041,7 +1041,7 @@ export function AgentPanel() {
               {imageAttachments.map((img, i) => (
                 <span
                   key={`img-${i}`}
-                  className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--warning,#eab308)_10%,transparent)] border border-[color-mix(in_srgb,var(--warning,#eab308)_25%,transparent)] text-[var(--warning,#eab308)]"
+                  className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-secondary)]"
                 >
                   <Icon icon="lucide:image" width={9} height={9} />
                   {img.name.length > 20 ? img.name.slice(0, 17) + '...' : img.name}
@@ -1056,7 +1056,7 @@ export function AgentPanel() {
               {contextAttachments.map((att, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] border border-[color-mix(in_srgb,var(--brand)_25%,transparent)] text-[var(--brand)]"
+                  className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-secondary)]"
                 >
                   <Icon
                     icon={att.type === 'selection' ? 'lucide:text-cursor-input' : 'lucide:file-text'}
@@ -1076,16 +1076,6 @@ export function AgentPanel() {
               ))}
             </div>
           )}
-
-          <div className="flex items-center gap-1 mb-1">
-            <button
-              onClick={handleImageSelect}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-              title="Attach image"
-            >
-              <Icon icon="lucide:image-plus" width={11} height={11} />
-            </button>
-          </div>
 
           <textarea
             ref={inputRef}
@@ -1128,30 +1118,30 @@ export function AgentPanel() {
             onPaste={handleImagePaste}
             placeholder={activeFile ? `Ask about ${activeFile.split('/').pop()}...` : 'Ask or type /command...'}
             rows={1}
-            className="w-full resize-none rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] px-3 py-2.5 pr-10 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)] focus:shadow-[0_0_0_1px_color-mix(in_srgb,var(--brand)_20%,transparent)] transition-all"
+            className="w-full resize-none rounded-lg bg-[var(--bg)] border border-[var(--border)] pl-3 pr-20 py-2 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-colors"
           />
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || sending}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all cursor-pointer ${
-              input.trim() && !sending
-                ? 'bg-[var(--brand)] text-white hover:opacity-90'
-                : 'text-[var(--text-disabled)] cursor-not-allowed'
-            }`}
-            title="Send (Enter)"
-          >
-            <Icon icon={isStreaming ? 'lucide:square' : 'lucide:arrow-up'} width={12} height={12} />
-          </button>
-        </div>
-        <div className="flex items-center justify-between mt-1.5 px-0.5">
-          <span className="text-[8px] text-[var(--text-disabled)]">
-            {activeFile && (
-              <>Context: <span className="text-[var(--text-tertiary)]">{activeFile.split('/').pop()}</span></>
-            )}
-          </span>
-          <span className="text-[8px] text-[var(--text-disabled)]">
-            <kbd className="px-1 rounded border border-[var(--border)] text-[7px]">Enter</kbd> send · <kbd className="px-1 rounded border border-[var(--border)] text-[7px]">Shift+Enter</kbd> newline
-          </span>
+          {/* Action buttons — inside input, right side */}
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <button
+              onClick={handleImageSelect}
+              className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+              title="Attach image"
+            >
+              <Icon icon="lucide:image-plus" width={12} height={12} />
+            </button>
+            <button
+              onClick={sendMessage}
+              disabled={!input.trim() || sending}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                input.trim() && !sending
+                  ? 'bg-[var(--brand)] text-white hover:opacity-90'
+                  : 'text-[var(--text-disabled)] cursor-not-allowed'
+              }`}
+              title="Send (Enter)"
+            >
+              <Icon icon={isStreaming ? 'lucide:square' : 'lucide:arrow-up'} width={12} height={12} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
