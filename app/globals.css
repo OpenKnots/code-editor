@@ -641,7 +641,8 @@
 
 /* Dark semantic colors (Obsidian + Neon share defaults; Catppuccin has its own block) */
 .dark[data-theme="obsidian"],
-.dark[data-theme="neon"] {
+.dark[data-theme="neon"],
+.dark[data-theme="voodoo"] {
   --color-additions: #3fb950;
   --color-deletions: #f85149;
   --color-stage-review: #60a5fa;
@@ -729,7 +730,8 @@
 
 /* Light semantic colors (Obsidian + Neon; Catppuccin has its own block) */
 [data-theme="obsidian"]:not(.dark),
-[data-theme="neon"]:not(.dark) {
+[data-theme="neon"]:not(.dark),
+[data-theme="voodoo"]:not(.dark) {
   --color-additions: #16a34a;
   --color-deletions: #dc2626;
   --color-stage-review: #2563eb;
@@ -819,7 +821,8 @@
 [data-theme="obsidian"]:not(.dark) .prose-chat code,
 [data-theme="bone"]:not(.dark) .prose-chat code,
 [data-theme="neon"]:not(.dark) .prose-chat code,
-[data-theme="catppuccin-mocha"]:not(.dark) .prose-chat code {
+[data-theme="catppuccin-mocha"]:not(.dark) .prose-chat code,
+[data-theme="voodoo"]:not(.dark) .prose-chat code {
   background: rgba(0, 0, 0, 0.04);
   border-color: var(--border);
 }

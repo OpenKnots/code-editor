@@ -114,6 +114,7 @@ export function SettingsPanel({ open, onClose }: Props) {
                           : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-disabled)]'
                       }`}
                     >
+                      <span className="inline-block w-2 h-2 rounded-full mr-1 shrink-0" style={{ background: t.color }} />
                       {t.label}
                     </button>
                   ))}

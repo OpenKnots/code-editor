@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Icon } from '@iconify/react'
+import { KnotLogo } from '@/components/knot-logo'
 import type { AgentMode } from '@/components/mode-selector'
 import { useRepo } from '@/context/repo-context'
 import { useLocal } from '@/context/local-context'
@@ -59,6 +60,9 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
     <div className="flex-1 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-[560px]">
         {/* Heading */}
+        <div className="flex justify-center mb-3">
+          <KnotLogo size={36} />
+        </div>
         <h1 className="text-center text-[20px] font-semibold text-[var(--text-primary)] tracking-tight mb-3">
           {repoShort ? `What should we work on?` : `What do you want to build?`}
         </h1>
