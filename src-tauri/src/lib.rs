@@ -2,12 +2,170 @@ mod engine;
 mod terminal;
 
 use terminal::TerminalState;
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    Manager, Emitter,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(TerminalState::new())
+        .setup(|app| {
+            // ── Native Menu Bar ─────────────────────────────────
+            let app_menu = SubmenuBuilder::new(app, "Code Editor")
+                .item(&PredefinedMenuItem::about(app, Some("About Code Editor"), None)?)
+                .separator()
+                .item(&PredefinedMenuItem::services(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::hide(app, None)?)
+                .item(&PredefinedMenuItem::hide_others(app, None)?)
+                .item(&PredefinedMenuItem::show_all(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::quit(app, None)?)
+                .build()?;
+
+            // File menu
+            let save_item = MenuItemBuilder::new("Save")
+                .id("file_save")
+                .accelerator("CmdOrCtrl+S")
+                .build(app)?;
+            let save_all_item = MenuItemBuilder::new("Save All")
+                .id("file_save_all")
+                .accelerator("CmdOrCtrl+Shift+S")
+                .build(app)?;
+            let close_tab_item = MenuItemBuilder::new("Close Tab")
+                .id("file_close_tab")
+                .accelerator("CmdOrCtrl+W")
+                .build(app)?;
+
+            let file_menu = SubmenuBuilder::new(app, "File")
+                .item(&save_item)
+                .item(&save_all_item)
+                .separator()
+                .item(&close_tab_item)
+                .build()?;
+
+            // Edit menu
+            let edit_menu = SubmenuBuilder::new(app, "Edit")
+                .item(&PredefinedMenuItem::undo(app, None)?)
+                .item(&PredefinedMenuItem::redo(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::cut(app, None)?)
+                .item(&PredefinedMenuItem::copy(app, None)?)
+                .item(&PredefinedMenuItem::paste(app, None)?)
+                .item(&PredefinedMenuItem::select_all(app, None)?)
+                .build()?;
+
+            // View menu
+            let toggle_explorer = MenuItemBuilder::new("Toggle Explorer")
+                .id("view_explorer")
+                .accelerator("CmdOrCtrl+B")
+                .build(app)?;
+            let toggle_agent = MenuItemBuilder::new("Toggle Agent")
+                .id("view_agent")
+                .accelerator("CmdOrCtrl+J")
+                .build(app)?;
+            let toggle_terminal = MenuItemBuilder::new("Toggle Terminal")
+                .id("view_terminal")
+                .accelerator("CmdOrCtrl+`")
+                .build(app)?;
+            let quick_open = MenuItemBuilder::new("Quick Open")
+                .id("view_quick_open")
+                .accelerator("CmdOrCtrl+P")
+                .build(app)?;
+            let zoom_in = MenuItemBuilder::new("Zoom In")
+                .id("view_zoom_in")
+                .accelerator("CmdOrCtrl+=")
+                .build(app)?;
+            let zoom_out = MenuItemBuilder::new("Zoom Out")
+                .id("view_zoom_out")
+                .accelerator("CmdOrCtrl+-")
+                .build(app)?;
+            let zoom_reset = MenuItemBuilder::new("Actual Size")
+                .id("view_zoom_reset")
+                .accelerator("CmdOrCtrl+0")
+                .build(app)?;
+            let fullscreen_item = PredefinedMenuItem::fullscreen(app, None)?;
+
+            let view_menu = SubmenuBuilder::new(app, "View")
+                .item(&toggle_explorer)
+                .item(&toggle_agent)
+                .item(&toggle_terminal)
+                .separator()
+                .item(&quick_open)
+                .separator()
+                .item(&zoom_in)
+                .item(&zoom_out)
+                .item(&zoom_reset)
+                .separator()
+                .item(&fullscreen_item)
+                .build()?;
+
+            // Window menu
+            let window_menu = SubmenuBuilder::new(app, "Window")
+                .item(&PredefinedMenuItem::minimize(app, None)?)
+                .item(&PredefinedMenuItem::maximize(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::close_window(app, None)?)
+                .build()?;
+
+            // Help menu
+            let docs_item = MenuItemBuilder::new("Documentation")
+                .id("help_docs")
+                .build(app)?;
+
+            let help_menu = SubmenuBuilder::new(app, "Help")
+                .item(&docs_item)
+                .build()?;
+
+            let menu = MenuBuilder::new(app)
+                .item(&app_menu)
+                .item(&file_menu)
+                .item(&edit_menu)
+                .item(&view_menu)
+                .item(&window_menu)
+                .item(&help_menu)
+                .build()?;
+
+            app.set_menu(menu)?;
+
+            // ── Menu Event Handler ──────────────────────────────
+            let app_handle = app.handle().clone();
+            app.on_menu_event(move |_app, event| {
+                let id = event.id().0.as_str();
+                let window = app_handle.get_webview_window("main");
+                if let Some(win) = window {
+                    match id {
+                        "file_save" => { let _ = win.emit("menu-action", "save"); }
+                        "file_save_all" => { let _ = win.emit("menu-action", "save-all"); }
+                        "file_close_tab" => { let _ = win.emit("menu-action", "close-tab"); }
+                        "view_explorer" => { let _ = win.emit("menu-action", "toggle-explorer"); }
+                        "view_agent" => { let _ = win.emit("menu-action", "toggle-agent"); }
+                        "view_terminal" => { let _ = win.emit("menu-action", "toggle-terminal"); }
+                        "view_quick_open" => { let _ = win.emit("menu-action", "quick-open"); }
+                        "view_zoom_in" => { let _ = win.eval("document.body.style.zoom = String(parseFloat(getComputedStyle(document.body).zoom || '1') + 0.1)"); }
+                        "view_zoom_out" => { let _ = win.eval("document.body.style.zoom = String(Math.max(0.5, parseFloat(getComputedStyle(document.body).zoom || '1') - 0.1))"); }
+                        "view_zoom_reset" => { let _ = win.eval("document.body.style.zoom = '1'"); }
+                        "help_docs" => { let _ = win.emit("menu-action", "open-docs"); }
+                        _ => {}
+                    }
+                }
+            });
+
+            // ── Window Vibrancy (macOS) ─────────────────────────
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::apply_vibrancy;
+                let window = app.get_webview_window("main").unwrap();
+                apply_vibrancy(&window, window_vibrancy::NSVisualEffectMaterial::Sidebar, None, None)
+                    .ok(); // Don't panic if vibrancy fails
+            }
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Terminal commands
             terminal::create_terminal,

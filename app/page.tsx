@@ -255,7 +255,7 @@ const AGENT_MAX = 600
 
 function EditorLayout() {
   const { repo } = useRepo()
-  const { files, activeFile, openFile, getFile, markClean } = useEditor()
+  const { files, activeFile, openFile, closeFile, getFile, markClean } = useEditor()
   const { status } = useGateway()
   const [explorerWidth, setExplorerWidth] = useState(240)
   const [agentWidth, setAgentWidth] = useState(360)
@@ -289,6 +289,54 @@ function EditorLayout() {
       console.error('Failed to save file:', err)
     }
   }, [repo, activeFile, getFile, markClean])
+
+  // Handle native menu actions from Tauri
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const w = window as unknown as Record<string, unknown>
+    if (!w.__TAURI_INTERNALS__ && !w.__TAURI__) return
+
+    let unlisten: (() => void) | null = null
+    ;(async () => {
+      const { listen } = await import('@tauri-apps/api/event')
+      unlisten = await listen<string>('menu-action', (event) => {
+        switch (event.payload) {
+          case 'save': {
+            const active = files.find(f => f.path === activeFile)
+            if (active?.dirty) {
+              window.dispatchEvent(new CustomEvent('save-file', { detail: { path: active.path } }))
+            }
+            break
+          }
+          case 'save-all':
+            files.filter(f => f.dirty).forEach(f => {
+              window.dispatchEvent(new CustomEvent('save-file', { detail: { path: f.path } }))
+            })
+            break
+          case 'close-tab':
+            if (activeFile) closeFile(activeFile)
+            break
+          case 'toggle-explorer':
+            setExplorerVisible(v => !v)
+            break
+          case 'toggle-agent':
+            setAgentOpen(v => !v)
+            break
+          case 'toggle-terminal':
+            setTerminalVisible(v => !v)
+            break
+          case 'quick-open':
+            setQuickOpenVisible(v => !v)
+            break
+          case 'open-docs':
+            window.open('https://github.com/OpenKnots/code-editor/tree/main/docs', '_blank')
+            break
+        }
+      })
+    })()
+
+    return () => { unlisten?.() }
+  }, [files, activeFile])
 
   // Handle save-file events (⌘S or Save button)
   useEffect(() => {

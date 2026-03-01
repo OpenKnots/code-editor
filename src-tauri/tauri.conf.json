@@ -20,7 +20,7 @@
         "minWidth": 800,
         "minHeight": 600,
         "decorations": true,
-        "transparent": false,
+        "transparent": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
       }
@@ -39,5 +39,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "window-state": {
+      "autoSave": true
+    }
   }
 }

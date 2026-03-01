@@ -2516,3 +2516,23 @@ p { line-height: 1.6; }
   --radius-md: 6px;
   --radius-lg: 8px;
 }
+
+/* ─── Tauri Vibrancy Support ───────────────────────────────── */
+/* When running in Tauri with vibrancy, make sidebar backgrounds
+   slightly transparent so the native blur shows through */
+.tauri-vibrancy .file-explorer-bg,
+.tauri-vibrancy .engine-panel-bg {
+  background: color-mix(in srgb, var(--bg) 85%, transparent) !important;
+}
+
+.tauri-vibrancy .header-bg {
+  background: color-mix(in srgb, var(--bg-elevated) 80%, transparent) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.tauri-vibrancy .statusbar-bg {
+  background: color-mix(in srgb, var(--bg-elevated) 80%, transparent) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
