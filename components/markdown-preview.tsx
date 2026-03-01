@@ -174,6 +174,57 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   const [hoverTarget, setHoverTarget] = useState<HoverTarget | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  // ─── Syntax highlight code blocks with Monaco ─────────────
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    el.querySelectorAll<HTMLPreElement>('pre').forEach(async (pre) => {
+      if (pre.dataset.highlighted) return
+      pre.dataset.highlighted = 'true'
+
+      const code = pre.querySelector('code')
+      if (!code) return
+
+      // Extract language from class="language-xxx"
+      const langClass = Array.from(code.classList).find(c => c.startsWith('language-'))
+      const lang = langClass?.replace('language-', '') || ''
+      const rawText = code.textContent || ''
+
+      if (!rawText.trim()) return
+
+      // Add header + copy button
+      const wrapper = document.createElement('div')
+      wrapper.className = 'code-block-wrapper group relative rounded-lg border border-[var(--border)] bg-[var(--bg)] overflow-hidden my-2'
+
+      const header = document.createElement('div')
+      header.className = 'flex items-center justify-between h-7 px-3 bg-[var(--bg-secondary)] border-b border-[var(--border)]'
+      header.innerHTML = `<span class="text-[9px] font-mono text-[var(--text-disabled)] uppercase tracking-wider">${lang || 'code'}</span><button class="copy-btn flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors opacity-0 group-hover:opacity-100 cursor-pointer" title="Copy code">Copy</button>`
+
+      // Copy handler
+      header.querySelector('.copy-btn')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(rawText).then(() => {
+          const btn = header.querySelector('.copy-btn')
+          if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500) }
+        })
+      })
+
+      pre.className = 'overflow-x-auto p-3 text-[11px] leading-[1.6] font-mono m-0'
+      pre.parentNode?.insertBefore(wrapper, pre)
+      wrapper.appendChild(header)
+      wrapper.appendChild(pre)
+
+      // Monaco colorize
+      try {
+        const { default: loader } = await import('@monaco-editor/loader')
+        const monaco = await loader.init()
+        const langId = lang === 'js' ? 'javascript' : lang === 'ts' ? 'typescript' : lang === 'jsx' ? 'javascript' : lang === 'tsx' ? 'typescript' : lang === 'py' ? 'python' : lang === 'sh' || lang === 'bash' ? 'shell' : lang === 'yml' ? 'yaml' : lang || 'plaintext'
+        const html = await monaco.editor.colorize(rawText, langId, { tabSize: 2 })
+        code.innerHTML = html
+      } catch {}
+    })
+  })
+
   useEffect(() => {
     const el = containerRef.current
     if (!el) return

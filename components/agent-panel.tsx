@@ -275,6 +275,17 @@ export function AgentPanel() {
           const text = finalText || prev || ''
           if (text && !/^NO_REPLY$/i.test(text.trim())) {
             const editProposals = parseEditProposals(text)
+            // Auto-apply edits directly to the editor (Cursor-style)
+            if (editProposals.length > 0) {
+              for (const proposal of editProposals) {
+                const existing = getFile(proposal.filePath)
+                if (existing) {
+                  updateFileContent(proposal.filePath, proposal.content)
+                } else {
+                  openFile(proposal.filePath, proposal.content, undefined)
+                }
+              }
+            }
             setMessages(msgs => [...msgs, {
               id: crypto.randomUUID(),
               role: 'assistant' as const,
