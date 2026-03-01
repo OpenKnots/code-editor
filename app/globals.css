@@ -1131,8 +1131,8 @@ p { line-height: 1.6; }
    Scrollbar
    ────────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -1140,17 +1140,28 @@ p { line-height: 1.6; }
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 3px;
+  background: color-mix(in srgb, var(--scrollbar-thumb) 40%, transparent);
+  border-radius: 99px;
+  border: 1px solid transparent;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
 
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--scrollbar-thumb) 40%, transparent) transparent;
+}
+
 @media (pointer: coarse) {
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { border-radius: 5px; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -1324,7 +1335,7 @@ p { line-height: 1.6; }
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar-track {
@@ -1332,6 +1343,7 @@ p { line-height: 1.6; }
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+  border-radius: 99px;
   background: var(--border);
   border-radius: 3px;
 }
