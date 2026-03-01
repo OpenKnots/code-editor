@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useGateway } from '@/context/gateway-context'
-import { setGithubToken } from '@/lib/github-client'
+import { setGithubToken, requestDeviceCode, pollDeviceToken } from '@/lib/github-api'
 
 const STORAGE_KEY = 'code-editor:github-token'
 const STORAGE_SOURCE_KEY = 'code-editor:github-token-source'
@@ -151,18 +151,7 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
     oauthCancelled.current = false
 
     try {
-      const res = await fetch('/api/github/device-code', {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, scope: 'repo read:user' }),
-      })
-      const data = (await res.json()) as {
-        device_code: string
-        user_code: string
-        verification_uri: string
-        verification_uri_complete?: string
-        interval: number
-      }
+      const data = await requestDeviceCode(GITHUB_CLIENT_ID)
 
       // Use the complete URI (pre-fills the code) for one-click experience
       const directUrl = data.verification_uri_complete || `${data.verification_uri}?user_code=${data.user_code}`
@@ -212,16 +201,7 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
         if (oauthCancelled.current) break
 
         try {
-          const res = await fetch('/api/github/access-token', {
-            method: 'POST',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              client_id: GITHUB_CLIENT_ID,
-              device_code: deviceCode,
-              grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-            }),
-          })
-          const data = (await res.json()) as { access_token?: string; error?: string }
+          const data = await pollDeviceToken(GITHUB_CLIENT_ID, deviceCode)
 
           if (data.access_token) {
             saveToken(data.access_token, 'oauth')

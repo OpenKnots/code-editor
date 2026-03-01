@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components'
 import { ThemeProvider } from '@/context/theme-context'
 import { GatewayProvider } from '@/context/gateway-context'
 import { RepoProvider } from '@/context/repo-context'
@@ -21,7 +20,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-theme="obsidian" className="dark" suppressHydrationWarning>
       <body className="antialiased">
-        <AuthKitProvider>
           <ThemeProvider>
             <GatewayProvider>
               <GitHubAuthProvider>
@@ -35,7 +33,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </GitHubAuthProvider>
             </GatewayProvider>
           </ThemeProvider>
-        </AuthKitProvider>
       </body>
     </html>
   )

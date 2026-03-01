@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
-import { fetchRepoTree } from '@/lib/github-client'
+import { fetchRepoTreeByName as fetchRepoTree } from '@/lib/github-api'
 
 export interface RepoInfo {
   owner: string

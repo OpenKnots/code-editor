@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Icon } from '@iconify/react'
-import { useAuth } from '@workos-inc/authkit-nextjs/components'
 import { useGateway } from '@/context/gateway-context'
 import { useRepo } from '@/context/repo-context'
 import { useEditor } from '@/context/editor-context'
@@ -18,7 +17,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher'
 import { QuickOpen } from '@/components/quick-open'
 import { ShortcutsOverlay } from '@/components/shortcuts-overlay'
 import { CommandPalette, type CommandId } from '@/components/command-palette'
-import { fetchFileContents, createOrUpdateFile, commitFiles } from '@/lib/github-client'
+import { fetchFileContentsByName as fetchFileContents, createOrUpdateFileByName as createOrUpdateFile, commitFilesByName as commitFiles } from '@/lib/github-api'
 import { TerminalPanel } from '@/components/terminal-panel'
 import { ChangesPanel } from '@/components/changes-panel'
 import { GatewayConnectBanner, GatewayConnectPopover } from '@/components/gateway-connect'
@@ -78,134 +77,6 @@ function toDataUrl(base64: string, mimeType: string): string {
 
 // ─── Access Gate ────────────────────────────────────────────────
 
-type AccessStatus =
-  | { state: 'loading' }
-  | { state: 'ok' }
-  | { state: 'error'; message: string; sponsorUrl?: string }
-
-function SponsorGate({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading, signOut } = useAuth()
-  const [access, setAccess] = useState<AccessStatus>({ state: 'loading' })
-  const [retryCount, setRetryCount] = useState(0)
-
-  useEffect(() => {
-    if (authLoading || !user) return
-    setAccess({ state: 'loading' })
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/check-sponsor')
-        if (cancelled) return
-        if (res.ok) {
-          setAccess({ state: 'ok' })
-        } else {
-          const data = await res.json() as { message?: string; sponsor_url?: string }
-          setAccess({
-            state: 'error',
-            message: data.message ?? 'Access verification failed.',
-            sponsorUrl: data.sponsor_url,
-          })
-        }
-      } catch {
-        if (!cancelled) {
-          setAccess({ state: 'error', message: 'Could not verify access. Please try again.' })
-        }
-      }
-    })()
-    return () => { cancelled = true }
-  }, [user, authLoading, retryCount])
-
-  if (authLoading || access.state === 'loading') {
-    return (
-      <div className="h-full flex items-center justify-center bg-[var(--bg)]">
-        <div className="flex items-center gap-3 text-[var(--text-tertiary)]">
-          <Icon icon="lucide:loader-2" width={18} height={18} className="animate-spin" />
-          <span className="text-sm">Verifying access…</span>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[var(--bg)]">
-        <div className="text-center space-y-3 text-[var(--text-tertiary)]">
-          <p className="text-sm">You need to sign in to continue.</p>
-          <a href="/callback" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[var(--brand)] text-white hover:opacity-90 transition-opacity">
-            Sign In
-          </a>
-        </div>
-      </div>
-    )
-  }
-
-  if (access?.state === 'error') {
-    return (
-      <div className="h-full overflow-hidden flex items-center justify-center px-4 bg-[var(--bg)]">
-        <div className="w-full max-w-[420px] space-y-5 animate-fade-in-up">
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6 sm:p-8 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand)] to-transparent opacity-40" />
-
-            <div className="text-center mb-6">
-              <div className="relative w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center bg-gradient-to-br from-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_80%,#000)] shadow-lg">
-                <Icon icon="lucide:lock" width={22} height={22} className="text-white" />
-                <div className="absolute -inset-1 rounded-xl bg-[var(--brand)] opacity-15 blur-md" />
-              </div>
-
-              <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
-                Pro Access Required
-              </h1>
-              <p className="text-sm mt-2 text-[var(--text-tertiary)] leading-relaxed">
-                {access.message}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {access.state === 'error' && access.sponsorUrl && (
-                <a
-                  href={access.sponsorUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 text-white"
-                  style={{
-                    background: 'linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, #000) 100%)',
-                    boxShadow: '0 2px 12px var(--brand-glow, rgba(167,139,250,0.15))',
-                  }}
-                >
-                  <Icon icon="lucide:heart" width={14} height={14} />
-                  Become a Sponsor
-                </a>
-              )}
-
-              <button
-                onClick={() => setRetryCount(c => c + 1)}
-                className="w-full py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer border border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
-              >
-                Retry Verification
-              </button>
-
-              <button
-                onClick={() => signOut()}
-                className="w-full py-2 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <p className="text-xs text-[var(--text-tertiary)]">
-              Signed in as <span className="text-[var(--text-secondary)]">{user.email}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return <>{children}</>
-}
 
 // ─── Editor Layout ──────────────────────────────────────────────
 
@@ -749,36 +620,11 @@ function EditorLayout() {
 // ─── Root Page ──────────────────────────────────────────────────
 
 export default function EditorPage() {
-  const { user, loading } = useAuth()
   const [showEditor, setShowEditor] = useState(false)
 
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[var(--bg)]">
-        <Icon icon="lucide:loader-2" width={20} height={20} className="animate-spin text-[var(--text-tertiary)]" />
-      </div>
-    )
-  }
-
-  // Unauthenticated users see the landing page
-  if (!user) {
-    if (showEditor) {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/sign-in'
-      }
-      return (
-        <div className="h-full flex items-center justify-center bg-[var(--bg)]">
-          <Icon icon="lucide:loader-2" width={20} height={20} className="animate-spin text-[var(--text-tertiary)]" />
-        </div>
-      )
-    }
+  if (!showEditor) {
     return <Landing onEnter={() => setShowEditor(true)} />
   }
 
-  // Authenticated users go through sponsor gate → editor
-  return (
-    <SponsorGate>
-      <EditorLayout />
-    </SponsorGate>
-  )
+  return <EditorLayout />
 }

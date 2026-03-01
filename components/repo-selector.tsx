@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import { useRepo } from '@/context/repo-context'
-import { authHeaders } from '@/lib/github-client'
+import { authHeaders, fetchUserRepos, fetchBranches, type Repo } from '@/lib/github-api'
 
 interface BranchInfo {
   name: string
