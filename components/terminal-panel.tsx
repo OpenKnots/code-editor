@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Icon } from '@iconify/react'
 import { isTauri, tauriInvoke, tauriListen } from '@/lib/tauri'
+import { useTheme } from '@/context/theme-context'
 import '@xterm/xterm/css/xterm.css'
 
 interface TerminalTab {
@@ -17,7 +18,37 @@ interface TerminalPanelProps {
   onHeightChange: (h: number) => void
 }
 
+function buildXtermTheme() {
+  const s = getComputedStyle(document.documentElement)
+  const v = (name: string) => s.getPropertyValue(name).trim()
+  const dark = document.documentElement.classList.contains('dark')
+  return {
+    background: v('--bg') || (dark ? '#0a0a0a' : '#fafafa'),
+    foreground: v('--text-primary') || (dark ? '#e5e5e5' : '#171717'),
+    cursor: v('--brand') || '#a855f7',
+    cursorAccent: v('--bg') || (dark ? '#0a0a0a' : '#fafafa'),
+    selectionBackground: (v('--brand') || '#a855f7') + '40',
+    black: dark ? '#1e1e1e' : '#d4d4d4',
+    red: dark ? '#f87171' : '#dc2626',
+    green: dark ? '#4ade80' : '#16a34a',
+    yellow: dark ? '#facc15' : '#ca8a04',
+    blue: dark ? '#60a5fa' : '#2563eb',
+    magenta: dark ? '#c084fc' : '#9333ea',
+    cyan: dark ? '#22d3ee' : '#0891b2',
+    white: dark ? '#e5e5e5' : '#171717',
+    brightBlack: dark ? '#525252' : '#a3a3a3',
+    brightRed: dark ? '#fca5a5' : '#ef4444',
+    brightGreen: dark ? '#86efac' : '#22c55e',
+    brightYellow: dark ? '#fde047' : '#eab308',
+    brightBlue: dark ? '#93c5fd' : '#3b82f6',
+    brightMagenta: dark ? '#d8b4fe' : '#a855f7',
+    brightCyan: dark ? '#67e8f9' : '#06b6d4',
+    brightWhite: dark ? '#fafafa' : '#0a0a0a',
+  }
+}
+
 export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanelProps) {
+  const { version: themeVersion } = useTheme()
   const [tabs, setTabs] = useState<TerminalTab[]>([])
   const [activeTab, setActiveTab] = useState<number | null>(null)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -66,10 +97,6 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
 
       if (cancelled || !termRef.current) return
 
-      // Read CSS variables for theme
-      const s = getComputedStyle(document.documentElement)
-      const v = (name: string) => s.getPropertyValue(name).trim()
-
       const term = new Terminal({
         cursorBlink: true,
         cursorStyle: 'bar',
@@ -78,29 +105,7 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
         lineHeight: 1.4,
         scrollback: 10000,
         allowProposedApi: true,
-        theme: {
-          background: v('--bg') || '#0a0a0a',
-          foreground: v('--text-primary') || '#e5e5e5',
-          cursor: v('--brand') || '#a855f7',
-          cursorAccent: v('--bg') || '#0a0a0a',
-          selectionBackground: v('--brand') + '40' || '#a855f740',
-          black: '#1e1e1e',
-          red: '#f87171',
-          green: '#4ade80',
-          yellow: '#facc15',
-          blue: '#60a5fa',
-          magenta: '#c084fc',
-          cyan: '#22d3ee',
-          white: '#e5e5e5',
-          brightBlack: '#525252',
-          brightRed: '#fca5a5',
-          brightGreen: '#86efac',
-          brightYellow: '#fde047',
-          brightBlue: '#93c5fd',
-          brightMagenta: '#d8b4fe',
-          brightCyan: '#67e8f9',
-          brightWhite: '#fafafa',
-        },
+        theme: buildXtermTheme(),
       })
 
       const fit = new FitAddon()
@@ -161,6 +166,16 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
       unlistenExit?.()
     }
   }, [activeTab])
+
+  // Reapply xterm theme live when mode/theme changes
+  useEffect(() => {
+    const term = xtermRef.current
+    if (!term) return
+    const id = requestAnimationFrame(() => {
+      term.options.theme = buildXtermTheme()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [themeVersion])
 
   // Fit on resize
   useEffect(() => {

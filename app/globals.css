@@ -81,6 +81,8 @@
   --bg: #0a0a0a;
   --bg-elevated: #141414;
   --bg-subtle: #1a1a1a;
+  --bg-secondary: #111111;
+  --bg-tertiary: #1e1e1e;
   --foreground: #ededed;
   --subtle: #666;
 
@@ -142,6 +144,8 @@
   --bg: #fafafa;
   --bg-elevated: #ffffff;
   --bg-subtle: #f5f5f5;
+  --bg-secondary: #f0f0f0;
+  --bg-tertiary: #e5e5e5;
   --foreground: #171717;
   --subtle: #a3a3a3;
 
@@ -207,6 +211,8 @@
   --bg: #000000;
   --bg-elevated: #0a0a0a;
   --bg-subtle: #141414;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #1a1a1a;
   --foreground: #ffffff;
   --subtle: #636363;
 
@@ -271,6 +277,8 @@
   --bg: #ffffff;
   --bg-elevated: #fafafa;
   --bg-subtle: #f0f0f0;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #e8e8e8;
   --foreground: #000000;
   --subtle: #999999;
 
@@ -336,6 +344,8 @@
   --bg: #070709;
   --bg-elevated: #181818;
   --bg-subtle: #222222;
+  --bg-secondary: #101012;
+  --bg-tertiary: #1c1c1e;
   --foreground: #f0f0f4;
   --subtle: #555;
 
@@ -393,6 +403,8 @@
   --bg: #faf8ff;
   --bg-elevated: #ffffff;
   --bg-subtle: #f3eefa;
+  --bg-secondary: #f0ecf5;
+  --bg-tertiary: #e6e0f0;
   --foreground: #0a0a0f;
   --subtle: #9b8fb5;
 
@@ -454,6 +466,8 @@
   --bg: #1e1e2e;
   --bg-elevated: #181825;
   --bg-subtle: #313244;
+  --bg-secondary: #1a1a2a;
+  --bg-tertiary: #292940;
   --foreground: #cdd6f4;
   --subtle: #6c7086;
 
@@ -515,6 +529,8 @@
   --bg: #eff1f5;
   --bg-elevated: #e6e9ef;
   --bg-subtle: #ccd0da;
+  --bg-secondary: #dce0e8;
+  --bg-tertiary: #c8ccd6;
   --foreground: #4c4f69;
   --subtle: #9ca0b0;
 

@@ -353,17 +353,6 @@ function EditorLayout() {
       {/* Top bar */}
       <header data-tauri-drag-region className={`flex items-center justify-between h-11 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0 ${isTauriDesktop ? 'tauri-drag-region' : ''} ${isMacTauri ? 'pl-20 pr-4' : 'px-4'}`}>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setExplorerVisible(v => !v)}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isTauriDesktop ? 'tauri-no-drag' : ''} ${explorerVisible
-              ? 'text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
-              : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
-              }`}
-            title={`${explorerVisible ? 'Hide' : 'Show'} explorer (\u2318B)`}
-          >
-            <Icon icon="lucide:panel-left" width={16} height={16} />
-          </button>
-
           <div className="flex items-center gap-2">
             <Icon icon="lucide:code" width={18} height={18} className="text-[var(--brand)]" />
             <span className="text-[13px] font-bold text-[var(--text-primary)]">code-editor</span>
@@ -387,17 +376,6 @@ function EditorLayout() {
           <div className={isTauriDesktop ? 'tauri-no-drag' : ''}>
             <ThemeSwitcher />
           </div>
-
-          <button
-            onClick={() => setAgentOpen(!agentOpen)}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isTauriDesktop ? 'tauri-no-drag' : ''} ${agentOpen
-              ? 'text-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]'
-              : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
-              }`}
-            title={`${agentOpen ? 'Hide' : 'Show'} agent (\u2318J)`}
-          >
-            <Icon icon="lucide:sparkles" width={15} height={15} />
-          </button>
         </div>
       </header>
 
@@ -405,19 +383,65 @@ function EditorLayout() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* File Explorer */}
         {explorerVisible && (
-          <>
-            <div className="shrink-0 bg-[var(--bg)] overflow-hidden" style={{ width: explorerWidth }}>
-              <FileExplorer />
-            </div>
-            <ResizeHandle direction="horizontal" onResize={handleExplorerResize} />
-          </>
+          <div className="shrink-0 bg-[var(--bg)] overflow-hidden" style={{ width: explorerWidth }}>
+            <FileExplorer />
+          </div>
         )}
+
+        {/* Explorer resize handle — only when open */}
+        {explorerVisible && <ResizeHandle direction="horizontal" onResize={handleExplorerResize} />}
+
+        {/* Left panel edge trigger — always visible, sits at the right edge of the explorer section */}
+        <button
+          onClick={() => setExplorerVisible(v => !v)}
+          className="group relative shrink-0 self-stretch w-3.5 flex items-center justify-center cursor-pointer transition-colors duration-200 border-r border-[var(--border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-subtle)]"
+          title={`${explorerVisible ? 'Hide' : 'Show'} file explorer (\u2318B)`}
+          aria-label={explorerVisible ? 'Collapse file explorer' : 'Expand file explorer'}
+        >
+          {/* Active accent line on the right edge */}
+          <span className={`absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full transition-all duration-300 ${
+            explorerVisible
+              ? 'bg-[var(--brand)] opacity-60 group-hover:opacity-90'
+              : 'bg-[var(--text-tertiary)] opacity-0 group-hover:opacity-30'
+          }`} />
+          {/* Direction chevron — appears on hover */}
+          <Icon
+            icon={explorerVisible ? 'lucide:chevron-left' : 'lucide:chevron-right'}
+            width={9} height={9}
+            className="text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+          />
+        </button>
 
         {/* Editor area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <EditorTabs />
           <CodeEditor />
         </div>
+
+        {/* Right panel edge trigger — always visible, sits at the left edge of the agent section */}
+        <button
+          onClick={() => setAgentOpen(v => !v)}
+          className={`group relative shrink-0 self-stretch w-3.5 flex items-center justify-center cursor-pointer transition-colors duration-200 border-l border-[var(--border)] ${
+            agentOpen
+              ? 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-subtle)]'
+              : 'bg-[var(--bg-elevated)] hover:bg-[var(--bg-subtle)]'
+          }`}
+          title={`${agentOpen ? 'Hide' : 'Show'} agent (\u2318J)`}
+          aria-label={agentOpen ? 'Collapse agent panel' : 'Expand agent panel'}
+        >
+          {/* Active accent line on the left edge */}
+          <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full transition-all duration-300 ${
+            agentOpen
+              ? 'bg-[var(--brand)] opacity-60 group-hover:opacity-90'
+              : 'bg-[var(--text-tertiary)] opacity-0 group-hover:opacity-30'
+          }`} />
+          {/* Direction chevron — appears on hover */}
+          <Icon
+            icon={agentOpen ? 'lucide:chevron-right' : 'lucide:chevron-left'}
+            width={9} height={9}
+            className="text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+          />
+        </button>
 
         {/* Sidebar: Agent + Engine tabs */}
         {agentOpen && (
@@ -455,21 +479,6 @@ function EditorLayout() {
           </>
         )}
       </div>
-
-      {/* Chat bubble (visible when agent panel is closed) */}
-      {!agentOpen && (
-        <button
-          onClick={() => setAgentOpen(true)}
-          className="fixed bottom-6 right-6 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105 cursor-pointer z-50"
-          style={{
-            backgroundColor: 'var(--brand)',
-            color: 'white',
-          }}
-          title="Open agent (\u2318J)"
-        >
-          <Icon icon="lucide:sparkles" width={20} height={20} />
-        </button>
-      )}
 
       {/* Quick Open (⌘P) */}
       <QuickOpen

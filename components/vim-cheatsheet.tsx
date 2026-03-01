@@ -148,9 +148,9 @@ export function VimCheatsheet({ open, onClose }: VimCheatsheetProps) {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Sheet */}
-      <div className="relative w-full max-w-[720px] max-h-[80vh] flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden animate-fade-in-up">
+      <div className="relative w-full max-w-[1080px] max-h-[96vh] flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden animate-fade-in-up">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] shrink-0">
+        <div className="flex items-center gap-2 p-2.5 border-b border-[var(--border)] shrink-0">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--brand)]">
               VIM

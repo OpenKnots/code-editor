@@ -2,30 +2,20 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Icon } from '@iconify/react'
+import { useTheme, THEME_PRESETS, type ThemeMode } from '@/context/theme-context'
+import { ThemeStudio } from '@/components/theme-studio'
 
-const THEMES = [
-  { id: 'obsidian', label: 'Obsidian', color: '#ca3a29' },
-  { id: 'neon', label: 'Neon', color: '#a855f7' },
-  { id: 'catppuccin-mocha', label: 'Catppuccin', color: '#cba6f7' },
-  { id: 'bone', label: 'Bone', color: '#78716c' },
-] as const
-
-const STORAGE_KEY = 'code-editor:theme'
+const MODES: { id: ThemeMode; icon: string; label: string }[] = [
+  { id: 'light', icon: 'lucide:sun', label: 'Light' },
+  { id: 'dark', icon: 'lucide:moon', label: 'Dark' },
+  { id: 'system', icon: 'lucide:monitor', label: 'System' },
+]
 
 export function ThemeSwitcher() {
+  const { themeId, mode, setThemeId, setMode } = useTheme()
   const [open, setOpen] = useState(false)
-  const [current, setCurrent] = useState('obsidian')
+  const [studioOpen, setStudioOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        setCurrent(saved)
-        document.documentElement.setAttribute('data-theme', saved)
-      }
-    } catch {}
-  }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -35,31 +25,52 @@ export function ThemeSwitcher() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const selectTheme = (id: string) => {
-    setCurrent(id)
-    document.documentElement.setAttribute('data-theme', id)
-    try { localStorage.setItem(STORAGE_KEY, id) } catch {}
-    setOpen(false)
-  }
-
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
         className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-        title="Switch theme"
+        title="Theme & mode"
       >
         <Icon icon="lucide:palette" width={15} height={15} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl z-50 py-1 animate-fade-in-up">
-          {THEMES.map(t => (
+        <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl z-50 py-1 animate-fade-in-up">
+          {/* Mode selector */}
+          <div className="px-2.5 pt-1.5 pb-1">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Mode</span>
+          </div>
+          <div className="flex gap-0.5 mx-2 mb-1.5 p-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)]">
+            {MODES.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                className={`flex-1 flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+                  mode === m.id
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                }`}
+                title={m.label}
+              >
+                <Icon icon={m.icon} width={12} height={12} />
+                <span>{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="h-px bg-[var(--border)] mx-2 my-1" />
+
+          {/* Theme selector */}
+          <div className="px-2.5 pt-1 pb-0.5">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Theme</span>
+          </div>
+          {THEME_PRESETS.map(t => (
             <button
               key={t.id}
-              onClick={() => selectTheme(t.id)}
+              onClick={() => { setThemeId(t.id); setOpen(false) }}
               className={`flex items-center gap-2.5 w-full px-3 py-1.5 text-left transition-colors cursor-pointer ${
-                current === t.id
+                themeId === t.id
                   ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--text-primary)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
               }`}
@@ -69,13 +80,25 @@ export function ThemeSwitcher() {
                 style={{ backgroundColor: t.color }}
               />
               <span className="text-[12px]">{t.label}</span>
-              {current === t.id && (
+              {themeId === t.id && (
                 <Icon icon="lucide:check" width={12} height={12} className="ml-auto text-[var(--brand)]" />
               )}
             </button>
           ))}
+
+          <div className="h-px bg-[var(--border)] mx-2 my-1" />
+
+          <button
+            onClick={() => { setOpen(false); setStudioOpen(true) }}
+            className="flex items-center gap-2.5 w-full px-3 py-1.5 text-left transition-colors cursor-pointer text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+          >
+            <Icon icon="lucide:wand-sparkles" width={12} height={12} className="shrink-0" />
+            <span className="text-[12px]">Theme Studio</span>
+          </button>
         </div>
       )}
+
+      <ThemeStudio open={studioOpen} onClose={() => setStudioOpen(false)} />
     </div>
   )
 }

@@ -5,6 +5,7 @@ import Editor, { type OnMount, type BeforeMount } from '@monaco-editor/react'
 import loader from '@monaco-editor/loader'
 import { Icon } from '@iconify/react'
 import { useEditor } from '@/context/editor-context'
+import { useTheme } from '@/context/theme-context'
 import { registerEditorTheme } from '@/lib/monaco-theme'
 import { InlineEdit } from '@/components/inline-edit'
 import { MarkdownPreview } from '@/components/markdown-preview'
@@ -13,7 +14,9 @@ import { VimCheatsheet } from '@/components/vim-cheatsheet'
 
 export function CodeEditor() {
   const { files, activeFile, updateFileContent } = useEditor()
+  const { version: themeVersion } = useTheme()
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
+  const monacoInstanceRef = useRef<Parameters<BeforeMount>[0] | null>(null)
   const [monacoReady, setMonacoReady] = useState(false)
   const [vimEnabled, setVimEnabled] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -51,6 +54,7 @@ export function CodeEditor() {
   const file = files.find(f => f.path === activeFile)
 
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    monacoInstanceRef.current = monaco
     monaco.languages.typescript?.typescriptDefaults?.setCompilerOptions({
       jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
       allowNonTsExtensions: true,
@@ -62,7 +66,6 @@ export function CodeEditor() {
       allowNonTsExtensions: true,
       target: monaco.languages.typescript.ScriptTarget.ES2022,
     })
-    // Disable red squiggly lines — Monaco has no tsconfig/types context
     monaco.languages.typescript?.typescriptDefaults?.setDiagnosticsOptions({
       noSemanticValidation: true,
       noSyntaxValidation: false,
@@ -71,9 +74,20 @@ export function CodeEditor() {
       noSemanticValidation: true,
       noSyntaxValidation: false,
     })
-    // Register custom theme matching our CSS variables
     registerEditorTheme(monaco)
   }, [])
+
+  // Re-register + reapply Monaco theme when theme context changes
+  useEffect(() => {
+    const monaco = monacoInstanceRef.current
+    if (!monaco) return
+    // Small delay so CSS vars have flushed after DOM class/attr change
+    const id = requestAnimationFrame(() => {
+      registerEditorTheme(monaco)
+      monaco.editor.setTheme('code-editor')
+    })
+    return () => cancelAnimationFrame(id)
+  }, [themeVersion])
 
   const handleMount: OnMount = useCallback((editor) => {
     editorRef.current = editor

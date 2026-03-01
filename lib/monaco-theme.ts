@@ -1,6 +1,6 @@
 /**
  * Custom Monaco theme that reads CSS custom properties from the current theme.
- * Called in beforeMount to register the theme before any editor renders.
+ * Supports both light and dark modes dynamically.
  */
 
 import type { editor } from 'monaco-editor'
@@ -34,45 +34,78 @@ function toMonacoTokenHex(color: string, fallback: string): string {
   return fallbackNormalized
 }
 
+function isDarkMode(): boolean {
+  if (typeof document === 'undefined') return true
+  return document.documentElement.classList.contains('dark')
+}
+
 export function registerEditorTheme(monaco: { editor: typeof editor }) {
-  const bg = getCSSVar('--bg', '#0a0a0a')
-  const bgSubtle = getCSSVar('--bg-subtle', '#141414')
-  const bgElevated = getCSSVar('--bg-elevated', '#111111')
-  const border = getCSSVar('--border', '#222222')
-  const fg = getCSSVar('--text-primary', '#e5e5e5')
-  const fgSecondary = getCSSVar('--text-secondary', '#999999')
-  const fgTertiary = getCSSVar('--text-tertiary', '#666666')
+  const dark = isDarkMode()
+  const bg = getCSSVar('--bg', dark ? '#0a0a0a' : '#fafafa')
+  const bgSubtle = getCSSVar('--bg-subtle', dark ? '#141414' : '#f5f5f5')
+  const bgElevated = getCSSVar('--bg-elevated', dark ? '#111111' : '#ffffff')
+  const border = getCSSVar('--border', dark ? '#222222' : '#e5e5e5')
+  const fg = getCSSVar('--text-primary', dark ? '#e5e5e5' : '#171717')
+  const fgSecondary = getCSSVar('--text-secondary', dark ? '#999999' : '#525252')
+  const fgTertiary = getCSSVar('--text-tertiary', dark ? '#666666' : '#a3a3a3')
   const brand = getCSSVar('--brand', '#ca3a29')
-  const additions = getCSSVar('--color-additions', '#22c55e')
-  const deletions = getCSSVar('--color-deletions', '#ef4444')
+  const additions = getCSSVar('--color-additions', dark ? '#22c55e' : '#16a34a')
+  const deletions = getCSSVar('--color-deletions', dark ? '#ef4444' : '#dc2626')
+
+  const lightTokens: editor.ITokenThemeRule[] = [
+    { token: 'comment', foreground: toMonacoTokenHex(fgTertiary, 'a3a3a3'), fontStyle: 'italic' },
+    { token: 'keyword', foreground: '7c3aed' },
+    { token: 'keyword.control', foreground: '7c3aed' },
+    { token: 'storage', foreground: '7c3aed' },
+    { token: 'string', foreground: '16a34a' },
+    { token: 'string.escape', foreground: '15803d' },
+    { token: 'number', foreground: 'b45309' },
+    { token: 'regexp', foreground: 'dc2626' },
+    { token: 'type', foreground: '0891b2' },
+    { token: 'type.identifier', foreground: '0891b2' },
+    { token: 'class', foreground: '0891b2' },
+    { token: 'interface', foreground: '0891b2' },
+    { token: 'function', foreground: '2563eb' },
+    { token: 'function.call', foreground: '2563eb' },
+    { token: 'variable', foreground: toMonacoTokenHex(fg, '171717') },
+    { token: 'variable.predefined', foreground: 'dc2626' },
+    { token: 'constant', foreground: 'b45309' },
+    { token: 'tag', foreground: 'dc2626' },
+    { token: 'attribute.name', foreground: '7c3aed' },
+    { token: 'attribute.value', foreground: '16a34a' },
+    { token: 'delimiter', foreground: toMonacoTokenHex(fgSecondary, '525252') },
+    { token: 'operator', foreground: toMonacoTokenHex(fgSecondary, '525252') },
+  ]
+
+  const darkTokens: editor.ITokenThemeRule[] = [
+    { token: 'comment', foreground: toMonacoTokenHex(fgTertiary, '666666'), fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'c084fc' },
+    { token: 'keyword.control', foreground: 'c084fc' },
+    { token: 'storage', foreground: 'c084fc' },
+    { token: 'string', foreground: '86efac' },
+    { token: 'string.escape', foreground: '6ee7b7' },
+    { token: 'number', foreground: 'fbbf24' },
+    { token: 'regexp', foreground: 'f87171' },
+    { token: 'type', foreground: '67e8f9' },
+    { token: 'type.identifier', foreground: '67e8f9' },
+    { token: 'class', foreground: '67e8f9' },
+    { token: 'interface', foreground: '67e8f9' },
+    { token: 'function', foreground: '93c5fd' },
+    { token: 'function.call', foreground: '93c5fd' },
+    { token: 'variable', foreground: toMonacoTokenHex(fg, 'e5e5e5') },
+    { token: 'variable.predefined', foreground: 'fca5a5' },
+    { token: 'constant', foreground: 'fbbf24' },
+    { token: 'tag', foreground: 'f87171' },
+    { token: 'attribute.name', foreground: 'c084fc' },
+    { token: 'attribute.value', foreground: '86efac' },
+    { token: 'delimiter', foreground: toMonacoTokenHex(fgSecondary, '999999') },
+    { token: 'operator', foreground: toMonacoTokenHex(fgSecondary, '999999') },
+  ]
 
   monaco.editor.defineTheme('code-editor', {
-    base: 'vs-dark',
+    base: dark ? 'vs-dark' : 'vs',
     inherit: true,
-    rules: [
-      { token: 'comment', foreground: toMonacoTokenHex(fgTertiary, '666666'), fontStyle: 'italic' },
-      { token: 'keyword', foreground: 'c084fc' },           // purple-400
-      { token: 'keyword.control', foreground: 'c084fc' },
-      { token: 'storage', foreground: 'c084fc' },
-      { token: 'string', foreground: '86efac' },             // green-300
-      { token: 'string.escape', foreground: '6ee7b7' },
-      { token: 'number', foreground: 'fbbf24' },             // amber-400
-      { token: 'regexp', foreground: 'f87171' },             // red-400
-      { token: 'type', foreground: '67e8f9' },               // cyan-300
-      { token: 'type.identifier', foreground: '67e8f9' },
-      { token: 'class', foreground: '67e8f9' },
-      { token: 'interface', foreground: '67e8f9' },
-      { token: 'function', foreground: '93c5fd' },           // blue-300
-      { token: 'function.call', foreground: '93c5fd' },
-      { token: 'variable', foreground: toMonacoTokenHex(fg, 'e5e5e5') },
-      { token: 'variable.predefined', foreground: 'fca5a5' },// red-300
-      { token: 'constant', foreground: 'fbbf24' },
-      { token: 'tag', foreground: 'f87171' },                // red-400 (HTML/JSX)
-      { token: 'attribute.name', foreground: 'c084fc' },
-      { token: 'attribute.value', foreground: '86efac' },
-      { token: 'delimiter', foreground: toMonacoTokenHex(fgSecondary, '999999') },
-      { token: 'operator', foreground: toMonacoTokenHex(fgSecondary, '999999') },
-    ],
+    rules: dark ? darkTokens : lightTokens,
     colors: {
       'editor.background': bg,
       'editor.foreground': fg,
