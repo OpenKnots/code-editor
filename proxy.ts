@@ -108,6 +108,7 @@ const workosMiddleware = authkitMiddleware({
       '/download',
       '/callback',
       '/api/download',
+      '/api/github/:path*',
     ],
   },
 })

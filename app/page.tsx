@@ -76,21 +76,21 @@ function toDataUrl(base64: string, mimeType: string): string {
   return `data:${mimeType};base64,${base64.replace(/\n/g, '')}`
 }
 
-// ─── Sponsor Gate ───────────────────────────────────────────────
+// ─── Access Gate ────────────────────────────────────────────────
 
-type SponsorStatus =
+type AccessStatus =
   | { state: 'loading' }
-  | { state: 'ok'; tier: string }
-  | { state: 'error'; code: string; message: string; sponsorUrl?: string }
+  | { state: 'ok' }
+  | { state: 'error'; message: string }
 
 function SponsorGate({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, signOut } = useAuth()
-  const [sponsor, setSponsor] = useState<SponsorStatus>({ state: 'loading' })
+  const [access, setAccess] = useState<AccessStatus>({ state: 'loading' })
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (authLoading || !user) return
-    setSponsor({ state: 'loading' })
+    setAccess({ state: 'loading' })
 
     let cancelled = false
     ;(async () => {
@@ -98,27 +98,24 @@ function SponsorGate({ children }: { children: React.ReactNode }) {
         const res = await fetch('/api/check-sponsor')
         if (cancelled) return
         if (res.ok) {
-          const data = await res.json() as { tier?: string }
-          setSponsor({ state: 'ok', tier: data.tier ?? '' })
+          setAccess({ state: 'ok' })
         } else {
-          const data = await res.json() as { error?: string; message?: string; sponsor_url?: string }
-          setSponsor({
+          const data = await res.json() as { message?: string }
+          setAccess({
             state: 'error',
-            code: data.error ?? 'unknown',
-            message: data.message ?? 'Sponsorship verification failed.',
-            sponsorUrl: data.sponsor_url,
+            message: data.message ?? 'Access verification failed.',
           })
         }
       } catch {
         if (!cancelled) {
-          setSponsor({ state: 'error', code: 'network', message: 'Could not verify sponsorship. Please try again.' })
+          setAccess({ state: 'error', message: 'Could not verify access. Please try again.' })
         }
       }
     })()
     return () => { cancelled = true }
   }, [user, authLoading, retryCount])
 
-  if (authLoading || sponsor.state === 'loading') {
+  if (authLoading || access.state === 'loading') {
     return (
       <div className="h-full flex items-center justify-center bg-[var(--bg)]">
         <div className="flex items-center gap-3 text-[var(--text-tertiary)]">
@@ -142,10 +139,7 @@ function SponsorGate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (sponsor.state === 'error') {
-    const isGitHubMissing = sponsor.code === 'github_username_required'
-    const isNotSponsored = sponsor.code === 'not_sponsored' || sponsor.code === 'tier_too_low'
-
+  if (access?.state === 'error') {
     return (
       <div className="h-full overflow-hidden flex items-center justify-center px-4 bg-[var(--bg)]">
         <div className="w-full max-w-[420px] space-y-5 animate-fade-in-up">
@@ -154,42 +148,24 @@ function SponsorGate({ children }: { children: React.ReactNode }) {
 
             <div className="text-center mb-6">
               <div className="relative w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center bg-gradient-to-br from-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_80%,#000)] shadow-lg">
-                <Icon icon={isGitHubMissing ? 'lucide:github' : 'lucide:heart'} width={22} height={22} className="text-white" />
+                <Icon icon="lucide:lock" width={22} height={22} className="text-white" />
                 <div className="absolute -inset-1 rounded-xl bg-[var(--brand)] opacity-15 blur-md" />
               </div>
 
               <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
-                {isGitHubMissing ? 'GitHub Account Required' : isNotSponsored ? 'Sponsorship Required' : 'Access Error'}
+                Pro Access Required
               </h1>
               <p className="text-sm mt-2 text-[var(--text-tertiary)] leading-relaxed">
-                {sponsor.message}
+                {access.message}
               </p>
             </div>
 
             <div className="space-y-3">
-              {isGitHubMissing && (
-                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed text-center">
-                  Please sign in using your GitHub account so we can verify your sponsorship.
-                </p>
-              )}
-
-              {sponsor.sponsorUrl && (
-                <a
-                  href={sponsor.sponsorUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-medium transition-all bg-[var(--brand)] text-white hover:opacity-90"
-                >
-                  <Icon icon="lucide:heart" width={14} height={14} />
-                  Sponsor on GitHub
-                </a>
-              )}
-
               <button
                 onClick={() => setRetryCount(c => c + 1)}
                 className="w-full py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer border border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
               >
-                Retry Verification
+                Retry
               </button>
 
               <button

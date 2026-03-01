@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withAuth } from '@workos-inc/authkit-nextjs'
+import { withAuth, getWorkOS } from '@workos-inc/authkit-nextjs'
 
 export async function GET() {
   const { user } = await withAuth()
@@ -8,7 +8,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  const plan = (user.metadata as Record<string, string>)?.KnotCode
+  const fullUser = await getWorkOS().userManagement.getUser(user.id)
+  const plan = fullUser.metadata?.KnotCode
 
   if (plan !== 'pro') {
     return NextResponse.json(

@@ -27,7 +27,7 @@ export default function DownloadPage() {
     }
 
     try {
-      const res = await fetch('https://github.com/login/device/code', {
+      const res = await fetch('/api/github/device-code', {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, scope: 'read:user' }),
@@ -64,7 +64,7 @@ export default function DownloadPage() {
         if (cancelled) break
 
         try {
-          const res = await fetch('https://github.com/login/oauth/access_token', {
+          const res = await fetch('/api/github/access-token', {
             method: 'POST',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify({
