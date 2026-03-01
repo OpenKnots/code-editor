@@ -257,7 +257,7 @@ function TerminalPane({
               <Icon icon="lucide:plus" width={14} height={14} />
             </button>
             <button
-              onClick={() => createTerminal('Gateway Engine', 'openclaw gateway logs')}
+              onClick={() => createTerminal('Gateway Engine', 'openclaw logs')}
               className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--brand)] transition-colors shrink-0"
               title="Open Gateway Engine logs"
             >

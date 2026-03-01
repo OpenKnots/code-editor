@@ -180,7 +180,7 @@ openclaw gateway restart
 
 4. **Model quota exceeded:** If using a rate-limited model, the gateway may silently fail. Check gateway logs:
    ```bash
-   openclaw gateway logs
+   openclaw logs
    ```
 
 ---
