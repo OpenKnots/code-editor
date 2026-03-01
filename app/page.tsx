@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useRepo } from '@/context/repo-context'
@@ -10,21 +11,22 @@ import { GitHubAuthBadge } from '@/components/github-auth'
 import { FileExplorer } from '@/components/file-explorer'
 import { EditorTabs } from '@/components/editor-tabs'
 import { CodeEditor } from '@/components/code-editor'
-import { AgentPanel } from '@/components/agent-panel'
+const AgentPanel = dynamic(() => import('@/components/agent-panel').then(m => m.AgentPanel), { ssr: false })
 import { SourceSwitcher, SourceModeIndicator } from '@/components/source-switcher'
 import { ActivityBar } from '@/components/activity-bar'
 import { ResizeHandle } from '@/components/resize-handle'
 import { ThemeSwitcher } from '@/components/theme-switcher'
-import { QuickOpen } from '@/components/quick-open'
-import { ShortcutsOverlay } from '@/components/shortcuts-overlay'
-import { CommandPalette, type CommandId } from '@/components/command-palette'
+const QuickOpen = dynamic(() => import('@/components/quick-open').then(m => m.QuickOpen), { ssr: false })
+const ShortcutsOverlay = dynamic(() => import('@/components/shortcuts-overlay').then(m => m.ShortcutsOverlay), { ssr: false })
+import type { CommandId } from '@/components/command-palette'
+const CommandPalette = dynamic(() => import('@/components/command-palette').then(m => m.CommandPalette), { ssr: false })
 import { fetchFileContentsByName as fetchFileContents, createOrUpdateFileByName as createOrUpdateFile, commitFilesByName as commitFiles } from '@/lib/github-api'
-import { TerminalPanel } from '@/components/terminal-panel'
+const TerminalPanel = dynamic(() => import('@/components/terminal-panel').then(m => m.TerminalPanel), { ssr: false })
 import { isTauri } from '@/lib/tauri'
-import { ChangesPanel } from '@/components/changes-panel'
+const ChangesPanel = dynamic(() => import('@/components/changes-panel').then(m => m.ChangesPanel), { ssr: false })
 import { GatewayConnectBanner, GatewayConnectPopover } from '@/components/gateway-connect'
-import Landing from '@/components/landing'
-import { EnginePanel } from '@/components/engine-panel'
+const Landing = dynamic(() => import('@/components/landing'), { ssr: false })
+const EnginePanel = dynamic(() => import('@/components/engine-panel').then(m => m.EnginePanel), { ssr: false })
 
 const IMAGE_MIME_BY_EXT: Record<string, string> = {
   png: 'image/png',

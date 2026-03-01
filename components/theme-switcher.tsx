@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Icon } from '@iconify/react'
 import { useTheme, THEME_PRESETS, type ThemeMode } from '@/context/theme-context'
-import { ThemeStudio } from '@/components/theme-studio'
+import dynamic from 'next/dynamic'
+const ThemeStudio = dynamic(() => import('@/components/theme-studio').then(m => m.ThemeStudio), { ssr: false })
 
 const MODES: { id: ThemeMode; icon: string; label: string }[] = [
   { id: 'light', icon: 'lucide:sun', label: 'Light' },
