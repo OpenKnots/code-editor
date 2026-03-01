@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import { ModeSelector } from '@/components/mode-selector'
+import { ChatHome } from '@/components/chat-home'
+import { ChatHeader } from '@/components/chat-header'
 import type { AgentMode } from '@/components/mode-selector'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
@@ -956,21 +958,14 @@ export function AgentPanel() {
   }
 
   // ─── Render ───────────────────────────────────────────────────
+  const chatTitle = messages.find(m => m.role === 'user')?.content.slice(0, 50).replace(/\n/g, ' ') || null
+
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[var(--sidebar-bg)]">
-      {/* Brand accent bar */}
-      <div className="h-[2px] shrink-0 bg-gradient-to-r from-transparent via-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_50%,transparent)] opacity-70" />
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_4%,var(--sidebar-bg))] shrink-0">
-        <div className="flex items-center gap-2">
-          <Icon icon="lucide:sparkles" width={14} height={14} className="text-[var(--brand)]" />
-          <span className="text-[12px] font-semibold text-[var(--text-primary)]">Agent</span>
-          <span className="text-[10px] text-[var(--text-tertiary)]">&middot;</span>
-          <span className={`text-[10px] ${isConnected ? 'text-[var(--color-additions)]' : 'text-[var(--color-deletions)]'}`}>
-            {isConnected ? 'connected' : 'offline'}
-          </span>
-        </div>
-        {messages.length > 0 && (
+      <ChatHeader title={chatTitle ?? undefined} messageCount={messages.length} />
+      {messages.length > 0 && (
+        <div className="flex items-center justify-end px-3 py-1 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
           <button
             onClick={handleClear}
             className={`p-1 rounded text-[10px] transition-colors cursor-pointer ${
@@ -982,8 +977,8 @@ export function AgentPanel() {
           >
             <Icon icon={confirmClear ? 'lucide:alert-triangle' : 'lucide:eraser'} width={13} height={13} />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
@@ -992,35 +987,15 @@ export function AgentPanel() {
         )}
 
         {messages.length === 0 && isConnected && (
-          <div className="flex flex-col items-center justify-center text-center py-8">
-            <div className="relative mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[color-mix(in_srgb,var(--brand)_15%,transparent)] to-[color-mix(in_srgb,var(--brand)_5%,transparent)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] flex items-center justify-center">
-                <Icon icon="lucide:sparkles" width={22} height={22} className="text-[var(--brand)] animate-sparkle" />
-              </div>
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--sidebar-bg)] bg-[var(--color-additions)]" />
-            </div>
-            <p className="text-[13px] font-semibold text-[var(--text-primary)]">Coding Agent</p>
-            <p className="text-[11px] text-[var(--text-tertiary)] mt-1 max-w-[220px] leading-relaxed">
-              Full-stack expert. Edit, explain, refactor, or generate code.
-            </p>
-            <div className="flex flex-wrap gap-1.5 mt-4 justify-center">
-              {[
-                { cmd: '/edit', icon: 'lucide:pencil' },
-                { cmd: '/explain', icon: 'lucide:book-open' },
-                { cmd: '/refactor', icon: 'lucide:refresh-cw' },
-                { cmd: '/generate', icon: 'lucide:plus' },
-              ].map(({ cmd, icon }) => (
-                <button
-                  key={cmd}
-                  onClick={() => setInput(cmd + ' ')}
-                  className="flex items-center gap-1 text-[10px] font-mono px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--brand)] hover:text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_5%,transparent)] transition-all cursor-pointer"
-                >
-                  <Icon icon={icon} width={10} height={10} />
-                  {cmd}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChatHome
+            onSend={(text, mode) => {
+              setAgentMode(mode)
+              setInput(text)
+              setTimeout(() => { sendMessage() }, 50)
+            }}
+            onSelectFolder={() => window.dispatchEvent(new CustomEvent('open-folder'))}
+            onCloneRepo={() => window.dispatchEvent(new CustomEvent('open-folder'))}
+          />
         )}
 
         {messages.map(msg => (

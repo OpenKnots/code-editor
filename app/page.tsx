@@ -25,6 +25,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher'
 const QuickOpen = dynamic(() => import('@/components/quick-open').then(m => m.QuickOpen), { ssr: false })
 const ShortcutsOverlay = dynamic(() => import('@/components/shortcuts-overlay').then(m => m.ShortcutsOverlay), { ssr: false })
 import type { CommandId } from '@/components/command-palette'
+import { RepoPickerModal } from '@/components/repo-picker-modal'
 import { GlobalSearch } from '@/components/global-search'
 const CommandPalette = dynamic(() => import('@/components/command-palette').then(m => m.CommandPalette), { ssr: false })
 import { fetchFileContentsByName as fetchFileContents, createOrUpdateFileByName as createOrUpdateFile, commitFilesByName as commitFiles } from '@/lib/github-api'
@@ -110,6 +111,7 @@ function EditorLayout() {
   const [commandPaletteVisible, setCommandPaletteVisible] = useState(false)
   const [changesVisible, setChangesVisible] = useState(false)
   const [globalSearchVisible, setGlobalSearchVisible] = useState(false)
+  const [repoPickerVisible, setRepoPickerVisible] = useState(false)
   const [terminalVisible, setTerminalVisible] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState(260)
   const [engineVisible, setEngineVisible] = useState(false)
@@ -556,6 +558,26 @@ function EditorLayout() {
         onSelect={(path, sha) => {
           const event = new CustomEvent('file-select', { detail: { path, sha } })
           window.dispatchEvent(event)
+        }}
+      />
+
+      {/* Repo Picker Modal */}
+      <RepoPickerModal
+        open={repoPickerVisible}
+        onClose={() => setRepoPickerVisible(false)}
+        onSelectFolder={() => {
+          if (local.available) {
+            local.openFolder()
+          }
+          setRepoPickerVisible(false)
+        }}
+        onCloneUrl={(url) => {
+          // Parse GitHub URL to owner/repo
+          const match = url.match(/github\.com\/([^/]+\/[^/]+)/)
+          if (match) {
+            window.dispatchEvent(new CustomEvent('file-select', { detail: { path: match[1], sha: '' } }))
+          }
+          setRepoPickerVisible(false)
         }}
       />
 

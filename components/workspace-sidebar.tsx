@@ -207,13 +207,31 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-1 px-2.5 py-2 border-t border-[var(--border)] shrink-0">
-        <button className="p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Settings">
-          <Icon icon="lucide:settings" width={12} height={12} />
-        </button>
-        <button className="p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Help">
-          <Icon icon="lucide:circle-help" width={12} height={12} />
-        </button>
+      <div className="flex items-center justify-between px-2.5 py-2 border-t border-[var(--border)] shrink-0">
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '`', metaKey: true }))}
+            className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+            title="Terminal"
+          >
+            <Icon icon="lucide:terminal" width={13} height={13} />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true }))}
+            className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+            title="Toggle Explorer"
+          >
+            <Icon icon="lucide:panel-left" width={13} height={13} />
+          </button>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <button className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Help">
+            <Icon icon="lucide:circle-help" width={13} height={13} />
+          </button>
+          <button className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Settings">
+            <Icon icon="lucide:settings" width={13} height={13} />
+          </button>
+        </div>
       </div>
     </div>
   )
