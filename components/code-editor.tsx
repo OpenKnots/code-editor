@@ -7,6 +7,8 @@ import { Icon } from '@iconify/react'
 import { useEditor } from '@/context/editor-context'
 import { useTheme } from '@/context/theme-context'
 import { registerEditorTheme } from '@/lib/monaco-theme'
+import { useGateway } from '@/context/gateway-context'
+import { createInlineCompletionsProvider } from '@/lib/inline-completions'
 import { InlineEdit } from '@/components/inline-edit'
 import { MarkdownPreview } from '@/components/markdown-preview'
 import { MarkdownModeToggle, type MarkdownViewMode } from '@/components/markdown-mode-toggle'
@@ -14,6 +16,12 @@ import { VimCheatsheet } from '@/components/vim-cheatsheet'
 
 export function CodeEditor() {
   const { files, activeFile, updateFileContent } = useEditor()
+  const { sendRequest, status: gatewayStatus } = useGateway()
+  const [completionsEnabled, setCompletionsEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('code-editor:ai-completions') !== 'false'
+  })
+  const completionsDisposable = useRef<{ dispose: () => void } | null>(null)
   const { version: themeVersion } = useTheme()
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const monacoInstanceRef = useRef<Parameters<BeforeMount>[0] | null>(null)
@@ -21,6 +29,10 @@ export function CodeEditor() {
   const [vimEnabled, setVimEnabled] = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('code-editor:vim-mode') === 'true'
+  })
+  const [readOnly, setReadOnly] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('code-editor:read-only') === 'true'
   })
   const vimModeRef = useRef<{ dispose: () => void } | null>(null)
   const vimStatusRef = useRef<HTMLDivElement>(null)
@@ -93,6 +105,46 @@ export function CodeEditor() {
     editorRef.current = editor
     editor.focus()
   }, [])
+
+  // Register AI inline completions
+  useEffect(() => {
+    if (!monacoReady || !completionsEnabled || gatewayStatus !== 'connected') {
+      // Dispose if disabled
+      if (completionsDisposable.current) {
+        completionsDisposable.current.dispose()
+        completionsDisposable.current = null
+      }
+      return
+    }
+
+    let disposed = false
+    ;(async () => {
+      const monaco = await import('monaco-editor')
+      if (disposed) return
+
+      const provider = createInlineCompletionsProvider(
+        (method, params) => sendRequest(method, params) as Promise<unknown>
+      )
+
+      completionsDisposable.current = monaco.languages.registerInlineCompletionsProvider(
+        { pattern: '**' },
+        provider
+      )
+    })()
+
+    return () => {
+      disposed = true
+      if (completionsDisposable.current) {
+        completionsDisposable.current.dispose()
+        completionsDisposable.current = null
+      }
+    }
+  }, [monacoReady, completionsEnabled, gatewayStatus, sendRequest])
+
+  // Persist completions preference
+  useEffect(() => {
+    localStorage.setItem('code-editor:ai-completions', String(completionsEnabled))
+  }, [completionsEnabled])
 
   // ⌘⇧K: Inline edit at selection (global keyboard listener)
   useEffect(() => {
@@ -173,6 +225,11 @@ export function CodeEditor() {
   useEffect(() => {
     localStorage.setItem('code-editor:vim-mode', String(vimEnabled))
   }, [vimEnabled])
+
+  // Persist read-only preference
+  useEffect(() => {
+    localStorage.setItem('code-editor:read-only', String(readOnly))
+  }, [readOnly])
 
   // Command palette -> Monaco command bridge
   useEffect(() => {
@@ -295,6 +352,8 @@ export function CodeEditor() {
           tabSize: 2,
           wordWrap: 'on',
           automaticLayout: true,
+          readOnly,
+          domReadOnly: readOnly,
         }}
       />
     ) : (
@@ -356,6 +415,19 @@ export function CodeEditor() {
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* AI completions toggle */}
+          <button
+            onClick={() => setCompletionsEnabled(v => !v)}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors cursor-pointer ${
+              completionsEnabled
+                ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]'
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+            }`}
+            title={completionsEnabled ? 'AI completions: ON (Tab to accept)' : 'AI completions: OFF'}
+          >
+            <Icon icon="lucide:sparkles" width={11} height={11} />
+            {completionsEnabled ? 'AI' : 'AI'}
+          </button>
           {/* Save button */}
           {file.dirty && (
             <button
@@ -367,6 +439,42 @@ export function CodeEditor() {
               Save
             </button>
           )}
+          {/* Read-only toggle */}
+          <button
+            onClick={() => setReadOnly(v => !v)}
+            className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors cursor-pointer ${
+              readOnly
+                ? 'bg-[color-mix(in_srgb,var(--color-deletions)_12%,transparent)] text-[var(--color-deletions)] border border-[color-mix(in_srgb,var(--color-deletions)_30%,transparent)]'
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+            }`}
+            title={readOnly ? 'Read-only — click to edit' : 'Click to make read-only'}
+          >
+            <Icon icon={readOnly ? 'lucide:lock' : 'lucide:lock-open'} width={10} height={10} />
+            {readOnly ? 'RO' : 'RW'}
+          </button>
+          {/* Vim mode toggle + cheatsheet */}
+          <div className="flex items-center">
+            <button
+              onClick={() => setVimEnabled(v => !v)}
+              className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono transition-colors cursor-pointer ${
+                vimEnabled
+                  ? 'bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--brand)] border border-[color-mix(in_srgb,var(--brand)_30%,transparent)] rounded-l'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] rounded'
+              }`}
+              title={vimEnabled ? 'Disable Vim mode' : 'Enable Vim mode'}
+            >
+              VIM
+            </button>
+            {vimEnabled && (
+              <button
+                onClick={() => setVimCheatsheetOpen(true)}
+                className="px-1 py-0.5 rounded-r border border-l-0 border-[color-mix(in_srgb,var(--brand)_30%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_20%,transparent)] transition-colors cursor-pointer"
+                title="Vim Cheatsheet"
+              >
+                <Icon icon="lucide:help-circle" width={11} height={11} />
+              </button>
+            )}
+          </div>
           {isMarkdown && (
             <MarkdownModeToggle mode={markdownMode} onModeChange={setMarkdownMode} />
           )}

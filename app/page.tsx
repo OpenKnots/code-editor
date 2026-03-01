@@ -17,6 +17,7 @@ import { ShortcutsOverlay } from '@/components/shortcuts-overlay'
 import { CommandPalette, type CommandId } from '@/components/command-palette'
 import { fetchFileContents, createOrUpdateFile } from '@/lib/github-client'
 import { TerminalPanel } from '@/components/terminal-panel'
+import { ChangesPanel } from '@/components/changes-panel'
 import { EnginePanel } from '@/components/engine-panel'
 
 const STORAGE_REMEMBER = 'code-editor:remember'
@@ -263,6 +264,7 @@ function EditorLayout() {
   const [quickOpenVisible, setQuickOpenVisible] = useState(false)
   const [shortcutsVisible, setShortcutsVisible] = useState(false)
   const [commandPaletteVisible, setCommandPaletteVisible] = useState(false)
+  const [changesVisible, setChangesVisible] = useState(false)
   const [terminalVisible, setTerminalVisible] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState(260)
   const [engineVisible, setEngineVisible] = useState(false)
@@ -535,6 +537,33 @@ function EditorLayout() {
         onRun={handleRunCommand}
       />
 
+      {/* Changes Panel (pre-commit diff) */}
+      <ChangesPanel
+        open={changesVisible}
+        onClose={() => setChangesVisible(false)}
+        onCommit={async (message) => {
+          if (!repo) return
+          const dirtyFiles = files.filter(f => f.dirty)
+          if (dirtyFiles.length === 0) return
+          try {
+            const res = await fetch(`/api/github/repos/${repo.owner}/${repo.repo}/commit`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                branch: repo.branch,
+                message,
+                files: dirtyFiles.map(f => ({ path: f.path, content: f.content, sha: f.sha })),
+              }),
+            })
+            if (!res.ok) throw new Error(await res.text())
+            dirtyFiles.forEach(f => markClean(f.path))
+            setChangesVisible(false)
+          } catch (err) {
+            console.error('Commit failed:', err)
+          }
+        }}
+      />
+
       {/* Terminal Panel (⌘\`) */}
       <TerminalPanel
         visible={terminalVisible}
@@ -570,9 +599,13 @@ function EditorLayout() {
           {repo && <span className="font-mono">{repo.fullName}</span>}
           {repo && <span>{repo.branch}</span>}
           {dirtyCount > 0 && (
-            <span className="text-[var(--brand)]">
+            <button
+              onClick={() => setChangesVisible(true)}
+              className="text-[var(--brand)] hover:underline cursor-pointer"
+              title="Review changes before committing"
+            >
               {dirtyCount} modified
-            </span>
+            </button>
           )}
         </div>
         <div className="flex items-center gap-3">
