@@ -7,7 +7,7 @@ export interface OpenFile {
   content: string
   originalContent: string
   language: string
-  sha: string
+  sha?: string
   dirty: boolean
 }
 
@@ -15,7 +15,7 @@ interface EditorContextValue {
   files: OpenFile[]
   activeFile: string | null
   setActiveFile: (path: string | null) => void
-  openFile: (path: string, content: string, sha: string) => void
+  openFile: (path: string, content: string, sha?: string) => void
   closeFile: (path: string) => void
   updateFileContent: (path: string, content: string) => void
   markClean: (path: string) => void
@@ -42,7 +42,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [files, setFiles] = useState<OpenFile[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
 
-  const openFile = useCallback((path: string, content: string, sha: string) => {
+  const openFile = useCallback((path: string, content: string, sha?: string) => {
     setFiles(prev => {
       const existing = prev.find(f => f.path === path)
       if (existing) return prev
