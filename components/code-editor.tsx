@@ -40,6 +40,14 @@ export function CodeEditor() {
     }
   }, [activeFile, updateFileContent])
 
+  const fileIcon = file?.kind === 'image'
+    ? 'lucide:image'
+    : file?.kind === 'video'
+      ? 'lucide:video'
+      : file?.kind === 'audio'
+        ? 'lucide:music'
+      : 'lucide:file-code'
+
   if (!file) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center bg-[var(--bg)]">
@@ -63,16 +71,60 @@ export function CodeEditor() {
     <div className="flex-1 flex flex-col min-h-0">
       {/* File path bar */}
       <div className="flex items-center gap-2 px-3 py-1 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
-        <Icon icon="lucide:file-code" width={12} height={12} className="text-[var(--text-tertiary)]" />
+        <Icon icon={fileIcon} width={12} height={12} className="text-[var(--text-tertiary)]" />
         <span className="text-[10px] text-[var(--text-tertiary)] font-mono truncate">{file.path}</span>
         {file.dirty && (
           <span className="text-[9px] text-[var(--brand)] font-medium">modified</span>
         )}
       </div>
 
-      {/* Monaco */}
+      {/* Preview / Monaco */}
       <div className="flex-1 min-h-0">
-        {monacoReady ? (
+        {file.kind === 'image' ? (
+          <div className="h-full w-full flex items-center justify-center p-4 bg-[var(--bg-subtle)] overflow-auto">
+            {file.content ? (
+              <img
+                src={file.content}
+                alt={file.path.split('/').pop() ?? file.path}
+                className="max-w-full max-h-full object-contain rounded border border-[var(--border)] bg-[var(--bg)]"
+              />
+            ) : (
+              <div className="text-center text-[var(--text-tertiary)]">
+                <p className="text-[12px]">Image preview unavailable</p>
+              </div>
+            )}
+          </div>
+        ) : file.kind === 'video' ? (
+          <div className="h-full w-full flex items-center justify-center p-4 bg-[var(--bg-subtle)] overflow-auto">
+            {file.content ? (
+              <video
+                src={file.content}
+                controls
+                className="max-w-full max-h-full rounded border border-[var(--border)] bg-black"
+              />
+            ) : (
+              <div className="text-center text-[var(--text-tertiary)]">
+                <p className="text-[12px]">Video preview unavailable</p>
+              </div>
+            )}
+          </div>
+        ) : file.kind === 'audio' ? (
+          <div className="h-full w-full flex items-center justify-center p-4 bg-[var(--bg-subtle)] overflow-auto">
+            {file.content ? (
+              <div className="w-full max-w-[720px] rounded border border-[var(--border)] bg-[var(--bg)] p-4">
+                <div className="flex items-center gap-2 mb-3 text-[var(--text-secondary)]">
+                  <Icon icon="lucide:music-2" width={14} height={14} />
+                  <span className="text-[12px] truncate">{file.path.split('/').pop() ?? file.path}</span>
+                </div>
+                <audio src={file.content} controls className="w-full" />
+              </div>
+            ) : (
+              <div className="text-center text-[var(--text-tertiary)]">
+                <p className="text-[12px]">Audio preview unavailable</p>
+              </div>
+            )}
+          </div>
+        ) : monacoReady ? (
           <Editor
             key={file.path}
             height="100%"

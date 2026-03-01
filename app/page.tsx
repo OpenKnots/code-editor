@@ -15,6 +15,57 @@ import { ThemeSwitcher } from '@/components/theme-switcher'
 
 const STORAGE_REMEMBER = 'code-editor:remember'
 
+const IMAGE_MIME_BY_EXT: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  svg: 'image/svg+xml',
+  avif: 'image/avif',
+  ico: 'image/x-icon',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+}
+
+const VIDEO_MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogv: 'video/ogg',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+}
+
+const AUDIO_MIME_BY_EXT: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  flac: 'audio/flac',
+  opus: 'audio/opus',
+}
+
+function getMediaMeta(path: string): { kind: 'image' | 'video' | 'audio'; mimeType: string } | null {
+  const ext = path.split('.').pop()?.toLowerCase() ?? ''
+  const imageMime = IMAGE_MIME_BY_EXT[ext]
+  if (imageMime) return { kind: 'image', mimeType: imageMime }
+  const videoMime = VIDEO_MIME_BY_EXT[ext]
+  if (videoMime) return { kind: 'video', mimeType: videoMime }
+  const audioMime = AUDIO_MIME_BY_EXT[ext]
+  if (audioMime) return { kind: 'audio', mimeType: audioMime }
+  return null
+}
+
+function toDataUrl(base64: string, mimeType: string): string {
+  return `data:${mimeType};base64,${base64.replace(/\n/g, '')}`
+}
+
 function decodeBase64Utf8(input: string): string {
   const normalized = input.replace(/\n/g, '')
   const binary = atob(normalized)
@@ -221,10 +272,20 @@ function EditorLayout() {
         const res = await fetch(`/api/github/repos/${repo.owner}/${repo.repo}/contents/${path}`)
         if (!res.ok) throw new Error('Failed to fetch file')
         const data = await res.json()
-        const content = data.content
-          ? decodeBase64Utf8(data.content)
-          : data.text ?? ''
-        openFile(path, content, data.sha ?? sha)
+        const media = getMediaMeta(path)
+
+        if (media) {
+          const content = typeof data.content === 'string' && data.content.length > 0
+            ? toDataUrl(data.content, media.mimeType)
+            : typeof data.download_url === 'string' && data.download_url.length > 0
+              ? data.download_url
+              : ''
+          openFile(path, content, data.sha ?? sha, media)
+          return
+        }
+
+        const content = data.content ? decodeBase64Utf8(data.content) : data.text ?? ''
+        openFile(path, content, data.sha ?? sha, { kind: 'text' })
       } catch (err) {
         console.error('Failed to open file:', err)
       }
