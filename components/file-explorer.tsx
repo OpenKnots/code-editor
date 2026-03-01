@@ -185,7 +185,7 @@ export function FileExplorer() {
     return buildTree(matches)
   }, [effectiveTree, treeNodes, search])
 
-  if (!repo) {
+  if (!repo && !local.localMode) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-[var(--sidebar-bg)]">
         <Icon icon="lucide:folder-open" width={32} height={32} className="text-[var(--text-tertiary)] mb-3" />

@@ -21,6 +21,7 @@ import { CommandPalette, type CommandId } from '@/components/command-palette'
 import { fetchFileContents, createOrUpdateFile, commitFiles } from '@/lib/github-client'
 import { TerminalPanel } from '@/components/terminal-panel'
 import { ChangesPanel } from '@/components/changes-panel'
+import Landing from '@/components/landing'
 import { EnginePanel } from '@/components/engine-panel'
 
 const STORAGE_REMEMBER = 'code-editor:remember'
@@ -329,6 +330,9 @@ function EditorLayout() {
           case 'toggle-terminal':
             setTerminalVisible(v => !v)
             break
+          case 'toggle-engine':
+            setEngineVisible(v => !v)
+            break
           case 'quick-open':
             setQuickOpenVisible(v => !v)
             break
@@ -457,6 +461,8 @@ function EditorLayout() {
       }
       // ⌘` toggle terminal
       if ((e.metaKey || e.ctrlKey) && e.key === '`') { e.preventDefault(); setTerminalVisible(v => !v); return }
+      // ⌘⇧E toggle Gateway Engine
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'e') { e.preventDefault(); setEngineVisible(v => !v); return }
       // ? key (not in input)
       if (e.key === '?' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault()
@@ -719,7 +725,7 @@ function EditorLayout() {
             onClick={() => setEngineVisible(v => !v)}
             className={`flex items-center gap-1 cursor-pointer hover:text-[var(--text-secondary)] transition-colors ${engineVisible ? 'text-[var(--brand)]' : ''
               }`}
-            title="Toggle Gateway Engine"
+            title="Toggle Gateway Engine (⌘⇧E)"
           >
             <Icon icon="lucide:cpu" width={10} height={10} />
             <span>Gateway Engine</span>
@@ -737,9 +743,11 @@ function EditorLayout() {
 export default function EditorPage() {
   const { status } = useGateway()
   const local = useLocal()
+  const [showLogin, setShowLogin] = useState(false)
 
   if (status !== 'connected') {
-    return <GatewayLogin />
+    if (showLogin) return <GatewayLogin />
+    return <Landing onEnter={() => setShowLogin(true)} />
   }
 
   return <EditorLayout />

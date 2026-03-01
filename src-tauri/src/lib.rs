@@ -74,6 +74,10 @@ pub fn run() {
                 .id("view_terminal")
                 .accelerator("CmdOrCtrl+`")
                 .build(app)?;
+            let toggle_engine = MenuItemBuilder::new("Toggle Gateway Engine")
+                .id("view_engine")
+                .accelerator("CmdOrCtrl+Shift+E")
+                .build(app)?;
             let quick_open = MenuItemBuilder::new("Quick Open")
                 .id("view_quick_open")
                 .accelerator("CmdOrCtrl+P")
@@ -96,6 +100,7 @@ pub fn run() {
                 .item(&toggle_explorer)
                 .item(&toggle_agent)
                 .item(&toggle_terminal)
+                .item(&toggle_engine)
                 .separator()
                 .item(&quick_open)
                 .separator()
@@ -147,6 +152,7 @@ pub fn run() {
                         "view_explorer" => { let _ = win.emit("menu-action", "toggle-explorer"); }
                         "view_agent" => { let _ = win.emit("menu-action", "toggle-agent"); }
                         "view_terminal" => { let _ = win.emit("menu-action", "toggle-terminal"); }
+                        "view_engine" => { let _ = win.emit("menu-action", "toggle-engine"); }
                         "view_quick_open" => { let _ = win.emit("menu-action", "quick-open"); }
                         "view_zoom_in" => { let _ = win.eval("document.body.style.zoom = String(parseFloat(getComputedStyle(document.body).zoom || '1') + 0.1)"); }
                         "view_zoom_out" => { let _ = win.eval("document.body.style.zoom = String(Math.max(0.5, parseFloat(getComputedStyle(document.body).zoom || '1') - 0.1))"); }

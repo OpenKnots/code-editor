@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Icon } from '@iconify/react'
 import { isTauri, tauriInvoke, tauriListen } from '@/lib/tauri'
 import { useTheme } from '@/context/theme-context'
+import { useLocal } from '@/context/local-context'
 import '@xterm/xterm/css/xterm.css'
 
 interface TerminalTab {
@@ -57,6 +58,7 @@ interface TerminalPaneProps {
   showSplitButton: boolean
   onSplit: () => void
   onClose?: () => void
+  cwd?: string | null
 }
 
 function TerminalPane({
@@ -67,6 +69,7 @@ function TerminalPane({
   showSplitButton,
   onSplit,
   onClose,
+  cwd,
 }: TerminalPaneProps) {
   const [tabs, setTabs] = useState<TerminalTab[]>([])
   const [activeTab, setActiveTab] = useState<number | null>(null)
@@ -97,7 +100,7 @@ function TerminalPane({
     if (!isDesktop) return
     try {
       setTerminalError(null)
-      const id = await tauriInvoke<number>('create_terminal', { cols: 80, rows: 24 })
+      const id = await tauriInvoke<number>('create_terminal', { cols: 80, rows: 24, cwd: cwd ?? undefined })
       if (id == null) {
         setTerminalError('Terminal is unavailable outside the desktop runtime.')
         return
@@ -113,7 +116,7 @@ function TerminalPane({
     } catch (err) {
       setTerminalError(err instanceof Error ? err.message : 'Failed to create terminal session')
     }
-  }, [isDesktop])
+  }, [isDesktop, cwd])
 
   // Initialize xterm (once per pane mount)
   useEffect(() => {
@@ -321,6 +324,7 @@ function TerminalPane({
 
 export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanelProps) {
   const { version: themeVersion } = useTheme()
+  const local = useLocal()
   const [splitEnabled, setSplitEnabled] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const resizing = useRef(false)
@@ -375,6 +379,7 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
           themeVersion={themeVersion}
           showSplitButton={!splitEnabled}
           onSplit={() => setSplitEnabled(true)}
+          cwd={local.localMode ? local.rootPath : null}
         />
 
         {splitEnabled && (
@@ -388,6 +393,7 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
               showSplitButton={false}
               onSplit={() => {}}
               onClose={() => setSplitEnabled(false)}
+              cwd={local.localMode ? local.rootPath : null}
             />
           </>
         )}

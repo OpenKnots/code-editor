@@ -16,6 +16,8 @@ const SECTIONS = [
       { keys: ['⌘', 'P'], desc: 'Quick file open' },
       { keys: ['⌘', 'B'], desc: 'Toggle file explorer' },
       { keys: ['⌘', 'J'], desc: 'Toggle agent panel' },
+      { keys: ['⌘', '`'], desc: 'Toggle terminal' },
+      { keys: ['⌘', '⇧', 'E'], desc: 'Toggle Gateway Engine' },
       { keys: ['?'], desc: 'This shortcuts overlay' },
     ],
   },
