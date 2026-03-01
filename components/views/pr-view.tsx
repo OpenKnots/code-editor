@@ -1,190 +1,899 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Icon } from '@iconify/react'
 import { useRepo } from '@/context/repo-context'
 import { useView } from '@/context/view-context'
-import { authHeaders } from '@/lib/github-api'
+import {
+  fetchPullRequests,
+  fetchPullRequest,
+  fetchPullRequestFiles,
+  createPullRequest,
+  mergePullRequest,
+  fetchBranchesByName,
+  type PullRequestSummary,
+  type PullRequestFile,
+} from '@/lib/github-api'
 
-interface PR {
-  number: number
-  title: string
-  author: string
-  state: string
-  draft: boolean
-  createdAt: string
-  updatedAt: string
-  labels: string[]
-  reviewDecision?: string
-  additions: number
-  deletions: number
-  changedFiles: number
-  headRef: string
-  baseRef: string
-  url: string
+type RightPanel = 'empty' | 'detail' | 'create'
+type MergeMethod = 'merge' | 'squash' | 'rebase'
+
+function timeAgo(dateStr: string): string {
+  const s = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`
+  return new Date(dateStr).toLocaleDateString()
+}
+
+function statusIcon(pr: PullRequestSummary): { icon: string; color: string } {
+  if (pr.merged) return { icon: 'lucide:git-merge', color: 'text-[var(--color-merged,#8b5cf6)]' }
+  if (pr.draft) return { icon: 'lucide:git-pull-request-draft', color: 'text-[var(--text-tertiary)]' }
+  if (pr.state === 'closed') return { icon: 'lucide:git-pull-request-closed', color: 'text-[var(--color-deletions)]' }
+  return { icon: 'lucide:git-pull-request', color: 'text-[var(--color-additions)]' }
+}
+
+type MediaKind = 'image' | 'video' | 'audio' | null
+
+function detectMedia(filename: string): MediaKind {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico'].includes(ext)) return 'image'
+  if (['mp4', 'webm', 'ogv', 'mov', 'm4v'].includes(ext)) return 'video'
+  if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus'].includes(ext)) return 'audio'
+  return null
+}
+
+function MediaPreview({ filename, url }: { filename: string; url?: string }) {
+  const kind = detectMedia(filename)
+  const name = filename.split('/').pop() ?? filename
+
+  if (!url) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-6 bg-[var(--bg-subtle)]">
+        <div className="text-center text-[var(--text-tertiary)]">
+          <Icon icon={kind === 'image' ? 'lucide:image' : kind === 'video' ? 'lucide:video' : 'lucide:music'} width={32} height={32} className="mx-auto mb-2 opacity-40" />
+          <p className="text-[12px] font-medium">{name}</p>
+          <p className="text-[10px] text-[var(--text-disabled)] mt-1">Preview unavailable</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (kind === 'image') {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-6 bg-[var(--bg-subtle)] overflow-auto">
+        <div className="flex flex-col items-center gap-3">
+          <img
+            src={url}
+            alt={name}
+            className="max-w-full max-h-[60vh] object-contain rounded-lg border border-[var(--border)] bg-[var(--bg)] shadow-sm"
+          />
+          <span className="text-[10px] text-[var(--text-disabled)] font-mono">{name}</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (kind === 'video') {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-6 bg-[var(--bg-subtle)] overflow-auto">
+        <div className="flex flex-col items-center gap-3 w-full max-w-[720px]">
+          <video
+            src={url}
+            controls
+            className="max-w-full max-h-[60vh] rounded-lg border border-[var(--border)] bg-black shadow-sm"
+          />
+          <span className="text-[10px] text-[var(--text-disabled)] font-mono">{name}</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (kind === 'audio') {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-6 bg-[var(--bg-subtle)] overflow-auto">
+        <div className="w-full max-w-[480px] rounded-lg border border-[var(--border)] bg-[var(--bg)] p-5 shadow-sm">
+          <div className="flex items-center gap-2.5 mb-4 text-[var(--text-secondary)]">
+            <div className="w-8 h-8 rounded-lg bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] flex items-center justify-center">
+              <Icon icon="lucide:music-2" width={16} height={16} className="text-[var(--brand)]" />
+            </div>
+            <span className="text-[12px] font-medium truncate">{name}</span>
+          </div>
+          <audio src={url} controls className="w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function statusBadge(pr: PullRequestSummary): { label: string; bg: string; fg: string } {
+  if (pr.merged) return {
+    label: 'Merged',
+    bg: 'bg-[color-mix(in_srgb,var(--color-merged,#8b5cf6)_12%,transparent)]',
+    fg: 'text-[var(--color-merged,#8b5cf6)]',
+  }
+  if (pr.draft) return {
+    label: 'Draft',
+    bg: 'bg-[var(--bg-subtle)]',
+    fg: 'text-[var(--text-tertiary)]',
+  }
+  if (pr.state === 'closed') return {
+    label: 'Closed',
+    bg: 'bg-[color-mix(in_srgb,var(--color-deletions)_12%,transparent)]',
+    fg: 'text-[var(--color-deletions)]',
+  }
+  return {
+    label: 'Open',
+    bg: 'bg-[color-mix(in_srgb,var(--color-additions)_12%,transparent)]',
+    fg: 'text-[var(--color-additions)]',
+  }
 }
 
 export function PrView() {
   const { repo } = useRepo()
   const { goBack } = useView()
-  const [prs, setPrs] = useState<PR[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedPr, setSelectedPr] = useState<PR | null>(null)
-  const [prFiles, setPrFiles] = useState<Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string }>>([])
-  const [activeFile, setActiveFile] = useState<{ filename: string; patch?: string } | null>(null)
-  const [filter, setFilter] = useState<'open' | 'closed' | 'all'>('open')
 
+  const [prs, setPrs] = useState<PullRequestSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'open' | 'closed' | 'all'>('open')
+  const [search, setSearch] = useState('')
+
+  const [rightPanel, setRightPanel] = useState<RightPanel>('empty')
+  const [selectedPr, setSelectedPr] = useState<PullRequestSummary | null>(null)
+  const [prFiles, setPrFiles] = useState<PullRequestFile[]>([])
+  const [loadingFiles, setLoadingFiles] = useState(false)
+  const [activeFile, setActiveFile] = useState<PullRequestFile | null>(null)
+
+  // Merge state
+  const [merging, setMerging] = useState(false)
+  const [mergeMethod, setMergeMethod] = useState<MergeMethod>('squash')
+  const [showMergeMenu, setShowMergeMenu] = useState(false)
+  const [mergeError, setMergeError] = useState<string | null>(null)
+  const [mergeSuccess, setMergeSuccess] = useState(false)
+  const mergeMenuRef = useRef<HTMLDivElement>(null)
+
+  // Create PR state
+  const [branches, setBranches] = useState<string[]>([])
+  const [createHead, setCreateHead] = useState('')
+  const [createBase, setCreateBase] = useState('')
+  const [createTitle, setCreateTitle] = useState('')
+  const [createBody, setCreateBody] = useState('')
+  const [createDraft, setCreateDraft] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  const branchName = repo?.branch ?? 'main'
+
+  // Load PRs
   const loadPrs = useCallback(async () => {
     if (!repo) return
     setLoading(true)
     try {
-      const state = filter === 'all' ? 'all' : filter
-      const resp = await fetch(`https://api.github.com/repos/${repo.fullName}/pulls?state=${state}&per_page=30&sort=updated`, {
-        headers: { ...authHeaders(), Accept: 'application/vnd.github.v3+json' },
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        setPrs(data.map((p: any) => ({
-          number: p.number,
-          title: p.title,
-          author: p.user?.login ?? 'unknown',
-          state: p.state,
-          draft: p.draft,
-          createdAt: new Date(p.created_at).toLocaleDateString(),
-          updatedAt: new Date(p.updated_at).toLocaleDateString(),
-          labels: (p.labels || []).map((l: any) => l.name),
-          additions: p.additions ?? 0,
-          deletions: p.deletions ?? 0,
-          changedFiles: p.changed_files ?? 0,
-          headRef: p.head?.ref ?? '',
-          baseRef: p.base?.ref ?? '',
-          url: p.html_url,
-        })))
-      }
-    } catch {}
+      const data = await fetchPullRequests(repo.fullName, filter)
+      setPrs(data)
+    } catch (err) {
+      console.error('Failed to load PRs:', err)
+    }
     setLoading(false)
   }, [repo, filter])
 
   useEffect(() => { loadPrs() }, [loadPrs])
 
-  const loadPrFiles = useCallback(async (pr: PR) => {
-    setSelectedPr(pr); setPrFiles([]); setActiveFile(null)
-    try {
-      const resp = await fetch(`https://api.github.com/repos/${repo?.fullName}/pulls/${pr.number}/files?per_page=100`, {
-        headers: { ...authHeaders(), Accept: 'application/vnd.github.v3+json' },
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        setPrFiles(data.map((f: any) => ({ filename: f.filename, status: f.status, additions: f.additions, deletions: f.deletions, patch: f.patch })))
-      }
-    } catch {}
+  // Load branches for create form
+  useEffect(() => {
+    if (repo) {
+      fetchBranchesByName(repo.fullName)
+        .then(bs => setBranches(bs.map(b => b.name)))
+        .catch(() => {})
+    }
   }, [repo])
+
+  // Close merge menu on click outside
+  useEffect(() => {
+    if (!showMergeMenu) return
+    const handler = (e: MouseEvent) => {
+      if (mergeMenuRef.current && !mergeMenuRef.current.contains(e.target as Node)) {
+        setShowMergeMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showMergeMenu])
+
+  // Select a PR
+  const selectPr = useCallback(async (pr: PullRequestSummary) => {
+    setSelectedPr(pr)
+    setRightPanel('detail')
+    setActiveFile(null)
+    setMergeError(null)
+    setMergeSuccess(false)
+    setLoadingFiles(true)
+    try {
+      const [detail, files] = await Promise.all([
+        fetchPullRequest(repo!.fullName, pr.number),
+        fetchPullRequestFiles(repo!.fullName, pr.number),
+      ])
+      setSelectedPr(detail)
+      setPrFiles(files)
+    } catch (err) {
+      console.error('Failed to load PR detail:', err)
+    }
+    setLoadingFiles(false)
+  }, [repo])
+
+  // Create PR
+  const handleCreate = async () => {
+    if (!repo || !createTitle.trim() || !createHead || !createBase) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      const newPr = await createPullRequest(repo.fullName, createTitle.trim(), createBody, createHead, createBase, createDraft)
+      setCreateTitle('')
+      setCreateBody('')
+      setCreateDraft(false)
+      setRightPanel('detail')
+      setSelectedPr(newPr)
+      setPrFiles([])
+      loadPrs()
+      selectPr(newPr)
+    } catch (err: any) {
+      setCreateError(err?.message || 'Failed to create PR')
+    }
+    setCreating(false)
+  }
+
+  // Merge PR
+  const handleMerge = async () => {
+    if (!repo || !selectedPr) return
+    setMerging(true)
+    setMergeError(null)
+    try {
+      await mergePullRequest(repo.fullName, selectedPr.number, mergeMethod)
+      setMergeSuccess(true)
+      setSelectedPr({ ...selectedPr, merged: true, state: 'closed' })
+      loadPrs()
+    } catch (err: any) {
+      setMergeError(err?.message || 'Failed to merge')
+    }
+    setMerging(false)
+    setShowMergeMenu(false)
+  }
+
+  // Open create form
+  const openCreateForm = () => {
+    setRightPanel('create')
+    setSelectedPr(null)
+    setActiveFile(null)
+    setCreateHead(branchName)
+    setCreateBase(repo?.branch === branchName ? 'main' : (repo?.branch ?? 'main'))
+    setCreateTitle('')
+    setCreateBody('')
+    setCreateDraft(false)
+    setCreateError(null)
+  }
+
+  // Filtered PRs
+  const filteredPrs = useMemo(() => {
+    if (!search.trim()) return prs
+    const q = search.toLowerCase()
+    return prs.filter(pr =>
+      pr.title.toLowerCase().includes(q) ||
+      pr.author.toLowerCase().includes(q) ||
+      `#${pr.number}`.includes(q)
+    )
+  }, [prs, search])
+
+  const openCount = useMemo(() => prs.filter(p => p.state === 'open').length, [prs])
+
+  const mergeMethodLabel: Record<MergeMethod, string> = {
+    merge: 'Create merge commit',
+    squash: 'Squash and merge',
+    rebase: 'Rebase and merge',
+  }
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {/* PR list */}
-      <div className="w-[340px] flex flex-col border-r border-[var(--border)] bg-[var(--bg)] shrink-0">
-        <div className="flex items-center justify-between h-10 px-3 border-b border-[var(--border)] shrink-0">
-          <div className="flex items-center gap-2">
-            <button onClick={goBack} className="p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer"><Icon icon="lucide:arrow-left" width={13} height={13} /></button>
-            <Icon icon="lucide:git-pull-request" width={13} height={13} className="text-[var(--brand)]" />
-            <span className="text-[11px] font-semibold text-[var(--text-primary)]">Pull Requests</span>
-          </div>
-          <button onClick={loadPrs} className="p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer"><Icon icon="lucide:refresh-cw" width={11} height={11} className={loading ? 'animate-spin' : ''} /></button>
+      {/* Left panel — PR list */}
+      <div className="w-[300px] flex flex-col border-r border-[var(--border)] bg-[var(--bg)] shrink-0">
+        {/* Header */}
+        <div className="flex items-center gap-2 h-[34px] px-3 border-b border-[var(--border)] shrink-0">
+          <button
+            onClick={goBack}
+            className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+            title="Back"
+          >
+            <Icon icon="lucide:arrow-left" width={14} height={14} />
+          </button>
+          <Icon icon="lucide:git-pull-request" width={13} height={13} className="text-[var(--brand)]" />
+          <span className="text-[11px] font-semibold text-[var(--text-primary)] tracking-tight">Pull Requests</span>
+          <div className="flex-1" />
+          <button
+            onClick={loadPrs}
+            className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+            title="Refresh"
+          >
+            <Icon icon="lucide:refresh-cw" width={12} height={12} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={openCreateForm}
+            className="flex items-center gap-1 h-[22px] px-2 rounded-[var(--radius-sm)] bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)] cursor-pointer transition-colors text-[10px] font-medium"
+            title="New Pull Request"
+          >
+            <Icon icon="lucide:plus" width={11} height={11} />
+            New
+          </button>
         </div>
 
         {/* Filter tabs */}
-        <div className="flex items-center gap-0 h-8 border-b border-[var(--border)] px-3 shrink-0">
+        <div className="flex items-center h-[30px] border-b border-[var(--border)] px-1.5 shrink-0 gap-0.5">
           {(['open', 'closed', 'all'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 text-[10px] font-medium rounded cursor-pointer ${filter === f ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`flex items-center gap-1.5 h-[24px] px-2.5 text-[11px] font-medium rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
+                filter === f
+                  ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+              }`}
+            >
               {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === 'open' && openCount > 0 && (
+                <span className="px-1 min-w-[16px] text-center rounded-full bg-[var(--color-additions)] text-white text-[9px] font-bold leading-[16px]">
+                  {openCount}
+                </span>
+              )}
             </button>
           ))}
+        </div>
+
+        {/* Search */}
+        <div className="px-2 py-1.5 border-b border-[var(--border)] shrink-0">
+          <div className="relative">
+            <Icon icon="lucide:search" width={12} height={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Filter pull requests..."
+              className="w-full h-[26px] pl-7 pr-2 text-[11px] rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
+            />
+          </div>
         </div>
 
         {/* PR list */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="py-8 text-center"><Icon icon="lucide:loader" width={16} height={16} className="mx-auto animate-spin text-[var(--brand)]" /></div>
-          ) : prs.length > 0 ? prs.map(pr => (
-            <button key={pr.number} onClick={() => loadPrFiles(pr)} className={`w-full text-left px-3 py-2.5 border-b border-[var(--border)] hover:bg-[var(--bg-subtle)] cursor-pointer ${selectedPr?.number === pr.number ? 'bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]' : ''}`}>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <Icon icon={pr.draft ? 'lucide:git-pull-request-draft' : pr.state === 'open' ? 'lucide:git-pull-request' : 'lucide:git-merge'} width={12} height={12} className={pr.state === 'open' ? 'text-[var(--color-additions)]' : 'text-[var(--brand)]'} />
-                <span className="text-[11px] font-medium text-[var(--text-primary)] truncate flex-1">{pr.title}</span>
-              </div>
-              <div className="flex items-center gap-1.5 ml-[19px]">
-                <span className="text-[9px] text-[var(--text-disabled)]">#{pr.number}</span>
-                <span className="text-[9px] text-[var(--text-disabled)]">&middot;</span>
-                <span className="text-[9px] text-[var(--text-tertiary)]">{pr.author}</span>
-                <span className="text-[9px] text-[var(--text-disabled)]">&middot;</span>
-                <span className="text-[9px] text-[var(--text-disabled)]">{pr.updatedAt}</span>
-                {pr.changedFiles > 0 && <span className="ml-auto text-[8px] font-mono text-[var(--text-disabled)]">{pr.changedFiles} files</span>}
-              </div>
-              {pr.labels.length > 0 && (
-                <div className="flex flex-wrap gap-1 ml-[19px] mt-1">
-                  {pr.labels.slice(0, 3).map(l => <span key={l} className="px-1.5 py-0.5 rounded-full text-[8px] bg-[var(--bg-subtle)] text-[var(--text-tertiary)]">{l}</span>)}
-                </div>
-              )}
-            </button>
-          )) : (
-            <div className="py-8 text-center"><Icon icon="lucide:git-pull-request" width={24} height={24} className="mx-auto mb-2 text-[var(--text-disabled)] opacity-30" /><p className="text-[10px] text-[var(--text-disabled)]">No pull requests found</p></div>
+            <div className="py-12 text-center">
+              <Icon icon="lucide:loader" width={16} height={16} className="mx-auto animate-spin text-[var(--brand)]" />
+            </div>
+          ) : filteredPrs.length > 0 ? (
+            filteredPrs.map(pr => {
+              const si = statusIcon(pr)
+              return (
+                <button
+                  key={pr.number}
+                  onClick={() => selectPr(pr)}
+                  className={`w-full text-left px-3 py-2 border-b border-[var(--border)] hover:bg-[var(--bg-subtle)] cursor-pointer transition-colors ${
+                    selectedPr?.number === pr.number ? 'bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <Icon icon={si.icon} width={14} height={14} className={`${si.color} shrink-0 mt-0.5`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-[var(--text-primary)] leading-snug line-clamp-2">
+                        {pr.title}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[9px] text-[var(--text-disabled)] font-mono">#{pr.number}</span>
+                        <span className="text-[var(--text-disabled)]">&middot;</span>
+                        <span className="text-[9px] text-[var(--text-tertiary)]">{pr.author}</span>
+                        <span className="text-[var(--text-disabled)]">&middot;</span>
+                        <span className="text-[9px] text-[var(--text-disabled)]">{timeAgo(pr.updatedAt)}</span>
+                        {pr.changedFiles > 0 && (
+                          <>
+                            <span className="ml-auto text-[9px] font-mono text-[var(--color-additions)]">+{pr.additions}</span>
+                            <span className="text-[9px] font-mono text-[var(--color-deletions)]">-{pr.deletions}</span>
+                          </>
+                        )}
+                      </div>
+                      {pr.labels.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {pr.labels.slice(0, 3).map(l => (
+                            <span
+                              key={l.name}
+                              className="px-1.5 py-px rounded-full text-[8px] font-medium border"
+                              style={{
+                                backgroundColor: `#${l.color}20`,
+                                borderColor: `#${l.color}40`,
+                                color: `#${l.color}`,
+                              }}
+                            >
+                              {l.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              )
+            })
+          ) : (
+            <div className="py-12 text-center">
+              <Icon icon="lucide:git-pull-request" width={28} height={28} className="mx-auto mb-2 opacity-20" />
+              <p className="text-[11px] text-[var(--text-tertiary)]">No pull requests found</p>
+              <p className="text-[10px] text-[var(--text-disabled)] mt-0.5">
+                {search ? 'Try a different search' : `No ${filter} pull requests`}
+              </p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* PR detail / diff */}
+      {/* Right panel */}
       <div className="flex-1 flex flex-col bg-[var(--bg-elevated)] overflow-hidden">
-        {selectedPr ? (
-          <>
-            <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)] shrink-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Icon icon={selectedPr.draft ? 'lucide:git-pull-request-draft' : 'lucide:git-pull-request'} width={14} height={14} className={selectedPr.state === 'open' ? 'text-[var(--color-additions)]' : 'text-[var(--brand)]'} />
-                <span className="text-[12px] font-semibold text-[var(--text-primary)]">{selectedPr.title}</span>
-                <span className="text-[10px] text-[var(--text-disabled)]">#{selectedPr.number}</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="text-[var(--text-tertiary)]">{selectedPr.author}</span>
-                <span className="text-[var(--text-disabled)]">wants to merge</span>
-                <span className="font-mono text-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] px-1.5 rounded">{selectedPr.headRef}</span>
-                <span className="text-[var(--text-disabled)]">→</span>
-                <span className="font-mono text-[var(--text-secondary)] bg-[var(--bg)] px-1.5 rounded">{selectedPr.baseRef}</span>
-                <span className="ml-auto font-mono text-[var(--color-additions)]">+{selectedPr.additions}</span>
-                <span className="font-mono text-[var(--color-deletions)]">-{selectedPr.deletions}</span>
-              </div>
-            </div>
-
-            {activeFile ? (
-              <>
-                <div className="flex items-center gap-2 h-8 px-4 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
-                  <button onClick={() => setActiveFile(null)} className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer"><Icon icon="lucide:arrow-left" width={11} height={11} /></button>
-                  <span className="text-[10px] font-mono text-[var(--text-primary)]">{activeFile.filename}</span>
-                </div>
-                <div className="flex-1 overflow-auto font-mono text-[11px] leading-[1.55]">
-                  {activeFile.patch ? <pre className="p-3 text-[var(--text-secondary)]">{activeFile.patch.split('\n').map((line, i) => <div key={i} className={line.startsWith('+') && !line.startsWith('+++') ? 'bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] text-[var(--color-additions)]' : line.startsWith('-') && !line.startsWith('---') ? 'bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] text-[var(--color-deletions)]' : line.startsWith('@@') ? 'text-[var(--brand)] font-semibold' : ''}>{line}</div>)}</pre> : <div className="p-4 text-center text-[var(--text-disabled)]">Binary file</div>}
-                </div>
-              </>
-            ) : prFiles.length > 0 ? (
-              <div className="flex-1 overflow-y-auto">
-                <div className="px-4 py-2 text-[9px] font-semibold uppercase text-[var(--text-disabled)] tracking-wider">{prFiles.length} file{prFiles.length !== 1 ? 's' : ''} changed</div>
-                {prFiles.map(f => (
-                  <button key={f.filename} onClick={() => setActiveFile(f)} className="w-full text-left flex items-center gap-2 px-4 py-1.5 hover:bg-[var(--bg-subtle)] cursor-pointer border-b border-[var(--border)]">
-                    <Icon icon={f.status === 'added' ? 'lucide:plus' : f.status === 'removed' ? 'lucide:minus' : 'lucide:pencil'} width={10} height={10} className={f.status === 'added' ? 'text-[var(--color-additions)]' : f.status === 'removed' ? 'text-[var(--color-deletions)]' : 'text-[var(--warning,#eab308)]'} />
-                    <span className="text-[10px] font-mono text-[var(--text-secondary)] truncate flex-1">{f.filename}</span>
-                    <span className="text-[8px] font-mono text-[var(--color-additions)]">+{f.additions}</span>
-                    <span className="text-[8px] font-mono text-[var(--color-deletions)]">-{f.deletions}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center"><Icon icon="lucide:loader" width={16} height={16} className="animate-spin text-[var(--brand)]" /></div>
-            )}
-          </>
+        {rightPanel === 'create' ? (
+          <CreatePrForm
+            branches={branches}
+            defaultHead={branchName}
+            defaultBase={repo?.branch === branchName ? 'main' : (repo?.branch ?? 'main')}
+            head={createHead}
+            base={createBase}
+            title={createTitle}
+            body={createBody}
+            draft={createDraft}
+            creating={creating}
+            error={createError}
+            onHeadChange={setCreateHead}
+            onBaseChange={setCreateBase}
+            onTitleChange={setCreateTitle}
+            onBodyChange={setCreateBody}
+            onDraftChange={setCreateDraft}
+            onCancel={() => setRightPanel(selectedPr ? 'detail' : 'empty')}
+            onCreate={handleCreate}
+          />
+        ) : rightPanel === 'detail' && selectedPr ? (
+          activeFile ? (
+            <DiffViewer file={activeFile} onBack={() => setActiveFile(null)} />
+          ) : (
+            <PrDetail
+              pr={selectedPr}
+              files={prFiles}
+              loadingFiles={loadingFiles}
+              merging={merging}
+              mergeMethod={mergeMethod}
+              showMergeMenu={showMergeMenu}
+              mergeMenuRef={mergeMenuRef}
+              mergeError={mergeError}
+              mergeSuccess={mergeSuccess}
+              mergeMethodLabel={mergeMethodLabel}
+              onMergeMethodChange={setMergeMethod}
+              onToggleMergeMenu={() => setShowMergeMenu(v => !v)}
+              onMerge={handleMerge}
+              onFileSelect={setActiveFile}
+            />
+          )
         ) : (
           <div className="flex-1 flex items-center justify-center text-[11px] text-[var(--text-disabled)]">
-            <div className="text-center"><Icon icon="lucide:git-pull-request" width={28} height={28} className="mx-auto mb-2 opacity-30" /><p>Select a pull request to review</p></div>
+            <div className="text-center">
+              <Icon icon="lucide:git-pull-request" width={32} height={32} className="mx-auto mb-3 opacity-20" />
+              <p className="text-[12px] text-[var(--text-tertiary)] font-medium">Select a pull request to review</p>
+              <p className="text-[10px] text-[var(--text-disabled)] mt-1">Or create a new one with the + button</p>
+            </div>
           </div>
         )}
       </div>
     </div>
+  )
+}
+
+// ─── PR Detail Panel ───────────────────────────────────────────
+
+function PrDetail({
+  pr, files, loadingFiles, merging, mergeMethod, showMergeMenu, mergeMenuRef,
+  mergeError, mergeSuccess, mergeMethodLabel,
+  onMergeMethodChange, onToggleMergeMenu, onMerge, onFileSelect,
+}: {
+  pr: PullRequestSummary
+  files: PullRequestFile[]
+  loadingFiles: boolean
+  merging: boolean
+  mergeMethod: MergeMethod
+  showMergeMenu: boolean
+  mergeMenuRef: React.RefObject<HTMLDivElement | null>
+  mergeError: string | null
+  mergeSuccess: boolean
+  mergeMethodLabel: Record<MergeMethod, string>
+  onMergeMethodChange: (m: MergeMethod) => void
+  onToggleMergeMenu: () => void
+  onMerge: () => void
+  onFileSelect: (f: PullRequestFile) => void
+}) {
+  const badge = statusBadge(pr)
+
+  return (
+    <>
+      {/* PR header */}
+      <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
+        <div className="flex items-start gap-2 mb-2">
+          <Icon
+            icon={statusIcon(pr).icon}
+            width={16} height={16}
+            className={`${statusIcon(pr).color} shrink-0 mt-0.5`}
+          />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[13px] font-semibold text-[var(--text-primary)] leading-snug">{pr.title}</h2>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-1.5 h-[18px] rounded-full text-[9px] font-semibold ${badge.bg} ${badge.fg}`}>
+                {badge.label}
+              </span>
+              <span className="text-[10px] text-[var(--text-disabled)]">#{pr.number}</span>
+              <span className="text-[var(--text-disabled)]">&middot;</span>
+              <span className="text-[10px] text-[var(--text-tertiary)]">{pr.author}</span>
+              <span className="text-[var(--text-disabled)]">&middot;</span>
+              <span className="text-[10px] text-[var(--text-disabled)]">{timeAgo(pr.updatedAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Branch merge info */}
+        <div className="flex items-center gap-1.5 text-[10px] ml-[24px]">
+          <span className="font-mono text-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] px-1.5 py-px rounded-[var(--radius-sm)]">{pr.headRef}</span>
+          <Icon icon="lucide:arrow-right" width={10} height={10} className="text-[var(--text-disabled)]" />
+          <span className="font-mono text-[var(--text-secondary)] bg-[var(--bg-subtle)] px-1.5 py-px rounded-[var(--radius-sm)]">{pr.baseRef}</span>
+          <div className="flex-1" />
+          <span className="font-mono text-[var(--color-additions)] font-medium">+{pr.additions}</span>
+          <span className="font-mono text-[var(--color-deletions)] font-medium">-{pr.deletions}</span>
+          <span className="text-[var(--text-disabled)]">&middot;</span>
+          <span className="text-[var(--text-disabled)]">{pr.changedFiles} files</span>
+        </div>
+      </div>
+
+      {/* Body */}
+      {pr.body && (
+        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg)] shrink-0 max-h-[200px] overflow-y-auto">
+          <pre className="text-[11px] text-[var(--text-secondary)] whitespace-pre-wrap font-sans leading-relaxed">{pr.body}</pre>
+        </div>
+      )}
+
+      {/* Action bar */}
+      <div className="flex items-center gap-2 h-[38px] px-4 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
+        {pr.state === 'open' && !pr.merged ? (
+          <div className="relative flex items-center" ref={mergeMenuRef}>
+            <button
+              onClick={onMerge}
+              disabled={merging}
+              className={`flex items-center gap-1.5 h-[28px] px-3 rounded-l-[var(--radius-sm)] text-[11px] font-semibold transition-all cursor-pointer ${
+                merging
+                  ? 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed'
+                  : 'bg-[var(--color-additions)] text-white hover:opacity-90'
+              }`}
+            >
+              {merging ? (
+                <Icon icon="lucide:loader" width={12} height={12} className="animate-spin" />
+              ) : (
+                <Icon icon="lucide:git-merge" width={12} height={12} />
+              )}
+              {merging ? 'Merging...' : mergeMethodLabel[mergeMethod].split(' ')[0]}
+            </button>
+            <button
+              onClick={onToggleMergeMenu}
+              className="flex items-center justify-center w-[28px] h-[28px] rounded-r-[var(--radius-sm)] bg-[var(--color-additions)] text-white border-l border-white/20 hover:opacity-90 cursor-pointer transition-colors"
+            >
+              <Icon icon="lucide:chevron-down" width={10} height={10} />
+            </button>
+
+            {showMergeMenu && (
+              <div className="absolute top-full left-0 mt-1 w-52 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] z-50 overflow-hidden animate-scale-in">
+                {(['merge', 'squash', 'rebase'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => { onMergeMethodChange(m); onToggleMergeMenu() }}
+                    className={`w-full text-left px-3 h-[32px] text-[11px] hover:bg-[var(--bg-subtle)] cursor-pointer flex items-center gap-2 transition-colors ${
+                      mergeMethod === m ? 'text-[var(--color-additions)] font-medium' : 'text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {mergeMethod === m && <Icon icon="lucide:check" width={10} height={10} />}
+                    <span className={mergeMethod === m ? '' : 'ml-[18px]'}>{mergeMethodLabel[m]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : mergeSuccess ? (
+          <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-additions)] font-medium">
+            <Icon icon="lucide:check-circle" width={14} height={14} />
+            Pull request merged
+          </span>
+        ) : pr.merged ? (
+          <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-merged,#8b5cf6)] font-medium">
+            <Icon icon="lucide:git-merge" width={14} height={14} />
+            Merged {pr.mergedAt ? timeAgo(pr.mergedAt) : ''}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-deletions)] font-medium">
+            <Icon icon="lucide:x-circle" width={14} height={14} />
+            Closed
+          </span>
+        )}
+
+        {mergeError && (
+          <span className="text-[10px] text-[var(--color-deletions)] ml-2 truncate">{mergeError}</span>
+        )}
+
+        <div className="flex-1" />
+
+        <a
+          href={pr.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 h-[26px] px-2 rounded-[var(--radius-sm)] text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+        >
+          <Icon icon="lucide:external-link" width={11} height={11} />
+          GitHub
+        </a>
+      </div>
+
+      {/* Files list */}
+      <div className="flex-1 overflow-y-auto">
+        {loadingFiles ? (
+          <div className="py-12 text-center">
+            <Icon icon="lucide:loader" width={16} height={16} className="mx-auto animate-spin text-[var(--brand)]" />
+          </div>
+        ) : files.length > 0 ? (
+          <>
+            <div className="flex items-center h-[28px] px-4 border-b border-[var(--border)] bg-[var(--bg)]">
+              <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                {files.length} file{files.length !== 1 ? 's' : ''} changed
+              </span>
+            </div>
+            {files.map(f => (
+              <button
+                key={f.filename}
+                onClick={() => onFileSelect(f)}
+                className="w-full text-left flex items-center gap-2 px-4 h-[30px] hover:bg-[var(--bg-subtle)] cursor-pointer border-b border-[var(--border)] transition-colors"
+              >
+                <Icon
+                  icon={
+                    f.status === 'added' ? 'lucide:plus'
+                    : f.status === 'removed' ? 'lucide:minus'
+                    : f.status === 'renamed' ? 'lucide:arrow-right'
+                    : 'lucide:pencil'
+                  }
+                  width={10} height={10}
+                  className={
+                    f.status === 'added' ? 'text-[var(--color-additions)]'
+                    : f.status === 'removed' ? 'text-[var(--color-deletions)]'
+                    : 'text-[var(--warning,#eab308)]'
+                  }
+                />
+                <span className="text-[11px] font-mono text-[var(--text-secondary)] truncate flex-1">
+                  {f.previous_filename ? `${f.previous_filename} → ${f.filename}` : f.filename}
+                </span>
+                <span className="text-[9px] font-mono text-[var(--color-additions)]">+{f.additions}</span>
+                <span className="text-[9px] font-mono text-[var(--color-deletions)]">-{f.deletions}</span>
+              </button>
+            ))}
+          </>
+        ) : (
+          <div className="py-12 text-center">
+            <p className="text-[11px] text-[var(--text-disabled)]">No files changed</p>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─── Create PR Form ────────────────────────────────────────────
+
+function CreatePrForm({
+  branches, defaultHead, defaultBase, head, base, title, body, draft, creating, error,
+  onHeadChange, onBaseChange, onTitleChange, onBodyChange, onDraftChange, onCancel, onCreate,
+}: {
+  branches: string[]
+  defaultHead: string
+  defaultBase: string
+  head: string
+  base: string
+  title: string
+  body: string
+  draft: boolean
+  creating: boolean
+  error: string | null
+  onHeadChange: (v: string) => void
+  onBaseChange: (v: string) => void
+  onTitleChange: (v: string) => void
+  onBodyChange: (v: string) => void
+  onDraftChange: (v: boolean) => void
+  onCancel: () => void
+  onCreate: () => void
+}) {
+  const canCreate = title.trim() && head && base && head !== base && !creating
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 h-[34px] px-4 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
+        <button
+          onClick={onCancel}
+          className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+        >
+          <Icon icon="lucide:arrow-left" width={14} height={14} />
+        </button>
+        <Icon icon="lucide:git-pull-request-create-arrow" width={13} height={13} className="text-[var(--brand)]" />
+        <span className="text-[11px] font-semibold text-[var(--text-primary)] tracking-tight">New Pull Request</span>
+      </div>
+
+      {/* Form */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="max-w-[520px] space-y-4">
+          {/* Branch selectors */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <label className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">Head branch</label>
+              <select
+                value={head}
+                onChange={e => onHeadChange(e.target.value)}
+                className="w-full h-[32px] px-2.5 text-[11px] font-mono rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] transition-colors cursor-pointer appearance-none"
+              >
+                {branches.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <Icon icon="lucide:arrow-right" width={14} height={14} className="text-[var(--text-disabled)] mt-5" />
+            <div className="flex-1">
+              <label className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">Base branch</label>
+              <select
+                value={base}
+                onChange={e => onBaseChange(e.target.value)}
+                className="w-full h-[32px] px-2.5 text-[11px] font-mono rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] transition-colors cursor-pointer appearance-none"
+              >
+                {branches.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {head === base && head && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warning,#eab308)_10%,transparent)] border border-[color-mix(in_srgb,var(--warning,#eab308)_25%,transparent)]">
+              <Icon icon="lucide:alert-triangle" width={12} height={12} className="text-[var(--warning,#eab308)]" />
+              <span className="text-[10px] text-[var(--warning,#eab308)]">Head and base branches must be different</span>
+            </div>
+          )}
+
+          {/* Title */}
+          <div>
+            <label className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => onTitleChange(e.target.value)}
+              placeholder="Describe your changes..."
+              className="w-full h-[32px] px-2.5 text-[12px] rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
+              onKeyDown={e => { if (e.key === 'Enter' && canCreate) onCreate() }}
+              autoFocus
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">Description</label>
+            <textarea
+              value={body}
+              onChange={e => onBodyChange(e.target.value)}
+              placeholder="Add a description..."
+              rows={6}
+              className="w-full px-2.5 py-2 text-[11px] rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none resize-y focus:border-[var(--border-focus)] transition-colors leading-relaxed font-sans min-h-[100px]"
+            />
+          </div>
+
+          {/* Draft toggle */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={draft}
+              onChange={e => onDraftChange(e.target.checked)}
+              className="accent-[var(--brand)] w-3.5 h-3.5"
+            />
+            <span className="text-[11px] text-[var(--text-secondary)]">Create as draft</span>
+          </label>
+
+          {error && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] border border-[color-mix(in_srgb,var(--color-deletions)_25%,transparent)]">
+              <Icon icon="lucide:alert-circle" width={12} height={12} className="text-[var(--color-deletions)]" />
+              <span className="text-[10px] text-[var(--color-deletions)]">{error}</span>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={onCreate}
+              disabled={!canCreate}
+              className={`flex items-center gap-1.5 h-[32px] px-4 rounded-[var(--radius-sm)] text-[11px] font-semibold transition-all cursor-pointer ${
+                canCreate
+                  ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)] shadow-[var(--shadow-sm)]'
+                  : 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed'
+              }`}
+            >
+              {creating ? (
+                <>
+                  <Icon icon="lucide:loader" width={12} height={12} className="animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Icon icon="lucide:git-pull-request-create-arrow" width={12} height={12} />
+                  Create Pull Request
+                </>
+              )}
+            </button>
+            <button
+              onClick={onCancel}
+              className="h-[32px] px-3 rounded-[var(--radius-sm)] text-[11px] font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Diff Viewer ───────────────────────────────────────────────
+
+function DiffViewer({ file, onBack }: { file: PullRequestFile; onBack: () => void }) {
+  const media = detectMedia(file.filename)
+  const fileIcon = media === 'image' ? 'lucide:image' : media === 'video' ? 'lucide:video' : media === 'audio' ? 'lucide:music' : 'lucide:file-diff'
+
+  return (
+    <>
+      <div className="flex items-center gap-2 h-[34px] px-4 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
+        <button
+          onClick={onBack}
+          className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+        >
+          <Icon icon="lucide:arrow-left" width={14} height={14} />
+        </button>
+        <Icon icon={fileIcon} width={12} height={12} className="text-[var(--text-tertiary)]" />
+        <span className="text-[11px] font-mono font-medium text-[var(--text-primary)] truncate">{file.filename}</span>
+        <div className="flex-1" />
+        {!media && (
+          <>
+            <span className="text-[10px] font-mono text-[var(--color-additions)] font-medium">+{file.additions}</span>
+            <span className="text-[10px] font-mono text-[var(--color-deletions)] font-medium">-{file.deletions}</span>
+          </>
+        )}
+      </div>
+      <div className="flex-1 overflow-auto">
+        {media ? (
+          <MediaPreview filename={file.filename} url={file.raw_url} />
+        ) : file.patch ? (
+          <pre className="p-3 text-[var(--text-secondary)] font-mono text-[11px] leading-[1.6]">
+            {file.patch.split('\n').map((line, i) => (
+              <div
+                key={i}
+                className={
+                  line.startsWith('+') && !line.startsWith('+++')
+                    ? 'bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] text-[var(--color-additions)]'
+                    : line.startsWith('-') && !line.startsWith('---')
+                    ? 'bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] text-[var(--color-deletions)]'
+                    : line.startsWith('@@')
+                    ? 'text-[var(--brand)] font-semibold opacity-80'
+                    : ''
+                }
+              >
+                {line}
+              </div>
+            ))}
+          </pre>
+        ) : (
+          <div className="p-4 text-center text-[var(--text-disabled)] text-[11px]">Binary file</div>
+        )}
+      </div>
+    </>
   )
 }

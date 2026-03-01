@@ -46,10 +46,10 @@ export function ActivityBar({
   }
 
   return (
-    <div className="flex flex-col items-center justify-between w-[42px] shrink-0 bg-[var(--bg-secondary)] border-r border-[var(--border)] py-1.5">
-      <div className="flex flex-col items-center gap-0.5">
-        <div className="flex items-center justify-center w-[34px] h-[34px] mb-1">
-          <KnotLogo size={22} />
+    <div className="flex flex-col items-center justify-between w-[48px] shrink-0 bg-[var(--bg-secondary)] border-r border-[var(--border)] py-2">
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center justify-center w-[36px] h-[36px] mb-1.5">
+          <KnotLogo size={24} />
         </div>
         {items.map(item => {
           const act = isActive(item.id)
@@ -58,20 +58,18 @@ export function ActivityBar({
               key={item.id}
               onClick={() => onSelect(item.id)}
               title={item.label}
-              className={`relative flex items-center justify-center w-[34px] h-[34px] rounded-lg transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all duration-150 cursor-pointer ${
                 act
                   ? 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
               }`}
             >
-              {/* Active indicator bar */}
               {act && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-full bg-[var(--brand)]" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 rounded-full bg-[var(--brand)]" />
               )}
-              <Icon icon={item.icon} width={18} height={18} />
-              {/* Badge for source control */}
+              <Icon icon={item.icon} width={20} height={20} />
               {item.id === 'changes' && dirtyCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-[var(--brand)] text-[8px] font-bold text-white flex items-center justify-center px-0.5">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-[var(--brand)] text-[9px] font-bold text-white flex items-center justify-center px-0.5">
                   {dirtyCount}
                 </span>
               )}
@@ -80,7 +78,7 @@ export function ActivityBar({
         })}
       </div>
 
-      <div className="flex flex-col items-center gap-0.5">
+      <div className="flex flex-col items-center gap-1">
         {bottomItems.map(item => {
           const act = isActive(item.id)
           return (
@@ -88,18 +86,18 @@ export function ActivityBar({
               key={item.id}
               onClick={() => onSelect(item.id)}
               title={item.label}
-              className={`relative flex items-center justify-center w-[34px] h-[34px] rounded-lg transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all duration-150 cursor-pointer ${
                 act
                   ? 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
               }`}
             >
               {item.id === 'engine' && (
-                <span className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${
+                <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
                   gatewayConnected ? 'bg-[var(--color-additions)]' : 'bg-[var(--text-disabled)]'
                 }`} />
               )}
-              <Icon icon={item.icon} width={18} height={18} />
+              <Icon icon={item.icon} width={20} height={20} />
             </button>
           )
         })}

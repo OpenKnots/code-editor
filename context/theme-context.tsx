@@ -23,6 +23,7 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: 'vercel', label: 'Vercel', color: '#ededed', group: 'tweakcn' },
   { id: 'vintage-paper', label: 'Vintage Paper', color: '#8b5e3c', group: 'tweakcn' },
   { id: 'voodoo', label: 'VooDoo', color: '#8b5cf6', group: 'core' },
+  { id: 'cybernord', label: 'CyberNord', color: '#00ff41', group: 'tweakcn' },
 ]
 
 interface ThemeContextValue {

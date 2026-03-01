@@ -22,14 +22,14 @@ export function ModeSelector({ mode, onChange }: Props) {
         <button
           key={m.id}
           onClick={() => onChange(m.id)}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium transition-all cursor-pointer ${
             mode === m.id
               ? 'bg-[var(--bg)] text-[var(--text-primary)] shadow-sm border border-[var(--border)]'
               : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-transparent'
           }`}
           title={m.desc}
         >
-          <Icon icon={m.icon} width={11} height={11} />
+          <Icon icon={m.icon} width={14} height={14} />
           {m.label}
         </button>
       ))}

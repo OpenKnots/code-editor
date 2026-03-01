@@ -39,7 +39,7 @@ export default function EditorLayout() {
   const { status } = useGateway()
   const { repo } = useRepo()
   const { files, activeFile, openFile, setActiveFile, markClean, updateFileContent } = useEditor()
-  const { localMode, readFile: localReadFile, rootPath: localRootPath, gitInfo } = useLocal()
+  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo } = useLocal()
   const { activeView, setView } = useView()
 
   // ─── Minimal state ──────────────────────────────────────
@@ -157,7 +157,7 @@ export default function EditorLayout() {
     }
     window.addEventListener('file-select', handler)
     return () => window.removeEventListener('file-select', handler)
-  }, [repo, files, openFile, setActiveFile, setView])
+  }, [repo, files, openFile, setActiveFile, setView, localMode, localReadFile])
 
   // ─── Commit handler ────────────────────────────────────
   useEffect(() => {
@@ -178,17 +178,54 @@ export default function EditorLayout() {
     return () => window.removeEventListener('agent-commit', handler)
   }, [repo, files, markClean])
 
-  // ─── Save handler (⌘S) ────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault()
-        // Auto-save already handles persistence
+  // ─── Save handler (⌘S + save-file event) ──────────────
+  const saveFile = useCallback(async (path: string) => {
+    const file = files.find(f => f.path === path)
+    if (!file || !file.dirty) return
+
+    if (localMode && localWriteFile) {
+      try {
+        await localWriteFile(path, file.content)
+        markClean(path)
+      } catch (err) {
+        console.error('Failed to save file:', path, err)
+      }
+      return
+    }
+
+    if (repo) {
+      try {
+        await commitFiles(
+          repo.fullName,
+          [{ path: file.path, content: file.content, sha: file.sha }],
+          `Update ${path.split('/').pop()}`,
+          repo.branch
+        )
+        markClean(path)
+      } catch (err) {
+        console.error('Failed to save file to GitHub:', path, err)
       }
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [files, localMode, localWriteFile, markClean, repo])
+
+  useEffect(() => {
+    const keyHandler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        if (activeFile) saveFile(activeFile)
+      }
+    }
+    const eventHandler = (e: Event) => {
+      const { path } = (e as CustomEvent).detail ?? {}
+      if (path) saveFile(path)
+    }
+    window.addEventListener('keydown', keyHandler)
+    window.addEventListener('save-file', eventHandler)
+    return () => {
+      window.removeEventListener('keydown', keyHandler)
+      window.removeEventListener('save-file', eventHandler)
+    }
+  }, [activeFile, saveFile])
 
   // ─── Landing check ─────────────────────────────────────
   useEffect(() => {
@@ -225,41 +262,33 @@ export default function EditorLayout() {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* View navigation bar */}
-        <div className={`flex items-center h-8 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0 px-2 gap-0.5 ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}>
+        <div className={`flex items-center h-10 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0 px-2.5 gap-1 ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}>
           {/* View tabs */}
           {visibleViews.map((v, i) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all cursor-pointer ${
                 activeView === v
                   ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]'
                   : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
               }`}
               title={`${VIEW_ICONS[v].label} (⌘${i + 1})`}
             >
-              <Icon icon={VIEW_ICONS[v].icon} width={12} height={12} />
+              <Icon icon={VIEW_ICONS[v].icon} width={15} height={15} />
               <span className="hidden sm:inline">{VIEW_ICONS[v].label}</span>
               {v === 'git' && dirtyCount > 0 && (
-                <span className="px-1 min-w-[14px] text-center rounded-full bg-[var(--brand)] text-white text-[8px] leading-[14px]">{dirtyCount}</span>
+                <span className="px-1 min-w-[16px] text-center rounded-full bg-[var(--brand)] text-white text-[9px] leading-[16px]">{dirtyCount}</span>
               )}
             </button>
           ))}
 
           <div className="flex-1 tauri-drag-region" data-tauri-drag-region />
 
-          {/* Right side controls */}
-          <div className="flex items-center gap-1">
-            {status === 'connected' && (
-              <span className="flex items-center gap-1 text-[9px] text-[var(--color-additions)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-additions)]" />
-                <span className="hidden sm:inline">Connected</span>
-              </span>
-            )}
-            <button onClick={() => setSettingsVisible(true)} className="p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer" title="Settings">
-              <Icon icon="lucide:settings" width={12} height={12} />
-            </button>
-          </div>
+          {/* Settings */}
+          <button onClick={() => setSettingsVisible(true)} className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer" title="Settings">
+            <Icon icon="lucide:settings" width={16} height={16} />
+          </button>
         </div>
 
         {/* Active view */}
@@ -276,26 +305,32 @@ export default function EditorLayout() {
         </div>
 
         {/* Status bar */}
-        <footer className="flex items-center justify-between px-3 h-6 border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[9px] text-[var(--text-tertiary)] shrink-0">
+        <footer className="flex items-center justify-between px-3 h-[22px] border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[10px] text-[var(--text-tertiary)] shrink-0">
           <div className="flex items-center gap-3">
             {repo && (
-              <span className="flex items-center gap-1">
-                <Icon icon="lucide:git-branch" width={9} height={9} />
+              <span className="flex items-center gap-1 font-mono text-[var(--text-secondary)]">
+                <Icon icon="lucide:git-branch" width={10} height={10} className="text-[var(--brand)]" />
                 {repo.branch}
               </span>
             )}
             {localMode && gitInfo?.branch && (
-              <span className="flex items-center gap-1">
-                <Icon icon="lucide:git-branch" width={9} height={9} />
+              <span className="flex items-center gap-1 font-mono text-[var(--text-secondary)]">
+                <Icon icon="lucide:git-branch" width={10} height={10} className="text-[var(--brand)]" />
                 {gitInfo.branch}
               </span>
             )}
             {dirtyCount > 0 && (
-              <span className="text-[var(--warning,#eab308)]">{dirtyCount} unsaved</span>
+              <span className="flex items-center gap-1 text-[var(--warning,#eab308)]">
+                <Icon icon="lucide:circle-dot" width={8} height={8} />
+                {dirtyCount} unsaved
+              </span>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[var(--text-disabled)]">Knot Code</span>
+            <span className="text-[var(--text-disabled)] font-medium">Knot Code</span>
+            {status === 'connected' && (
+              <span className="w-2 h-2 rounded-full bg-[var(--color-additions)]" title="Connected" />
+            )}
           </div>
         </footer>
       </div>

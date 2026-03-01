@@ -10,6 +10,15 @@ import { commitFilesByName as commitFiles, fetchBranchesByName, createBranch, au
 import { computeDiff, type DiffLine } from '@/lib/diff'
 
 type Tab = 'changes' | 'history'
+type MediaKind = 'image' | 'video' | 'audio' | null
+
+function detectMedia(filename: string): MediaKind {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico'].includes(ext)) return 'image'
+  if (['mp4', 'webm', 'ogv', 'mov', 'm4v'].includes(ext)) return 'video'
+  if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus'].includes(ext)) return 'audio'
+  return null
+}
 
 interface Commit {
   sha: string
@@ -26,6 +35,7 @@ interface CommitFile {
   additions: number
   deletions: number
   patch?: string
+  raw_url?: string
 }
 
 interface Props {
@@ -188,6 +198,7 @@ export function GitPanel({ open, onClose }: Props) {
           additions: f.additions as number,
           deletions: f.deletions as number,
           patch: f.patch as string | undefined,
+          raw_url: f.raw_url as string | undefined,
         })))
       }
     } catch {}
@@ -498,39 +509,81 @@ export function GitPanel({ open, onClose }: Props) {
                 </div>
               )}
               {/* Commit file diff */}
-              {activeCommitFile && (
-                <>
-                  <div className="flex items-center gap-2 h-8 px-4 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
-                    <button onClick={() => setActiveCommitFile(null)} className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer">
-                      <Icon icon="lucide:arrow-left" width={11} height={11} />
-                    </button>
-                    <span className="text-[10px] font-mono text-[var(--text-primary)]">{activeCommitFile.filename}</span>
-                    <span className="text-[8px] font-mono text-[var(--color-additions)] ml-auto">+{activeCommitFile.additions}</span>
-                    <span className="text-[8px] font-mono text-[var(--color-deletions)]">-{activeCommitFile.deletions}</span>
-                  </div>
-                  <div className="flex-1 overflow-auto font-mono text-[11px] leading-[1.55]">
-                    {activeCommitFile.patch ? (
-                      <pre className="p-3 text-[var(--text-secondary)]">
-                        {activeCommitFile.patch.split('\n').map((line, i) => (
-                          <div
-                            key={i}
-                            className={
-                              line.startsWith('+') && !line.startsWith('+++') ? 'bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] text-[var(--color-additions)]'
-                              : line.startsWith('-') && !line.startsWith('---') ? 'bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] text-[var(--color-deletions)]'
-                              : line.startsWith('@@') ? 'text-[var(--brand)] font-semibold'
-                              : ''
-                            }
-                          >
-                            {line}
+              {activeCommitFile && (() => {
+                const media = detectMedia(activeCommitFile.filename)
+                const fileIcon = media === 'image' ? 'lucide:image' : media === 'video' ? 'lucide:video' : media === 'audio' ? 'lucide:music' : 'lucide:file-code-2'
+                const name = activeCommitFile.filename.split('/').pop() ?? activeCommitFile.filename
+                return (
+                  <>
+                    <div className="flex items-center gap-2 h-8 px-4 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
+                      <button onClick={() => setActiveCommitFile(null)} className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer">
+                        <Icon icon="lucide:arrow-left" width={11} height={11} />
+                      </button>
+                      <Icon icon={fileIcon} width={11} height={11} className="text-[var(--text-tertiary)]" />
+                      <span className="text-[10px] font-mono text-[var(--text-primary)]">{activeCommitFile.filename}</span>
+                      {!media && (
+                        <>
+                          <span className="text-[8px] font-mono text-[var(--color-additions)] ml-auto">+{activeCommitFile.additions}</span>
+                          <span className="text-[8px] font-mono text-[var(--color-deletions)]">-{activeCommitFile.deletions}</span>
+                        </>
+                      )}
+                    </div>
+                    {media ? (
+                      <div className="flex-1 flex items-center justify-center p-6 bg-[var(--bg-subtle)] overflow-auto">
+                        {activeCommitFile.raw_url ? (
+                          media === 'image' ? (
+                            <div className="flex flex-col items-center gap-3">
+                              <img src={activeCommitFile.raw_url} alt={name} className="max-w-full max-h-[50vh] object-contain rounded-lg border border-[var(--border)] bg-[var(--bg)] shadow-sm" />
+                              <span className="text-[10px] text-[var(--text-disabled)] font-mono">{name}</span>
+                            </div>
+                          ) : media === 'video' ? (
+                            <div className="flex flex-col items-center gap-3 w-full max-w-[560px]">
+                              <video src={activeCommitFile.raw_url} controls className="max-w-full max-h-[50vh] rounded-lg border border-[var(--border)] bg-black shadow-sm" />
+                              <span className="text-[10px] text-[var(--text-disabled)] font-mono">{name}</span>
+                            </div>
+                          ) : (
+                            <div className="w-full max-w-[400px] rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 shadow-sm">
+                              <div className="flex items-center gap-2 mb-3 text-[var(--text-secondary)]">
+                                <Icon icon="lucide:music-2" width={14} height={14} className="text-[var(--brand)]" />
+                                <span className="text-[11px] font-medium truncate">{name}</span>
+                              </div>
+                              <audio src={activeCommitFile.raw_url} controls className="w-full" />
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center text-[var(--text-tertiary)]">
+                            <Icon icon={fileIcon} width={28} height={28} className="mx-auto mb-2 opacity-40" />
+                            <p className="text-[11px] font-medium">{name}</p>
+                            <p className="text-[10px] text-[var(--text-disabled)] mt-1">Preview unavailable</p>
                           </div>
-                        ))}
-                      </pre>
+                        )}
+                      </div>
                     ) : (
-                      <div className="p-4 text-center text-[var(--text-disabled)]">Binary file or no diff available</div>
+                      <div className="flex-1 overflow-auto font-mono text-[11px] leading-[1.55]">
+                        {activeCommitFile.patch ? (
+                          <pre className="p-3 text-[var(--text-secondary)]">
+                            {activeCommitFile.patch.split('\n').map((line, i) => (
+                              <div
+                                key={i}
+                                className={
+                                  line.startsWith('+') && !line.startsWith('+++') ? 'bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] text-[var(--color-additions)]'
+                                  : line.startsWith('-') && !line.startsWith('---') ? 'bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] text-[var(--color-deletions)]'
+                                  : line.startsWith('@@') ? 'text-[var(--brand)] font-semibold'
+                                  : ''
+                                }
+                              >
+                                {line}
+                              </div>
+                            ))}
+                          </pre>
+                        ) : (
+                          <div className="p-4 text-center text-[var(--text-disabled)]">Binary file or no diff available</div>
+                        )}
+                      </div>
                     )}
-                  </div>
-                </>
-              )}
+                  </>
+                )
+              })()}
               {commitFiles2.length === 0 && !activeCommitFile && (
                 <div className="flex-1 flex items-center justify-center">
                   <Icon icon="lucide:loader" width={16} height={16} className="animate-spin text-[var(--brand)]" />

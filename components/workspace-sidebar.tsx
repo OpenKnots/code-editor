@@ -19,9 +19,9 @@ export interface ChatSession {
 
 const LS_KEY = 'code-editor:chat-sessions'
 const LS_WIDTH_KEY = 'code-editor:sidebar-width'
-const MIN_WIDTH = 180
-const MAX_WIDTH = 400
-const DEFAULT_WIDTH = 240
+const MIN_WIDTH = 200
+const MAX_WIDTH = 420
+const DEFAULT_WIDTH = 260
 
 function loadSessions(): ChatSession[] {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') }
@@ -57,7 +57,6 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
   const isDragging = useRef(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
-  // Load saved width
   useEffect(() => {
     try {
       const saved = parseInt(localStorage.getItem(LS_WIDTH_KEY) || '')
@@ -65,7 +64,6 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
     } catch {}
   }, [])
 
-  // Load sessions + listen for updates
   useEffect(() => {
     setSessions(loadSessions())
     const handler = (e: Event) => {
@@ -83,7 +81,6 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
     return () => window.removeEventListener('chat-session-update', handler)
   }, [])
 
-  // ⌘\ keyboard shortcut to toggle sidebar
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
@@ -95,7 +92,6 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
     return () => window.removeEventListener('keydown', handler)
   }, [onToggle])
 
-  // Drag-to-resize
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     isDragging.current = true
@@ -144,20 +140,19 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
   /* ── Collapsed ────────────────────────────────────────────── */
   if (collapsed) {
     return (
-      <div className={`flex flex-col items-center gap-3 w-[42px] bg-[var(--sidebar-bg)] border-r border-[var(--border)] shrink-0 transition-all duration-200 ${isTauriDesktop ? 'pt-8' : 'pt-3'} pb-3`}>
-        <button onClick={onToggle} className="p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Expand sidebar (⌘\\)">
-          <Icon icon="lucide:panel-left" width={15} height={15} />
+      <div className={`flex flex-col items-center gap-3 w-[48px] bg-[var(--sidebar-bg)] border-r border-[var(--border)] shrink-0 transition-all duration-200 ${isTauriDesktop ? 'pt-8' : 'pt-3'} pb-3`}>
+        <button onClick={onToggle} className="p-2 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Expand sidebar (⌘\\)">
+          <Icon icon="lucide:panel-left" width={18} height={18} />
         </button>
-        <button onClick={onNew} className="p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="New Chat">
-          <Icon icon="lucide:plus" width={15} height={15} />
+        <button onClick={onNew} className="p-2 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="New Chat">
+          <Icon icon="lucide:plus" width={18} height={18} />
         </button>
-        {/* Collapsed session dots */}
         <div className="flex flex-col items-center gap-2 mt-1">
           {sessions.slice(0, 5).map(s => (
             <button
               key={s.id}
               onClick={() => onSelect(s.id)}
-              className={`w-6 h-6 rounded-md flex items-center justify-center text-[8px] font-bold transition-all cursor-pointer ${
+              className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
                 activeId === s.id
                   ? 'bg-[var(--brand)] text-white'
                   : 'bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]'
@@ -185,30 +180,30 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
       tabIndex={0}
       onClick={() => onSelect(s.id)}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(s.id) } }}
-      className={`group relative w-full text-left px-2.5 py-2 rounded-lg transition-all cursor-pointer ${
+      className={`group relative w-full text-left px-3 py-2.5 rounded-lg transition-all cursor-pointer ${
         activeId === s.id
           ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)]'
           : 'hover:bg-[var(--bg-subtle)] border border-transparent'
       }`}
     >
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <Icon icon={modeIcon(s.mode)} width={11} height={11} className={activeId === s.id ? 'text-[var(--brand)]' : 'text-[var(--text-tertiary)]'} />
-        <span className="text-[11px] font-medium text-[var(--text-primary)] truncate flex-1">{s.title}</span>
-        <span className="text-[9px] text-[var(--text-disabled)] shrink-0">{timeAgo(s.timestamp)}</span>
+      <div className="flex items-center gap-2 mb-0.5">
+        <Icon icon={modeIcon(s.mode)} width={13} height={13} className={activeId === s.id ? 'text-[var(--brand)]' : 'text-[var(--text-tertiary)]'} />
+        <span className="text-[13px] font-medium text-[var(--text-primary)] truncate flex-1">{s.title}</span>
+        <span className="text-[11px] text-[var(--text-disabled)] shrink-0">{timeAgo(s.timestamp)}</span>
       </div>
       {(s.fileCount || s.additions || s.deletions) && (
-        <div className="flex items-center gap-1.5 ml-[17px] mt-0.5">
-          {s.fileCount && <span className="text-[9px] text-[var(--text-disabled)]">{s.fileCount} file{s.fileCount !== 1 ? 's' : ''}</span>}
-          {s.additions ? <span className="text-[9px] text-[var(--color-additions)] font-mono">+{s.additions}</span> : null}
-          {s.deletions ? <span className="text-[9px] text-[var(--color-deletions)] font-mono">-{s.deletions}</span> : null}
+        <div className="flex items-center gap-2 ml-[21px] mt-0.5">
+          {s.fileCount && <span className="text-[11px] text-[var(--text-disabled)]">{s.fileCount} file{s.fileCount !== 1 ? 's' : ''}</span>}
+          {s.additions ? <span className="text-[11px] text-[var(--color-additions)] font-mono">+{s.additions}</span> : null}
+          {s.deletions ? <span className="text-[11px] text-[var(--color-deletions)] font-mono">-{s.deletions}</span> : null}
         </div>
       )}
-      <div className="absolute right-1.5 top-1.5 hidden group-hover:flex items-center gap-0.5">
-        <button onClick={e => handlePin(s.id, e)} className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer">
-          <Icon icon={s.pinned ? 'lucide:pin-off' : 'lucide:pin'} width={9} height={9} />
+      <div className="absolute right-2 top-2 hidden group-hover:flex items-center gap-0.5">
+        <button onClick={e => handlePin(s.id, e)} className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer">
+          <Icon icon={s.pinned ? 'lucide:pin-off' : 'lucide:pin'} width={12} height={12} />
         </button>
-        <button onClick={e => handleDelete(s.id, e)} className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-disabled)] hover:text-[var(--color-deletions)] cursor-pointer">
-          <Icon icon="lucide:trash-2" width={9} height={9} />
+        <button onClick={e => handleDelete(s.id, e)} className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-disabled)] hover:text-[var(--color-deletions)] cursor-pointer">
+          <Icon icon="lucide:trash-2" width={12} height={12} />
         </button>
       </div>
     </div>
@@ -221,63 +216,59 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
       className="relative flex flex-col h-full bg-[var(--sidebar-bg)] border-r border-[var(--border)] overflow-hidden transition-[width] duration-200 shrink-0"
       style={{ width: sidebarWidth }}
     >
-      {/* Branding + Header — extra top padding on Tauri for traffic lights */}
+      {/* Branding + Header */}
       <div className={`shrink-0 ${isTauriDesktop ? 'pt-7' : ''}`}>
-        {/* Branding */}
-        <div data-tauri-drag-region className="flex items-center gap-2 px-3 pt-2.5 pb-1 tauri-drag-region">
-          <KnotLogo size={20} />
+        <div data-tauri-drag-region className="flex items-center gap-2.5 px-3.5 pt-3 pb-1.5 tauri-drag-region">
+          <KnotLogo size={22} />
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-bold text-[var(--text-primary)] leading-tight">Knot Code</div>
+            <div className="text-[13px] font-bold text-[var(--text-primary)] leading-tight">Knot Code</div>
             {repoName && (
-              <div className="text-[9px] text-[var(--text-tertiary)] truncate">{repoName}</div>
+              <div className="text-[11px] text-[var(--text-tertiary)] truncate">{repoName}</div>
             )}
           </div>
-          <button onClick={onToggle} className="tauri-no-drag p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Collapse (⌘\\)">
-            <Icon icon="lucide:panel-left-close" width={13} height={13} />
+          <button onClick={onToggle} className="tauri-no-drag p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Collapse (⌘\\)">
+            <Icon icon="lucide:panel-left-close" width={16} height={16} />
           </button>
         </div>
 
         {/* New Chat + Search row */}
-        <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-2">
+        <div className="flex items-center gap-2 px-3 pt-1.5 pb-2.5">
           <div className="relative flex-1">
-            <Icon icon="lucide:search" width={10} height={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+            <Icon icon="lucide:search" width={13} height={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
             <input
               type="text"
               value={searchChat}
               onChange={e => setSearchChat(e.target.value)}
               placeholder="Search chats..."
-              className="w-full pl-7 pr-2 py-1 text-[10px] rounded-md bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-colors"
+              className="w-full pl-8 pr-2.5 py-1.5 text-[12px] rounded-md bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-colors"
             />
           </div>
-          <button onClick={onNew} className="p-1.5 rounded-md bg-[var(--brand)] text-white hover:opacity-90 transition-opacity cursor-pointer shadow-sm" title="New Chat">
-            <Icon icon="lucide:plus" width={11} height={11} />
+          <button onClick={onNew} className="p-2 rounded-md bg-[var(--brand)] text-white hover:opacity-90 transition-opacity cursor-pointer shadow-sm" title="New Chat">
+            <Icon icon="lucide:plus" width={14} height={14} />
           </button>
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-[var(--border)] mx-2.5" />
+      <div className="h-px bg-[var(--border)] mx-3" />
 
       {/* Chat list */}
-      <div className="flex-1 overflow-y-auto px-1.5 pt-1">
-        {/* Pinned */}
+      <div className="flex-1 overflow-y-auto px-2 pt-1.5">
         {pinned.length > 0 && (
           <>
-            <div className="text-[8px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] px-2.5 pt-2.5 pb-1">Pinned</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] px-3 pt-3 pb-1.5">Pinned</div>
             <div className="flex flex-col gap-0.5">{pinned.map(renderSession)}</div>
           </>
         )}
 
-        {/* Recent */}
-        <div className="text-[8px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] px-2.5 pt-2.5 pb-1">Recent</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] px-3 pt-3 pb-1.5">Recent</div>
         <div className="flex flex-col gap-0.5">
           {filteredRecent.length > 0
             ? filteredRecent.map(renderSession)
             : (
-              <div className="px-2.5 py-6 text-center">
-                <Icon icon="lucide:message-square-plus" width={24} height={24} className="mx-auto mb-2 text-[var(--text-disabled)]" />
-                <p className="text-[10px] text-[var(--text-disabled)]">No chats yet</p>
-                <p className="text-[9px] text-[var(--text-disabled)] mt-0.5">Start a conversation to begin</p>
+              <div className="px-3 py-8 text-center">
+                <Icon icon="lucide:message-square-plus" width={28} height={28} className="mx-auto mb-2.5 text-[var(--text-disabled)]" />
+                <p className="text-[12px] text-[var(--text-disabled)]">No chats yet</p>
+                <p className="text-[11px] text-[var(--text-disabled)] mt-1">Start a conversation to begin</p>
               </div>
             )
           }
@@ -285,37 +276,37 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, collapsed, onToggl
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-2.5 py-2 border-t border-[var(--border)] shrink-0">
+      <div className="flex items-center justify-between px-2 py-1.5 border-t border-[var(--border)] shrink-0">
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '`', metaKey: true }))}
-            className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+            className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
             title="Terminal"
           >
-            <Icon icon="lucide:terminal" width={13} height={13} />
+            <Icon icon="lucide:terminal" width={15} height={15} />
           </button>
           <button
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true }))}
-            className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+            className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
             title="Toggle Explorer"
           >
-            <Icon icon="lucide:folder" width={13} height={13} />
+            <Icon icon="lucide:folder" width={15} height={15} />
           </button>
         </div>
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('open-git-panel'))}
-            className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+            className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
             title="Git"
           >
-            <Icon icon="lucide:git-branch" width={13} height={13} />
+            <Icon icon="lucide:git-branch" width={15} height={15} />
           </button>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('open-settings'))}
-            className="p-1.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+            className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
             title="Settings"
           >
-            <Icon icon="lucide:settings" width={13} height={13} />
+            <Icon icon="lucide:settings" width={15} height={15} />
           </button>
         </div>
       </div>

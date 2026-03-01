@@ -88,7 +88,7 @@ export function EditorView() {
             <EditorTabs />
 
             {/* Editor */}
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 flex flex-col">
               <CodeEditor />
             </div>
 

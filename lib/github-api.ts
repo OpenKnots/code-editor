@@ -282,6 +282,183 @@ export async function commitFiles(
   return { sha: newCommit.sha, files: files.length }
 }
 
+// ─── Pull Requests ─────────────────────────────────────────────
+
+export interface PullRequestSummary {
+  number: number
+  title: string
+  body: string | null
+  state: 'open' | 'closed'
+  draft: boolean
+  merged: boolean
+  author: string
+  authorAvatar: string
+  createdAt: string
+  updatedAt: string
+  mergedAt: string | null
+  labels: Array<{ name: string; color: string }>
+  headRef: string
+  baseRef: string
+  additions: number
+  deletions: number
+  changedFiles: number
+  url: string
+  reviewDecision?: string
+}
+
+export interface PullRequestFile {
+  filename: string
+  status: 'added' | 'removed' | 'modified' | 'renamed' | 'copied' | 'changed' | 'unchanged'
+  additions: number
+  deletions: number
+  patch?: string
+  previous_filename?: string
+  raw_url?: string
+}
+
+export async function fetchPullRequests(
+  repoFullName: string,
+  state: 'open' | 'closed' | 'all' = 'open',
+  perPage = 30,
+): Promise<PullRequestSummary[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls?state=${state}&per_page=${perPage}&sort=updated&direction=desc`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch PRs: ${res.status}`)
+  const data = (await res.json()) as any[]
+  return data.map(p => ({
+    number: p.number,
+    title: p.title,
+    body: p.body,
+    state: p.state,
+    draft: p.draft ?? false,
+    merged: !!p.merged_at,
+    author: p.user?.login ?? 'unknown',
+    authorAvatar: p.user?.avatar_url ?? '',
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+    mergedAt: p.merged_at,
+    labels: (p.labels || []).map((l: any) => ({ name: l.name, color: l.color })),
+    headRef: p.head?.ref ?? '',
+    baseRef: p.base?.ref ?? '',
+    additions: p.additions ?? 0,
+    deletions: p.deletions ?? 0,
+    changedFiles: p.changed_files ?? 0,
+    url: p.html_url,
+    reviewDecision: undefined,
+  }))
+}
+
+export async function fetchPullRequest(
+  repoFullName: string,
+  number: number,
+): Promise<PullRequestSummary> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch PR #${number}: ${res.status}`)
+  const p = (await res.json()) as any
+  return {
+    number: p.number,
+    title: p.title,
+    body: p.body,
+    state: p.state,
+    draft: p.draft ?? false,
+    merged: !!p.merged_at,
+    author: p.user?.login ?? 'unknown',
+    authorAvatar: p.user?.avatar_url ?? '',
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+    mergedAt: p.merged_at,
+    labels: (p.labels || []).map((l: any) => ({ name: l.name, color: l.color })),
+    headRef: p.head?.ref ?? '',
+    baseRef: p.base?.ref ?? '',
+    additions: p.additions ?? 0,
+    deletions: p.deletions ?? 0,
+    changedFiles: p.changed_files ?? 0,
+    url: p.html_url,
+  }
+}
+
+export async function fetchPullRequestFiles(
+  repoFullName: string,
+  number: number,
+): Promise<PullRequestFile[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/files?per_page=100`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch PR files: ${res.status}`)
+  const data = (await res.json()) as any[]
+  return data.map(f => ({
+    filename: f.filename,
+    status: f.status,
+    additions: f.additions,
+    deletions: f.deletions,
+    patch: f.patch,
+    previous_filename: f.previous_filename,
+    raw_url: f.raw_url,
+  }))
+}
+
+export async function createPullRequest(
+  repoFullName: string,
+  title: string,
+  body: string,
+  head: string,
+  base: string,
+  draft = false,
+): Promise<PullRequestSummary> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ title, body, head, base, draft }),
+    }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as Record<string, string>
+    throw new Error(err.message || `Failed to create PR: ${res.status}`)
+  }
+  const p = (await res.json()) as any
+  return {
+    number: p.number,
+    title: p.title,
+    body: p.body,
+    state: p.state,
+    draft: p.draft ?? false,
+    merged: false,
+    author: p.user?.login ?? 'unknown',
+    authorAvatar: p.user?.avatar_url ?? '',
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+    mergedAt: null,
+    labels: [],
+    headRef: p.head?.ref ?? '',
+    baseRef: p.base?.ref ?? '',
+    additions: 0,
+    deletions: 0,
+    changedFiles: 0,
+    url: p.html_url,
+  }
+}
+
+export async function mergePullRequest(
+  repoFullName: string,
+  number: number,
+  mergeMethod: 'merge' | 'squash' | 'rebase' = 'merge',
+  commitTitle?: string,
+): Promise<{ merged: boolean; message: string; sha: string }> {
+  const payload: Record<string, unknown> = { merge_method: mergeMethod }
+  if (commitTitle) payload.commit_title = commitTitle
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/merge`,
+    { method: 'PUT', body: JSON.stringify(payload) }
+  )
+  const data = (await res.json()) as any
+  if (!res.ok) throw new Error(data.message || `Failed to merge PR: ${res.status}`)
+  return { merged: data.merged ?? true, message: data.message ?? 'Merged', sha: data.sha ?? '' }
+}
+
 // ─── OAuth Device Flow (direct, no proxy) ──────────────────────
 
 export async function requestDeviceCode(clientId: string): Promise<{

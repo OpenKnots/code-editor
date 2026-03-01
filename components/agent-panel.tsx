@@ -56,29 +56,29 @@ function AgentConnectPrompt() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center text-center py-6 px-4">
-      <div className="relative mb-4">
+    <div className="flex flex-col items-center justify-center text-center py-8 px-4">
+      <div className="relative mb-5">
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[color-mix(in_srgb,var(--brand)_20%,transparent)] to-[color-mix(in_srgb,var(--brand)_6%,transparent)] border border-[color-mix(in_srgb,var(--brand)_25%,transparent)] flex items-center justify-center shadow-lg">
-          <Icon icon="lucide:cpu" width={26} height={26} className="text-[var(--brand)]" />
+          <Icon icon="lucide:cpu" width={28} height={28} className="text-[var(--brand)]" />
         </div>
-        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--sidebar-bg)] ${
+        <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--sidebar-bg)] ${
           isConnecting ? 'bg-[var(--warning,#eab308)] animate-pulse' : 'bg-[var(--text-disabled)]'
         }`} />
       </div>
 
-      <h3 className="text-[14px] font-semibold text-[var(--text-primary)] mb-1">Connect to Gateway</h3>
-      <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed mb-4 max-w-[240px]">
+      <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1.5">Connect to Gateway</h3>
+      <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-5 max-w-[280px]">
         Your OpenClaw gateway powers the AI agent. Connect to enable completions, chat, and slash commands.
       </p>
 
-      <div className="w-full max-w-[260px] space-y-2">
+      <div className="w-full max-w-[300px] space-y-2.5">
         <input
           type="text"
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
           placeholder="ws://localhost:4444"
-          className="w-full px-2.5 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+          className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
           disabled={isConnecting}
         />
         <div className="relative">
@@ -88,52 +88,51 @@ function AgentConnectPrompt() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
             placeholder="Password (optional)"
-            className="w-full px-2.5 py-2 pr-7 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+            className="w-full px-3 py-2.5 pr-9 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
             disabled={isConnecting}
           />
           <button
             onClick={() => setShowPassword(v => !v)}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer p-0.5"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer p-0.5"
             tabIndex={-1}
           >
-            <Icon icon={showPassword ? 'lucide:eye-off' : 'lucide:eye'} width={11} height={11} />
+            <Icon icon={showPassword ? 'lucide:eye-off' : 'lucide:eye'} width={14} height={14} />
           </button>
         </div>
         <button
           onClick={handleConnect}
           disabled={!url.trim() || isConnecting}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             backgroundColor: 'var(--brand)',
             color: 'var(--brand-contrast, #fff)',
           }}
         >
           {isConnecting ? (
-            <Icon icon="lucide:loader-2" width={12} height={12} className="animate-spin" />
+            <Icon icon="lucide:loader-2" width={14} height={14} className="animate-spin" />
           ) : (
-            <Icon icon="lucide:plug" width={12} height={12} />
+            <Icon icon="lucide:plug" width={14} height={14} />
           )}
           {isConnecting ? 'Connecting…' : 'Connect'}
         </button>
       </div>
 
       {status === 'error' && error && (
-        <div className="flex items-start gap-1.5 mt-3 text-[10px] text-[var(--color-deletions)] max-w-[260px] text-left">
-          <Icon icon="lucide:alert-circle" width={11} height={11} className="shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 mt-4 text-[12px] text-[var(--color-deletions)] max-w-[300px] text-left">
+          <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0 mt-0.5" />
           <span className="leading-relaxed">{error}</span>
         </div>
       )}
 
-      <div className="mt-5 space-y-1.5 text-[10px] text-[var(--text-disabled)] max-w-[220px]">
-        <div className="flex items-center gap-1.5">
-          <Icon icon="lucide:shield" width={10} height={10} />
+      <div className="mt-6 space-y-2 text-[12px] text-[var(--text-disabled)] max-w-[260px]">
+        <div className="flex items-center gap-2">
+          <Icon icon="lucide:shield" width={13} height={13} />
           <span>Runs locally — code never leaves your machine</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Icon icon="lucide:zap" width={10} height={10} />
+        <div className="flex items-center gap-2">
+          <Icon icon="lucide:zap" width={13} height={13} />
           <span>Works with any LLM provider</span>
         </div>
-
       </div>
     </div>
   )
@@ -1330,16 +1329,16 @@ export function AgentPanel() {
             onPaste={handleImagePaste}
             placeholder={activeFile ? `Ask about ${activeFile.split('/').pop()}...` : 'Ask or type /command...'}
             rows={1}
-            className="w-full resize-none rounded-lg bg-[var(--bg)] border border-[var(--border)] pl-3 pr-20 py-2 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-colors"
+            className="w-full resize-none rounded-lg bg-[var(--bg)] border border-[var(--border)] pl-3 pr-20 py-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-colors"
           />
           {/* Action buttons — inside input, right side */}
-          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
             <button
               onClick={handleImageSelect}
               className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
               title="Attach image"
             >
-              <Icon icon="lucide:image-plus" width={12} height={12} />
+              <Icon icon="lucide:image-plus" width={14} height={14} />
             </button>
             <button
               onClick={sendMessage}
@@ -1351,40 +1350,38 @@ export function AgentPanel() {
               }`}
               title="Send (Enter)"
             >
-              <Icon icon={isStreaming ? 'lucide:square' : 'lucide:arrow-up'} width={12} height={12} />
+              <Icon icon={isStreaming ? 'lucide:square' : 'lucide:arrow-up'} width={14} height={14} />
             </button>
           </div>
         </div>
-        {/* Bottom bar — mode selector + model + context tokens (1Code-style) */}
-        <div className="flex items-center justify-between mt-1 px-0.5">
-          <div className="flex items-center gap-2">
+        {/* Bottom bar — mode selector + model + context tokens */}
+        <div className="flex items-center justify-between mt-1.5 px-0.5">
+          <div className="flex items-center gap-2.5">
             <ModeSelector mode={agentMode} onChange={setAgentMode} />
-            {/* Model display */}
             {modelInfo.current && (
               <div className="relative">
                 <button
                   onClick={() => setModelMenuOpen(v => !v)}
-                  className="flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
                 >
-                  <Icon icon="lucide:sparkles" width={9} height={9} />
+                  <Icon icon="lucide:sparkles" width={12} height={12} />
                   {modelInfo.current.replace(/^.*\//, '').replace(/(claude-|gpt-)/, '').slice(0, 12)}
-                  <Icon icon="lucide:chevron-down" width={8} height={8} />
+                  <Icon icon="lucide:chevron-down" width={10} height={10} />
                 </button>
                 {modelMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-1 w-48 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 z-50">
+                  <div className="absolute bottom-full left-0 mb-1 w-52 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 z-50">
                     {modelInfo.available.slice(0, 4).map(m => (
                       <button
                         key={m}
                         onClick={() => {
-                          // Switch model via gateway
                           setModelMenuOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer ${
+                        className={`w-full text-left px-3 py-2 text-[12px] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer ${
                           m === modelInfo.current ? 'text-[var(--brand)]' : 'text-[var(--text-secondary)]'
                         }`}
                       >
-                        <div className="flex items-center gap-1.5">
-                          {m === modelInfo.current && <Icon icon="lucide:check" width={10} height={10} />}
+                        <div className="flex items-center gap-2">
+                          {m === modelInfo.current && <Icon icon="lucide:check" width={12} height={12} />}
                           <span className="font-mono">{m.replace(/^.*\//, '')}</span>
                         </div>
                       </button>
@@ -1394,15 +1391,14 @@ export function AgentPanel() {
               </div>
             )}
           </div>
-          {/* Context token count */}
-          <div className="flex items-center gap-2">
-            <span className="text-[8px] text-[var(--text-disabled)]">
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] text-[var(--text-disabled)]">
               {contextTokens > 0 ? `~${(contextTokens / 1000).toFixed(1)}k ctx` : ''}
             </span>
-            <span className="text-[8px] text-[var(--text-disabled)]">
-              <kbd className="px-1 rounded border border-[var(--border)] text-[7px]">@</kbd> files
+            <span className="text-[10px] text-[var(--text-disabled)]">
+              <kbd className="px-1 rounded border border-[var(--border)] text-[9px]">@</kbd> files
               <span className="mx-0.5">·</span>
-              <kbd className="px-1 rounded border border-[var(--border)] text-[7px]">/</kbd> cmds
+              <kbd className="px-1 rounded border border-[var(--border)] text-[9px]">/</kbd> cmds
             </span>
           </div>
         </div>
