@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Icon } from '@iconify/react'
+import { ModeSelector } from '@/components/mode-selector'
+import type { AgentMode } from '@/components/mode-selector'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
 import { useRepo } from '@/context/repo-context'
@@ -126,6 +128,7 @@ function AgentConnectPrompt() {
           <Icon icon="lucide:zap" width={10} height={10} />
           <span>Works with any LLM provider</span>
         </div>
+
       </div>
     </div>
   )
@@ -146,6 +149,7 @@ export function AgentPanel() {
   const [imageAttachments, setImageAttachments] = useState<Array<{ name: string; dataUrl: string }>>([])
   const [modelInfo, setModelInfo] = useState<{ current: string; available: string[] }>({ current: '', available: [] })
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
+  const [agentMode, setAgentMode] = useState<AgentMode>('agent')
   const [contextTokens, setContextTokens] = useState(0)
   const inlineDiffRef = useRef<InlineDiffResult | null>(null)
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
@@ -591,7 +595,8 @@ export function AgentPanel() {
       for (const img of imageAttachments) {
         attachCtx += `\n\n[Attached screenshot: ${img.name}]`
       }
-      const fullMessage = (context || '') + attachCtx + '\n\n' + text
+      const modePrefix = agentMode === 'plan' ? '[Mode: Plan — discuss and plan, do not write code yet]\n' : agentMode === 'code' ? '[Mode: Code — make direct changes]\n' : ''
+      const fullMessage = modePrefix + (context || '') + attachCtx + '\n\n' + text
       setContextAttachments([])
       setImageAttachments([])
       const idemKey = `ce-${Date.now()}`
@@ -1187,6 +1192,57 @@ export function AgentPanel() {
             >
               <Icon icon={isStreaming ? 'lucide:square' : 'lucide:arrow-up'} width={12} height={12} />
             </button>
+          </div>
+        </div>
+        {/* Bottom bar — mode selector + model + context tokens (1Code-style) */}
+        <div className="flex items-center justify-between mt-1 px-0.5">
+          <div className="flex items-center gap-2">
+            <ModeSelector mode={agentMode} onChange={setAgentMode} />
+            {/* Model display */}
+            {modelInfo.current && (
+              <div className="relative">
+                <button
+                  onClick={() => setModelMenuOpen(v => !v)}
+                  className="flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                >
+                  <Icon icon="lucide:sparkles" width={9} height={9} />
+                  {modelInfo.current.replace(/^.*\//, '').replace(/(claude-|gpt-)/, '').slice(0, 12)}
+                  <Icon icon="lucide:chevron-down" width={8} height={8} />
+                </button>
+                {modelMenuOpen && (
+                  <div className="absolute bottom-full left-0 mb-1 w-48 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 z-50">
+                    {modelInfo.available.slice(0, 4).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          // Switch model via gateway
+                          setModelMenuOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer ${
+                          m === modelInfo.current ? 'text-[var(--brand)]' : 'text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {m === modelInfo.current && <Icon icon="lucide:check" width={10} height={10} />}
+                          <span className="font-mono">{m.replace(/^.*\//, '')}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {/* Context token count */}
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] text-[var(--text-disabled)]">
+              {contextTokens > 0 ? `~${(contextTokens / 1000).toFixed(1)}k ctx` : ''}
+            </span>
+            <span className="text-[8px] text-[var(--text-disabled)]">
+              <kbd className="px-1 rounded border border-[var(--border)] text-[7px]">@</kbd> files
+              <span className="mx-0.5">·</span>
+              <kbd className="px-1 rounded border border-[var(--border)] text-[7px]">/</kbd> cmds
+            </span>
           </div>
         </div>
       </div>

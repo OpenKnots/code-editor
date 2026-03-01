@@ -14,6 +14,10 @@ import { CodeEditor } from '@/components/code-editor'
 const AgentPanel = dynamic(() => import('@/components/agent-panel').then(m => m.AgentPanel), { ssr: false })
 import { SourceSwitcher, SourceModeIndicator } from '@/components/source-switcher'
 import { ActivityBar } from '@/components/activity-bar'
+import { WorkspaceSidebar } from '@/components/workspace-sidebar'
+import { ModeSelector } from '@/components/mode-selector'
+import type { AgentMode } from '@/components/mode-selector'
+const DiffReviewPanel = dynamic(() => import('@/components/diff-review-panel').then(m => m.DiffReviewPanel), { ssr: false })
 import { ResizeHandle } from '@/components/resize-handle'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 const QuickOpen = dynamic(() => import('@/components/quick-open').then(m => m.QuickOpen), { ssr: false })
@@ -106,6 +110,11 @@ function EditorLayout() {
   const [terminalHeight, setTerminalHeight] = useState(260)
   const [engineVisible, setEngineVisible] = useState(false)
   const [gatewayPopoverOpen, setGatewayPopoverOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [diffReviewVisible, setDiffReviewVisible] = useState(false)
+  const [diffReviewWidth, setDiffReviewWidth] = useState(480)
+  const [agentMode, setAgentMode] = useState<AgentMode>('agent')
+  const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [cursorPos, setCursorPos] = useState<{ line: number; col: number } | null>(null)
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
   const [isMacTauri, setIsMacTauri] = useState(false)
@@ -380,6 +389,18 @@ function EditorLayout() {
 
       {/* Main content */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Workspace Sidebar — chat history (1Code-style) */}
+        <WorkspaceSidebar
+          activeId={activeChatId}
+          onSelect={setActiveChatId}
+          onNew={() => {
+            setActiveChatId(crypto.randomUUID())
+            setAgentOpen(true)
+          }}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(v => !v)}
+        />
+
         {/* Activity Bar */}
         <ActivityBar
           active=""
@@ -491,6 +512,28 @@ function EditorLayout() {
               <div className="flex-1 min-h-0 overflow-hidden">
                 <AgentPanel />
               </div>
+            </div>
+          </>
+        )}
+        {/* Diff Review Panel (1Code-style) */}
+        {diffReviewVisible && (
+          <>
+            <ResizeHandle direction="horizontal" onResize={(delta) => setDiffReviewWidth(w => Math.max(320, Math.min(800, w - delta)))} />
+            <div className="shrink-0 overflow-hidden" style={{ width: diffReviewWidth }}>
+              <DiffReviewPanel
+                visible={diffReviewVisible}
+                onClose={() => setDiffReviewVisible(false)}
+                onAcceptAll={() => {
+                  window.dispatchEvent(new CustomEvent('diff-accept-all'))
+                  setDiffReviewVisible(false)
+                }}
+                onRejectAll={() => {
+                  window.dispatchEvent(new CustomEvent('diff-reject-all'))
+                  setDiffReviewVisible(false)
+                }}
+                onAcceptFile={(path) => window.dispatchEvent(new CustomEvent('diff-accept-file', { detail: { path } }))}
+                onRejectFile={(path) => window.dispatchEvent(new CustomEvent('diff-reject-file', { detail: { path } }))}
+              />
             </div>
           </>
         )}
