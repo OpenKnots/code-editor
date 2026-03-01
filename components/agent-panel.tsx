@@ -185,7 +185,7 @@ export function AgentPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg)]">
+    <div className="flex flex-col min-h-dvh max-h-dvh overflow-hidden bg-[var(--bg)]">
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] shrink-0">
         <Icon icon="lucide:sparkles" width={14} height={14} className="text-[var(--brand)]" />

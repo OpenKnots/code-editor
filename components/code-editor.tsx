@@ -75,6 +75,7 @@ export function CodeEditor() {
         {monacoReady ? (
           <Editor
             key={file.path}
+            height="100%"
             defaultValue={file.content}
             language={file.language}
             theme="vs-dark"

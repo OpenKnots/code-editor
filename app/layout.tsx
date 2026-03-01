@@ -59,7 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" data-theme="obsidian" className="dark">
-      <body className="bg-[var(--bg)] text-[var(--text-primary)] antialiased">
+      <body className="bg-[var(--bg)] text-[var(--text-primary)] antialiased min-h-screen max-h-dvh overflow-hidden">
         {isAllowed ? (
           <GatewayProvider>
             <RepoProvider>

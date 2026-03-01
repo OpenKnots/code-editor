@@ -7,7 +7,7 @@ import { useRepo, type RepoInfo } from '@/context/repo-context'
 export function RepoSelector() {
   const { repo, setRepo } = useRepo()
   const [editing, setEditing] = useState(!repo)
-  const [input, setInput] = useState(repo ? repo.fullName : '')
+  const [input, setInput] = useState(repo ? repo.fullName : 'openknots/terminal-ui')
 
   const handleSubmit = useCallback(() => {
     const trimmed = input.trim()

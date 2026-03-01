@@ -43,7 +43,7 @@ function GatewayLogin() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-[var(--bg)]">
+    <div className="h-screen-safe overflow-hidden flex items-center justify-center px-4 bg-[var(--bg)]">
       <div className="w-full max-w-[400px] space-y-5 animate-fade-in-up">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6 sm:p-8 shadow-xl">
           <div className="text-center mb-6">
@@ -248,7 +248,7 @@ function EditorLayout() {
   }, [])
 
   return (
-    <div className="flex flex-col h-dvh max-h-dvh overflow-hidden">
+    <div className="flex flex-col h-screen-safe overflow-hidden">
       {/* Top bar */}
       <header className="flex items-center justify-between px-4 h-11 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
         <div className="flex items-center gap-3">
