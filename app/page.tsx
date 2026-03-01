@@ -38,8 +38,8 @@ const VIEW_ICONS: Record<ViewId, { icon: string; label: string }> = {
 export default function EditorLayout() {
   const { status } = useGateway()
   const { repo } = useRepo()
-  const { files, activeFile, openFile, markClean, updateFileContent } = useEditor()
-  const local = useLocal()
+  const { files, activeFile, openFile, setActiveFile, markClean, updateFileContent } = useEditor()
+  const { localMode, readFile: localReadFile, rootPath: localRootPath, gitInfo } = useLocal()
   const { activeView, setView } = useView()
 
   // ─── Minimal state ──────────────────────────────────────
@@ -114,22 +114,50 @@ export default function EditorLayout() {
   // ─── File open handler ─────────────────────────────────
   useEffect(() => {
     const handler = async (e: Event) => {
-      const { path, sha } = (e as CustomEvent).detail ?? {}
+      const { path, sha, content: providedContent } = (e as CustomEvent).detail ?? {}
       if (!path) return
+
+      // Already open — just switch to it
       const existing = files.find(f => f.path === path)
-      if (existing) { /* Already open */ return }
+      if (existing) {
+        setActiveFile(path)
+        setView('editor')
+        return
+      }
+
+      // Content provided directly (local mode)
+      if (providedContent != null) {
+        openFile(path, providedContent, sha ?? '')
+        setView('editor')
+        return
+      }
+
+      // Local mode — read from filesystem
+      if (localMode && localReadFile) {
+        try {
+          const content = await localReadFile(path)
+          openFile(path, content, '')
+          setView('editor')
+        } catch (err) {
+          console.error('Failed to read local file:', path, err)
+        }
+        return
+      }
+
+      // Fetch from GitHub
       if (repo) {
         try {
-          const [owner, name] = repo.fullName.split('/')
           const content = await fetchFileContents(repo.fullName, path, repo.branch)
           openFile(path, typeof content === 'string' ? content : '', sha ?? '')
           setView('editor')
-        } catch {}
+        } catch (err) {
+          console.error('Failed to open file:', path, err)
+        }
       }
     }
     window.addEventListener('file-select', handler)
     return () => window.removeEventListener('file-select', handler)
-  }, [repo, files, openFile, setView])
+  }, [repo, files, openFile, setActiveFile, setView])
 
   // ─── Commit handler ────────────────────────────────────
   useEffect(() => {
@@ -191,7 +219,7 @@ export default function EditorLayout() {
         onNew={() => { const newId = crypto.randomUUID(); setActiveChatId(newId); window.dispatchEvent(new CustomEvent('switch-chat', { detail: { id: newId } })); setView('chat') }}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(v => !v)}
-        repoName={repo?.fullName || local.rootPath?.split('/').pop()}
+        repoName={repo?.fullName || localRootPath?.split('/').pop()}
       />
 
       {/* Main content area */}
@@ -256,10 +284,10 @@ export default function EditorLayout() {
                 {repo.branch}
               </span>
             )}
-            {local.localMode && local.gitInfo?.branch && (
+            {localMode && gitInfo?.branch && (
               <span className="flex items-center gap-1">
                 <Icon icon="lucide:git-branch" width={9} height={9} />
-                {local.gitInfo.branch}
+                {gitInfo.branch}
               </span>
             )}
             {dirtyCount > 0 && (
