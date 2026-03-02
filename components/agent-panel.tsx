@@ -130,7 +130,7 @@ function AgentConnectPrompt() {
       <div className="mt-6 space-y-2 text-[12px] text-[var(--text-disabled)] max-w-[260px]">
         <div className="flex items-center gap-2">
           <Icon icon="lucide:shield" width={13} height={13} />
-          <span>Runs locally — code never leaves your machine</span>
+          <span>Runs locally. Code never leaves your machine</span>
         </div>
         <div className="flex items-center gap-2">
           <Icon icon="lucide:zap" width={13} height={13} />
@@ -1409,56 +1409,62 @@ export function AgentPanel() {
           </div>
         </div>
         {/* Bottom bar — runtime + permissions + mode selector + model + context tokens */}
-        <div className="flex items-center justify-between mt-1.5">
-          <div className="flex items-center gap-1.5">
-            <RuntimeSelector />
-            <PermissionsToggle />
+        <div className="flex flex-col gap-1 mt-1.5">
+          {/* Row 1: Mode selector centered */}
+          <div className="flex items-center justify-center">
             <ModeSelector mode={agentMode} onChange={setAgentMode} />
           </div>
-          <div className="flex items-center gap-2">
-            {modelInfo.current && (
-              <div className="relative">
-                <button
-                  onClick={() => setModelMenuOpen(v => !v)}
-                  className="flex items-center gap-1 text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-                >
-                  <Icon icon="lucide:sparkles" width={11} height={11} />
-                  {modelInfo.current.replace(/^.*\//, '').replace(/(claude-|gpt-)/, '').slice(0, 12)}
-                  <Icon icon="lucide:chevron-down" width={9} height={9} />
-                </button>
-                {modelMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setModelMenuOpen(false)} />
-                    <div className="absolute bottom-full left-0 mb-1 w-52 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-xl py-1 z-50">
-                      {modelInfo.available.slice(0, 4).map(m => (
-                        <button
-                          key={m}
-                          onClick={() => { setModelMenuOpen(false) }}
-                          className={`w-full text-left px-3 py-2 text-[12px] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] transition-colors cursor-pointer ${
-                            m === modelInfo.current ? 'text-[var(--brand)]' : 'text-[var(--text-secondary)]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {m === modelInfo.current && <Icon icon="lucide:check" width={12} height={12} />}
-                            <span className="font-mono">{m.replace(/^.*\//, '')}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-            {contextTokens > 0 && (
-              <span className="text-[10px] text-[var(--text-disabled)] tabular-nums">
-                ~{(contextTokens / 1000).toFixed(1)}k ctx
+          {/* Row 2: Runtime, permissions, model, context */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <RuntimeSelector />
+              <PermissionsToggle />
+            </div>
+            <div className="flex items-center gap-2">
+              {modelInfo.current && (
+                <div className="relative">
+                  <button
+                    onClick={() => setModelMenuOpen(v => !v)}
+                    className="flex items-center gap-1 text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                  >
+                    <Icon icon="lucide:sparkles" width={11} height={11} />
+                    {modelInfo.current.replace(/^.*\//, '').replace(/(claude-|gpt-)/, '').slice(0, 12)}
+                    <Icon icon="lucide:chevron-down" width={9} height={9} />
+                  </button>
+                  {modelMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setModelMenuOpen(false)} />
+                      <div className="absolute bottom-full left-0 mb-1 w-52 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-xl py-1 z-50">
+                        {modelInfo.available.slice(0, 4).map(m => (
+                          <button
+                            key={m}
+                            onClick={() => { setModelMenuOpen(false) }}
+                            className={`w-full text-left px-3 py-2 text-[12px] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] transition-colors cursor-pointer ${
+                              m === modelInfo.current ? 'text-[var(--brand)]' : 'text-[var(--text-secondary)]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {m === modelInfo.current && <Icon icon="lucide:check" width={12} height={12} />}
+                              <span className="font-mono">{m.replace(/^.*\//, '')}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {contextTokens > 0 && (
+                <span className="text-[10px] text-[var(--text-disabled)] tabular-nums">
+                  ~{(contextTokens / 1000).toFixed(1)}k ctx
+                </span>
+              )}
+              <span className="text-[10px] text-[var(--text-disabled)]">
+                <kbd className="px-1 py-px rounded border border-[var(--border)] text-[9px] font-mono">@</kbd>
+                <span className="mx-1">·</span>
+                <kbd className="px-1 py-px rounded border border-[var(--border)] text-[9px] font-mono">/</kbd>
               </span>
-            )}
-            <span className="text-[10px] text-[var(--text-disabled)]">
-              <kbd className="px-1 py-px rounded border border-[var(--border)] text-[9px] font-mono">@</kbd>
-              <span className="mx-1">·</span>
-              <kbd className="px-1 py-px rounded border border-[var(--border)] text-[9px] font-mono">/</kbd>
-            </span>
+            </div>
           </div>
         </div>
       </div>

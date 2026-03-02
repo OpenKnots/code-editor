@@ -220,7 +220,7 @@ export function WorkspaceSidebar({ activeId, onSelect, onNew, onDelete, collapse
     >
       {/* Branding + Header */}
       <div className={`shrink-0 ${isTauriDesktop ? 'pt-7' : ''}`}>
-        <div data-tauri-drag-region className="flex items-center gap-2.5 px-3.5 pt-3 pb-1.5 tauri-drag-region">
+        <div data-tauri-drag-region className="flex items-center gap-2.5 px-3.5 h-10 tauri-drag-region">
           <KnotLogo size={22} className="animate-sidebar-logo" />
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold text-[var(--text-primary)] leading-tight">Knot Code</div>

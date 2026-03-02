@@ -34,6 +34,7 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
   const [showTokenInput, setShowTokenInput] = useState(false)
   const [tokenDraft, setTokenDraft] = useState('')
   const [tokenRevealed, setTokenRevealed] = useState(false)
+  const [ghSectionOpen, setGhSectionOpen] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number>(0)
@@ -160,35 +161,42 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
             className="w-full resize-none bg-transparent px-4 pt-4 pb-1 text-[14px] leading-[1.6] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
           />
 
-          {/* Toolbar row */}
-          <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
-            <div className="flex items-center gap-0.5">
-              <button className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer" title="Attach file">
-                <Icon icon="lucide:paperclip" width={14} height={14} />
-              </button>
-              <button className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer" title="Attach image">
-                <Icon icon="lucide:image-plus" width={14} height={14} />
-              </button>
-              <button className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer" title="@ mention file">
-                <Icon icon="lucide:at-sign" width={14} height={14} />
-              </button>
+          {/* Toolbar */}
+          <div className="px-3 pb-2.5 pt-1 space-y-1.5">
+            {/* Row 1: Attachments left, selectors + send right */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-0.5">
+                <button className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer" title="Attach file">
+                  <Icon icon="lucide:paperclip" width={14} height={14} />
+                </button>
+                <button className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer" title="Attach image">
+                  <Icon icon="lucide:image-plus" width={14} height={14} />
+                </button>
+                <button className="p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer" title="@ mention file">
+                  <Icon icon="lucide:at-sign" width={14} height={14} />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <RuntimeSelector size="sm" />
+                <PermissionsToggle size="sm" />
+                <button
+                  onClick={handleSubmit}
+                  disabled={!input.trim()}
+                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                    input.trim()
+                      ? 'bg-[var(--text-primary)] text-[var(--bg)] shadow-sm hover:opacity-90 active:scale-95'
+                      : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] cursor-not-allowed'
+                  }`}
+                >
+                  <Icon icon="lucide:arrow-up" width={14} height={14} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <RuntimeSelector size="sm" />
-              <PermissionsToggle size="sm" />
+            {/* Row 2: Mode selector — always fully visible */}
+            <div className="flex items-center justify-center">
               <ModeSelector mode={agentMode} onChange={setAgentMode} size="sm" />
-              <button
-                onClick={handleSubmit}
-                disabled={!input.trim()}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  input.trim()
-                    ? 'bg-[var(--text-primary)] text-[var(--bg)] shadow-sm hover:opacity-90 active:scale-95'
-                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] cursor-not-allowed'
-                }`}
-              >
-                <Icon icon="lucide:arrow-up" width={14} height={14} />
-              </button>
             </div>
           </div>
         </div>
@@ -259,88 +267,99 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
               </div>
             )}
 
-            {/* GitHub Token */}
+            {/* GitHub Token — collapsed by default */}
             <div className="mt-4">
-              <div className="flex items-center gap-3 mb-2">
+              <button
+                onClick={() => setGhSectionOpen(v => !v)}
+                className="w-full flex items-center gap-3 cursor-pointer group"
+              >
                 <div className="flex-1 h-px bg-[var(--border)]" />
-                <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-disabled)] font-medium">GitHub</span>
+                <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--text-disabled)] font-medium group-hover:text-[var(--text-tertiary)] transition-colors">
+                  GitHub
+                  {authenticated && <Icon icon="lucide:check-circle" width={10} height={10} className="text-[var(--success)]" />}
+                  <Icon icon={ghSectionOpen ? 'lucide:chevron-up' : 'lucide:chevron-down'} width={10} height={10} />
+                </span>
                 <div className="flex-1 h-px bg-[var(--border)]" />
-              </div>
+              </button>
 
-              {authenticated ? (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]">
-                  <Icon icon="lucide:check-circle" width={14} height={14} className="text-[var(--success)] shrink-0" />
-                  <span className="text-[12px] text-[var(--text-secondary)] flex-1 font-mono truncate">
-                    {tokenRevealed ? ghToken : maskedToken}
-                  </span>
-                  <button
-                    onClick={() => setTokenRevealed(v => !v)}
-                    className="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-                    title={tokenRevealed ? 'Hide token' : 'Reveal token'}
-                  >
-                    <Icon icon={tokenRevealed ? 'lucide:eye-off' : 'lucide:eye'} width={13} height={13} />
-                  </button>
-                  <button
-                    onClick={() => { clearToken(); setTokenRevealed(false) }}
-                    className="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--error)_10%,transparent)] text-[var(--text-disabled)] hover:text-[var(--error)] transition-colors cursor-pointer"
-                    title="Remove token"
-                  >
-                    <Icon icon="lucide:x" width={13} height={13} />
-                  </button>
-                </div>
-              ) : showTokenInput ? (
-                <div className="flex items-center gap-1.5">
-                  <div className="flex-1 flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 focus-within:border-[var(--border-focus)] transition-colors">
-                    <Icon icon="lucide:key" width={13} height={13} className="text-[var(--text-disabled)] shrink-0" />
-                    <input
-                      type={tokenRevealed ? 'text' : 'password'}
-                      value={tokenDraft}
-                      onChange={e => setTokenDraft(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleSaveToken(); if (e.key === 'Escape') { setShowTokenInput(false); setTokenDraft(''); setTokenRevealed(false) } }}
-                      placeholder="ghp_... or github_pat_..."
-                      autoFocus
-                      className="flex-1 bg-transparent text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
+              {ghSectionOpen && (
+                <div className="mt-2">
+                  {authenticated ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]">
+                      <Icon icon="lucide:check-circle" width={14} height={14} className="text-[var(--success)] shrink-0" />
+                      <span className="text-[12px] text-[var(--text-secondary)] flex-1 font-mono truncate">
+                        {tokenRevealed ? ghToken : maskedToken}
+                      </span>
+                      <button
+                        onClick={() => setTokenRevealed(v => !v)}
+                        className="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                        title={tokenRevealed ? 'Hide token' : 'Reveal token'}
+                      >
+                        <Icon icon={tokenRevealed ? 'lucide:eye-off' : 'lucide:eye'} width={13} height={13} />
+                      </button>
+                      <button
+                        onClick={() => { clearToken(); setTokenRevealed(false) }}
+                        className="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--error)_10%,transparent)] text-[var(--text-disabled)] hover:text-[var(--error)] transition-colors cursor-pointer"
+                        title="Remove token"
+                      >
+                        <Icon icon="lucide:x" width={13} height={13} />
+                      </button>
+                    </div>
+                  ) : showTokenInput ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex-1 flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 focus-within:border-[var(--border-focus)] transition-colors">
+                        <Icon icon="lucide:key" width={13} height={13} className="text-[var(--text-disabled)] shrink-0" />
+                        <input
+                          type={tokenRevealed ? 'text' : 'password'}
+                          value={tokenDraft}
+                          onChange={e => setTokenDraft(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') handleSaveToken(); if (e.key === 'Escape') { setShowTokenInput(false); setTokenDraft(''); setTokenRevealed(false) } }}
+                          placeholder="ghp_... or github_pat_..."
+                          autoFocus
+                          className="flex-1 bg-transparent text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                        <button
+                          onClick={() => setTokenRevealed(v => !v)}
+                          className="p-0.5 rounded hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                          title={tokenRevealed ? 'Hide' : 'Reveal'}
+                        >
+                          <Icon icon={tokenRevealed ? 'lucide:eye-off' : 'lucide:eye'} width={12} height={12} />
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleSaveToken}
+                        disabled={!tokenDraft.trim()}
+                        className={`px-3.5 py-2 rounded-xl text-[12px] font-medium transition-all cursor-pointer ${
+                          tokenDraft.trim()
+                            ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)]'
+                            : 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed'
+                        }`}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => { setShowTokenInput(false); setTokenDraft(''); setTokenRevealed(false) }}
+                        className="p-1.5 rounded-md hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                      >
+                        <Icon icon="lucide:x" width={13} height={13} />
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => setTokenRevealed(v => !v)}
-                      className="p-0.5 rounded hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-                      title={tokenRevealed ? 'Hide' : 'Reveal'}
+                      onClick={() => setShowTokenInput(true)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
                     >
-                      <Icon icon={tokenRevealed ? 'lucide:eye-off' : 'lucide:eye'} width={12} height={12} />
+                      <Icon icon="lucide:key" width={13} height={13} />
+                      Add GitHub Token
                     </button>
-                  </div>
-                  <button
-                    onClick={handleSaveToken}
-                    disabled={!tokenDraft.trim()}
-                    className={`px-3.5 py-2 rounded-xl text-[12px] font-medium transition-all cursor-pointer ${
-                      tokenDraft.trim()
-                        ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)]'
-                        : 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed'
-                    }`}
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => { setShowTokenInput(false); setTokenDraft(''); setTokenRevealed(false) }}
-                    className="p-1.5 rounded-md hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-                  >
-                    <Icon icon="lucide:x" width={13} height={13} />
-                  </button>
+                  )}
+                  <p className="text-[10px] text-[var(--text-disabled)] text-center mt-2">
+                    {authenticated ? 'Token saved locally. Never sent to any server.' : 'Required for remote repos. Generate at github.com/settings/tokens'}
+                  </p>
                 </div>
-              ) : (
-                <button
-                  onClick={() => setShowTokenInput(true)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
-                >
-                  <Icon icon="lucide:key" width={13} height={13} />
-                  Add GitHub Token
-                </button>
               )}
-              <p className="text-[10px] text-[var(--text-disabled)] text-center mt-2">
-                {authenticated ? 'Token saved locally. Never sent to any server.' : 'Required for remote repos. Generate at github.com/settings/tokens'}
-              </p>
             </div>
           </div>
         )}

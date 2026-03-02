@@ -1,7 +1,7 @@
 import { isTauri } from '@/lib/tauri'
 
 const SPOTIFY_CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ?? ''
-const SCOPES = 'streaming user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative'
+const SCOPES = 'streaming user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-library-read'
 const TOKEN_KEY = 'knot:spotify-token'
 const REFRESH_KEY = 'knot:spotify-refresh'
 const EXPIRY_KEY = 'knot:spotify-expiry'
@@ -95,6 +95,7 @@ export async function startSpotifyLogin(): Promise<void> {
     scope: SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
+    show_dialog: 'true',
   })
 
   const authUrl = `https://accounts.spotify.com/authorize?${params}`

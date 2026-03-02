@@ -122,6 +122,11 @@ export function SpotifyPlayer() {
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistItem | null>(null)
   const [playlistTracks, setPlaylistTracks] = useState<PlaylistTrack[]>([])
   const [loadingTracks, setLoadingTracks] = useState(false)
+  const [likedSongs, setLikedSongs] = useState<PlaylistTrack[]>([])
+  const [loadingLiked, setLoadingLiked] = useState(false)
+  const [showLikedSongs, setShowLikedSongs] = useState(false)
+  const [likedTotal, setLikedTotal] = useState(0)
+  const [libraryError, setLibraryError] = useState<string | null>(null)
 
   // SDK state
   const [sdkReady, setSdkReady] = useState(false)
@@ -129,11 +134,17 @@ export function SpotifyPlayer() {
   const [playerState, setPlayerState] = useState<Spotify.PlayerState | null>(null)
   const [localPosition, setLocalPosition] = useState(0)
 
+  const [volume, setVolume] = useState(0.5)
+  const [showVolume, setShowVolume] = useState(false)
+  const [muted, setMuted] = useState(false)
+  const volumeBeforeMute = useRef(0.5)
+
   const playerRef = useRef<Spotify.Player | null>(null)
   const positionTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastStateTime = useRef(0)
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const volumeRef = useRef<HTMLDivElement>(null)
 
   // Handle OAuth callback on page load + check auth state
   useEffect(() => {
@@ -192,7 +203,7 @@ export function SpotifyPlayer() {
     player.addListener('ready', ({ device_id }: { device_id: string }) => {
       setDeviceId(device_id)
       setError(null)
-      // Transfer playback to this device
+      player.getVolume().then(v => { setVolume(v); setMuted(v === 0) }).catch(() => {})
       spotifyFetch('/me/player', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -289,6 +300,51 @@ export function SpotifyPlayer() {
     lastStateTime.current = Date.now()
   }, [playerState])
 
+  const changeVolume = useCallback((newVol: number) => {
+    const clamped = Math.max(0, Math.min(1, newVol))
+    setVolume(clamped)
+    setMuted(clamped === 0)
+    playerRef.current?.setVolume(clamped)
+  }, [])
+
+  const toggleMute = useCallback(() => {
+    if (muted) {
+      const restore = volumeBeforeMute.current > 0 ? volumeBeforeMute.current : 0.5
+      setVolume(restore)
+      setMuted(false)
+      playerRef.current?.setVolume(restore)
+    } else {
+      volumeBeforeMute.current = volume
+      setVolume(0)
+      setMuted(true)
+      playerRef.current?.setVolume(0)
+    }
+  }, [muted, volume])
+
+  const handleVolumeClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    changeVolume(pct)
+  }, [changeVolume])
+
+  const handleVolumeDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.buttons !== 1) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    changeVolume(pct)
+  }, [changeVolume])
+
+  useEffect(() => {
+    if (!showVolume) return
+    const handler = (e: MouseEvent) => {
+      if (volumeRef.current && !volumeRef.current.contains(e.target as Node)) {
+        setShowVolume(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showVolume])
+
   // Search
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return }
@@ -327,9 +383,17 @@ export function SpotifyPlayer() {
 
   const fetchPlaylists = useCallback(async () => {
     setLoadingPlaylists(true)
+    setLibraryError(null)
     try {
       const res = await spotifyFetch('/me/playlists?limit=50')
-      if (!res.ok) return
+      if (!res.ok) {
+        if (res.status === 403) {
+          setLibraryError('Missing permissions — disconnect and reconnect Spotify')
+        } else {
+          setLibraryError(`Failed to load playlists (${res.status})`)
+        }
+        return
+      }
       const data = await res.json()
       const items: PlaylistItem[] = (data.items ?? []).map((p: { id: string; uri: string; name: string; description: string; images: { url: string }[]; tracks: { total: number }; owner: { display_name: string } }) => ({
         id: p.id,
@@ -341,18 +405,25 @@ export function SpotifyPlayer() {
         ownerName: p.owner?.display_name ?? 'Unknown',
       }))
       setPlaylists(items)
-    } catch {} finally {
+    } catch (err) {
+      setLibraryError(err instanceof Error ? err.message : 'Failed to load playlists')
+    } finally {
       setLoadingPlaylists(false)
     }
   }, [])
 
   const fetchPlaylistTracks = useCallback(async (playlist: PlaylistItem) => {
     setSelectedPlaylist(playlist)
+    setShowLikedSongs(false)
     setLoadingTracks(true)
     setPlaylistTracks([])
+    setLibraryError(null)
     try {
       const res = await spotifyFetch(`/playlists/${playlist.id}/tracks?limit=50&fields=items(track(id,uri,name,artists(name),album(name,images),duration_ms))`)
-      if (!res.ok) return
+      if (!res.ok) {
+        setLibraryError(`Failed to load tracks (${res.status})`)
+        return
+      }
       const data = await res.json()
       const tracks: PlaylistTrack[] = (data.items ?? [])
         .filter((item: { track: { id: string } | null }) => item.track?.id)
@@ -366,8 +437,47 @@ export function SpotifyPlayer() {
           durationMs: item.track.duration_ms,
         }))
       setPlaylistTracks(tracks)
-    } catch {} finally {
+    } catch (err) {
+      setLibraryError(err instanceof Error ? err.message : 'Failed to load tracks')
+    } finally {
       setLoadingTracks(false)
+    }
+  }, [])
+
+  const fetchLikedSongs = useCallback(async () => {
+    setShowLikedSongs(true)
+    setSelectedPlaylist(null)
+    setLoadingLiked(true)
+    setLikedSongs([])
+    setLibraryError(null)
+    try {
+      const res = await spotifyFetch('/me/tracks?limit=50')
+      if (!res.ok) {
+        if (res.status === 403) {
+          setLibraryError('Missing permissions — disconnect and reconnect Spotify')
+        } else {
+          setLibraryError(`Failed to load liked songs (${res.status})`)
+        }
+        return
+      }
+      const data = await res.json()
+      setLikedTotal(data.total ?? 0)
+      const tracks: PlaylistTrack[] = (data.items ?? [])
+        .filter((item: { track: { id: string } | null }) => item.track?.id)
+        .map((item: { track: { id: string; uri: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number } }) => ({
+          id: item.track.id,
+          uri: item.track.uri,
+          name: item.track.name,
+          artists: item.track.artists?.map(a => a.name).join(', ') ?? '',
+          albumName: item.track.album?.name ?? '',
+          imageUrl: item.track.album?.images?.[2]?.url ?? item.track.album?.images?.[0]?.url,
+          durationMs: item.track.duration_ms,
+        }))
+      setLikedSongs(tracks)
+    } catch (err) {
+      setLibraryError(err instanceof Error ? err.message : 'Failed to load liked songs')
+    } finally {
+      setLoadingLiked(false)
     }
   }, [])
 
@@ -376,6 +486,8 @@ export function SpotifyPlayer() {
     setShowSearch(false)
     setSelectedPlaylist(null)
     setPlaylistTracks([])
+    setShowLikedSongs(false)
+    setLibraryError(null)
     if (playlists.length === 0) fetchPlaylists()
   }, [playlists.length, fetchPlaylists])
 
@@ -575,13 +687,62 @@ export function SpotifyPlayer() {
         </div>
       )}
 
-      {/* Library / Playlists */}
+      {/* Library / Playlists / Liked Songs */}
       {showLibrary && (
         <div className="border-b border-[var(--border-hover)]/50">
-          {selectedPlaylist ? (
+          {libraryError && (
+            <div className="px-2.5 py-1.5 bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border-b border-[var(--border-hover)]/30">
+              <p className="text-[9px] text-[var(--error)]">{libraryError}</p>
+            </div>
+          )}
+          {showLikedSongs ? (
             <>
               <button
-                onClick={() => { setSelectedPlaylist(null); setPlaylistTracks([]) }}
+                onClick={() => { setShowLikedSongs(false); setLikedSongs([]); setLibraryError(null) }}
+                className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-left hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer border-b border-[var(--border-hover)]/30"
+              >
+                <Icon icon="lucide:chevron-left" width={11} height={11} className="text-[var(--text-disabled)] shrink-0" />
+                <Icon icon="lucide:heart" width={10} height={10} className="text-[#1DB954] shrink-0" />
+                <span className="text-[10px] font-medium text-[var(--text-secondary)] truncate">Liked Songs</span>
+                <span className="text-[8px] text-[var(--text-disabled)] ml-auto shrink-0">{likedTotal} songs</span>
+              </button>
+              <div className={`overflow-y-auto ${expanded ? 'max-h-[400px]' : 'max-h-[260px]'}`}>
+                {loadingLiked ? (
+                  <div className="flex items-center gap-2 px-3 py-3">
+                    <Icon icon="lucide:loader-2" width={12} height={12} className="text-[var(--text-disabled)] animate-spin" />
+                    <span className="text-[10px] text-[var(--text-disabled)]">Loading liked songs...</span>
+                  </div>
+                ) : likedSongs.length === 0 && !libraryError ? (
+                  <div className="px-3 py-3">
+                    <span className="text-[10px] text-[var(--text-disabled)]">No liked songs found</span>
+                  </div>
+                ) : likedSongs.map((t, idx) => (
+                  <button
+                    key={t.id}
+                    onClick={() => playPlaylistTrack(t, undefined, idx)}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer text-left group"
+                  >
+                    {t.imageUrl ? (
+                      <img src={t.imageUrl} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="w-7 h-7 rounded bg-[var(--bg-subtle)] flex items-center justify-center shrink-0">
+                        <Icon icon="lucide:music" width={12} height={12} className="text-[var(--text-disabled)]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-medium text-[var(--text-primary)] truncate">{t.name}</div>
+                      <div className="text-[9px] text-[var(--text-tertiary)] truncate">{t.artists}</div>
+                    </div>
+                    <span className="text-[8px] font-mono text-[var(--text-disabled)] shrink-0">{formatMs(t.durationMs)}</span>
+                    <Icon icon="lucide:play" width={10} height={10} className="text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : selectedPlaylist ? (
+            <>
+              <button
+                onClick={() => { setSelectedPlaylist(null); setPlaylistTracks([]); setLibraryError(null) }}
                 className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-left hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer border-b border-[var(--border-hover)]/30"
               >
                 <Icon icon="lucide:chevron-left" width={11} height={11} className="text-[var(--text-disabled)] shrink-0" />
@@ -594,7 +755,7 @@ export function SpotifyPlayer() {
                     <Icon icon="lucide:loader-2" width={12} height={12} className="text-[var(--text-disabled)] animate-spin" />
                     <span className="text-[10px] text-[var(--text-disabled)]">Loading tracks...</span>
                   </div>
-                ) : playlistTracks.length === 0 ? (
+                ) : playlistTracks.length === 0 && !libraryError ? (
                   <div className="px-3 py-3">
                     <span className="text-[10px] text-[var(--text-disabled)]">No tracks found</span>
                   </div>
@@ -624,22 +785,38 @@ export function SpotifyPlayer() {
           ) : (
             <>
               <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[var(--border-hover)]/30">
-                <span className="text-[10px] font-medium text-[var(--text-secondary)]">My Playlists</span>
+                <span className="text-[10px] font-medium text-[var(--text-secondary)]">My Library</span>
                 <button
-                  onClick={() => { setShowLibrary(false) }}
+                  onClick={() => { setShowLibrary(false); setLibraryError(null) }}
                   className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-pointer"
                 >
                   <Icon icon="lucide:x" width={10} height={10} />
                 </button>
               </div>
               <div className={`overflow-y-auto ${expanded ? 'max-h-[400px]' : 'max-h-[260px]'}`}>
+                {/* Liked Songs entry */}
+                <button
+                  onClick={fetchLikedSongs}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer text-left"
+                >
+                  <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-gradient-to-br from-[#4B27A4] to-[#89CCF0]">
+                    <Icon icon="lucide:heart" width={14} height={14} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-medium text-[var(--text-primary)] truncate">Liked Songs</div>
+                    <div className="text-[9px] text-[var(--text-tertiary)] truncate">Your saved tracks</div>
+                  </div>
+                  <Icon icon="lucide:chevron-right" width={11} height={11} className="text-[var(--text-disabled)] shrink-0" />
+                </button>
+
+                {/* Playlists */}
                 {loadingPlaylists ? (
                   <div className="flex items-center gap-2 px-3 py-3">
                     <Icon icon="lucide:loader-2" width={12} height={12} className="text-[var(--text-disabled)] animate-spin" />
                     <span className="text-[10px] text-[var(--text-disabled)]">Loading playlists...</span>
                   </div>
-                ) : playlists.length === 0 ? (
-                  <div className="px-3 py-3">
+                ) : playlists.length === 0 && !libraryError ? (
+                  <div className="px-3 py-2">
                     <span className="text-[10px] text-[var(--text-disabled)]">No playlists found</span>
                   </div>
                 ) : playlists.map(p => (
@@ -747,6 +924,32 @@ export function SpotifyPlayer() {
                   <Icon icon="lucide:shuffle" width={16} height={16} />
                 </button>
               </div>
+
+              {/* Volume */}
+              <div className="flex items-center gap-2 mt-2 px-2">
+                <button
+                  onClick={toggleMute}
+                  className="p-1 rounded-full text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors shrink-0"
+                  title={muted ? 'Unmute' : 'Mute'}
+                >
+                  <Icon
+                    icon={muted || volume === 0 ? 'lucide:volume-x' : volume < 0.5 ? 'lucide:volume-1' : 'lucide:volume-2'}
+                    width={14} height={14}
+                  />
+                </button>
+                <div
+                  className="flex-1 h-1.5 rounded-full bg-[var(--border-hover)] cursor-pointer group relative"
+                  onClick={handleVolumeClick}
+                  onMouseMove={handleVolumeDrag}
+                >
+                  <div
+                    className="h-full rounded-full bg-[var(--text-tertiary)] group-hover:bg-[#1DB954] transition-colors relative"
+                    style={{ width: `${volume * 100}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[var(--text-primary)] shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
             <>
@@ -816,6 +1019,48 @@ export function SpotifyPlayer() {
                 >
                   <Icon icon="lucide:shuffle" width={12} height={12} />
                 </button>
+                <div className="relative ml-0.5" ref={volumeRef}>
+                  <button
+                    onClick={() => setShowVolume(v => !v)}
+                    className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                      showVolume ? 'text-[#1DB954]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
+                    }`}
+                    title="Volume"
+                  >
+                    <Icon
+                      icon={muted || volume === 0 ? 'lucide:volume-x' : volume < 0.5 ? 'lucide:volume-1' : 'lucide:volume-2'}
+                      width={12} height={12}
+                    />
+                  </button>
+                  {showVolume && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-2 rounded-xl bg-[var(--bg-tertiary)]/95 backdrop-blur-xl border border-[var(--border-hover)] shadow-xl w-32">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={toggleMute}
+                          className="p-0.5 rounded text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors shrink-0"
+                        >
+                          <Icon
+                            icon={muted || volume === 0 ? 'lucide:volume-x' : volume < 0.5 ? 'lucide:volume-1' : 'lucide:volume-2'}
+                            width={10} height={10}
+                          />
+                        </button>
+                        <div
+                          className="flex-1 h-1 rounded-full bg-[var(--border-hover)] cursor-pointer group relative"
+                          onClick={handleVolumeClick}
+                          onMouseMove={handleVolumeDrag}
+                        >
+                          <div
+                            className="h-full rounded-full bg-[var(--text-tertiary)] group-hover:bg-[#1DB954] transition-colors relative"
+                            style={{ width: `${volume * 100}%` }}
+                          >
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--text-primary)] shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                        <span className="text-[8px] font-mono text-[var(--text-disabled)] w-5 text-right shrink-0">{Math.round(volume * 100)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
