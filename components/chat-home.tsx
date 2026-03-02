@@ -49,8 +49,15 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
 
   const isTyping = isFocused && !!input.trim()
 
+  const [shineActive, setShineActive] = useState(true)
+  useEffect(() => {
+    const delay = 3000 + Math.random() * 2000
+    const t = setTimeout(() => setShineActive(false), delay)
+    return () => clearTimeout(t)
+  }, [])
+
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current || !isFocused || isTyping) return
+    if (!cardRef.current || !isFocused || isTyping || !shineActive) return
     cancelAnimationFrame(rafRef.current)
     rafRef.current = requestAnimationFrame(() => {
       const card = cardRef.current
@@ -63,7 +70,7 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
       card.style.setProperty('--rx', `${rotateX}deg`)
       card.style.setProperty('--ry', `${rotateY}deg`)
     })
-  }, [isFocused, isTyping])
+  }, [isFocused, isTyping, shineActive])
 
   const handleMouseLeave = useCallback(() => {
     if (!cardRef.current) return
@@ -72,11 +79,11 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
   }, [])
 
   useEffect(() => {
-    if (isTyping && cardRef.current) {
+    if ((isTyping || !shineActive) && cardRef.current) {
       cardRef.current.style.setProperty('--rx', '0deg')
       cardRef.current.style.setProperty('--ry', '0deg')
     }
-  }, [isTyping])
+  }, [isTyping, shineActive])
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 100)
@@ -131,7 +138,9 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
             isFocused
               ? input.trim()
                 ? 'chat-input-3d-typing border-[color-mix(in_srgb,var(--brand)_40%,var(--border))]'
-                : 'chat-input-3d-active border-[color-mix(in_srgb,var(--brand)_40%,var(--border))]'
+                : shineActive
+                  ? 'chat-input-3d-active border-[color-mix(in_srgb,var(--brand)_40%,var(--border))]'
+                  : 'border-[color-mix(in_srgb,var(--brand)_20%,var(--border))]'
               : 'border-[var(--border)]'
           }`}
           style={{ '--rx': '0deg', '--ry': '0deg' } as React.CSSProperties}

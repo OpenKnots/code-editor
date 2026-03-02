@@ -19,14 +19,13 @@ export function BranchPicker() {
   const filterRef = useRef<HTMLInputElement>(null)
 
   const currentBranch = localMode ? gitInfo?.branch : repo?.branch
-  if (!currentBranch) return null
 
   const loadBranches = useCallback(async () => {
     if (localMode) {
       setBranches(localBranches)
       return
     }
-    if (!repo) return
+    if (!repo || !currentBranch) return
     setLoading(true)
     try {
       const result = await fetchBranchesByName(repo.fullName)
@@ -96,6 +95,8 @@ export function BranchPicker() {
     }
     setOpen(false)
   }
+
+  if (!currentBranch) return null
 
   return (
     <div ref={containerRef} className="relative">

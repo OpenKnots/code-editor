@@ -324,7 +324,7 @@ export function SpotifyPlayer() {
       return (
         <button
           onClick={() => setCollapsed(false)}
-          className="fixed bottom-8 right-4 z-40 w-8 h-8 rounded-full bg-[var(--bg-elevated)]/80 backdrop-blur-xl border border-[var(--border)] shadow-lg flex items-center justify-center text-[var(--text-disabled)] hover:text-[#1DB954] hover:scale-110 transition-all duration-200 cursor-pointer opacity-50 hover:opacity-100"
+          className="fixed bottom-8 right-4 z-40 w-8 h-8 rounded-full bg-[var(--bg-tertiary)]/80 backdrop-blur-xl border border-[var(--border-hover)] shadow-lg flex items-center justify-center text-[var(--text-disabled)] hover:text-[#1DB954] hover:scale-110 transition-all duration-200 cursor-pointer opacity-50 hover:opacity-100"
           title="Connect to Spotify"
         >
           <Icon icon="simple-icons:spotify" width={14} height={14} />
@@ -333,8 +333,8 @@ export function SpotifyPlayer() {
     }
 
     return (
-      <div className="fixed bottom-8 right-4 z-40 w-[280px] rounded-2xl bg-[var(--bg-elevated)]/95 backdrop-blur-xl border border-[var(--border)] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2">
-        <div className="flex items-center justify-between h-8 px-2.5 border-b border-[var(--border)]">
+      <div className="fixed bottom-8 right-4 z-40 w-[280px] rounded-2xl bg-[var(--bg-tertiary)]/95 backdrop-blur-xl border border-[var(--border-hover)] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+        <div className="flex items-center justify-between h-8 px-2.5 border-b border-[var(--border-hover)]/50">
           <div className="flex items-center gap-1.5">
             <Icon icon="simple-icons:spotify" width={12} height={12} className="text-[#1DB954]" />
             <span className="text-[10px] font-medium text-[var(--text-secondary)]">Spotify</span>
@@ -344,7 +344,7 @@ export function SpotifyPlayer() {
           </button>
         </div>
         <div className="flex flex-col items-center py-6 px-4 gap-3">
-          <p className="text-[10px] text-[var(--text-tertiary)] text-center">Sign in with your Spotify Premium account to play full songs</p>
+          <p className="text-[10px] text-[var(--text-tertiary)] text-center">Sign-in to Spotify to play full songs</p>
           <button
             onClick={handleLogin}
             disabled={loggingIn}
@@ -374,7 +374,7 @@ export function SpotifyPlayer() {
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="fixed bottom-8 right-4 z-40 w-8 h-8 rounded-full bg-[var(--bg-elevated)]/80 backdrop-blur-xl border border-[var(--border)] shadow-lg flex items-center justify-center text-[#1DB954] hover:scale-110 transition-all duration-200 cursor-pointer opacity-70 hover:opacity-100"
+        className="fixed bottom-8 right-4 z-40 w-8 h-8 rounded-full bg-[var(--bg-tertiary)]/80 backdrop-blur-xl border border-[var(--border-hover)] shadow-lg flex items-center justify-center text-[#1DB954] hover:scale-110 transition-all duration-200 cursor-pointer opacity-70 hover:opacity-100"
         title={track ? `${track.name} — ${track.artists[0]?.name}` : 'Spotify Player'}
       >
         <Icon icon={!paused ? 'lucide:volume-2' : 'simple-icons:spotify'} width={14} height={14} className={!paused ? 'animate-pulse' : ''} />
@@ -383,9 +383,9 @@ export function SpotifyPlayer() {
   }
 
   return (
-    <div className="fixed bottom-8 right-4 z-40 w-[300px] rounded-2xl bg-[var(--bg-elevated)]/95 backdrop-blur-xl border border-[var(--border)] shadow-2xl overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
+    <div className="fixed bottom-8 right-4 z-40 w-[300px] rounded-2xl bg-[var(--bg-tertiary)]/95 backdrop-blur-xl border border-[var(--border-hover)] shadow-2xl overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
       {/* Header */}
-      <div className="flex items-center justify-between h-8 px-2.5 border-b border-[var(--border)]">
+      <div className="flex items-center justify-between h-8 px-2.5 border-b border-[var(--border-hover)]/50">
         <div className="flex items-center gap-1.5">
           <Icon icon="simple-icons:spotify" width={12} height={12} className="text-[#1DB954]" />
           <span className="text-[10px] font-medium text-[var(--text-secondary)]">
@@ -411,7 +411,7 @@ export function SpotifyPlayer() {
 
       {/* Search */}
       {showSearch && (
-        <div className="border-b border-[var(--border)]">
+        <div className="border-b border-[var(--border-hover)]/50">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5">
             <Icon icon="lucide:search" width={11} height={11} className="text-[var(--text-disabled)] shrink-0" />
             <input
@@ -432,7 +432,7 @@ export function SpotifyPlayer() {
             )}
           </div>
           {(results.length > 0 || searching) && (
-            <div className="max-h-[200px] overflow-y-auto border-t border-[var(--border)]">
+            <div className="max-h-[200px] overflow-y-auto border-t border-[var(--border-hover)]/50">
               {searching ? (
                 <div className="flex items-center gap-2 px-3 py-3">
                   <Icon icon="lucide:loader-2" width={12} height={12} className="text-[var(--text-disabled)] animate-spin" />
@@ -465,7 +465,7 @@ export function SpotifyPlayer() {
 
       {/* Error */}
       {error && (
-        <div className="px-2.5 py-1.5 bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border-b border-[var(--border)]">
+        <div className="px-2.5 py-1.5 bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border-b border-[var(--border-hover)]/50">
           <p className="text-[9px] text-[var(--error)]">{error}</p>
         </div>
       )}
@@ -496,14 +496,14 @@ export function SpotifyPlayer() {
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[8px] font-mono text-[var(--text-disabled)] w-7 text-right">{formatMs(localPosition)}</span>
             <div
-              className="flex-1 h-1 rounded-full bg-[var(--border)] cursor-pointer group relative"
+              className="flex-1 h-1 rounded-full bg-[var(--border-hover)] cursor-pointer group relative"
               onClick={seekTo}
             >
               <div
                 className="h-full rounded-full bg-[#1DB954] transition-[width] duration-200 ease-linear relative"
                 style={{ width: `${progressPct}%` }}
               >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[var(--text-primary)] shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
             <span className="text-[8px] font-mono text-[var(--text-disabled)] w-7">{formatMs(duration)}</span>
@@ -526,7 +526,7 @@ export function SpotifyPlayer() {
             <button onClick={skipPrev} className="p-1.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors">
               <Icon icon="lucide:skip-back" width={14} height={14} />
             </button>
-            <button onClick={togglePlay} className="p-2 rounded-full bg-white text-black hover:scale-105 cursor-pointer transition-transform shadow-md">
+            <button onClick={togglePlay} className="p-2 rounded-full bg-[var(--text-primary)] text-[var(--bg)] hover:scale-105 cursor-pointer transition-transform shadow-md">
               <Icon icon={paused ? 'lucide:play' : 'lucide:pause'} width={16} height={16} />
             </button>
             <button onClick={skipNext} className="p-1.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors">
