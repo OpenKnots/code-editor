@@ -115,6 +115,9 @@ export function GitView() {
   const [branchFilter, setBranchFilter] = useState('')
   const [branchLimit, setBranchLimit] = useState(BRANCH_PAGE_SIZE)
   const [branchSwitchError, setBranchSwitchError] = useState<string | null>(null)
+  const [unstaging, setUnstaging] = useState(false)
+  const [undoingCommit, setUndoingCommit] = useState(false)
+  const [confirmUndo, setConfirmUndo] = useState(false)
 
   const commitInputRef = useRef<HTMLInputElement>(null)
   const branchMenuRef = useRef<HTMLDivElement>(null)
@@ -275,6 +278,43 @@ export function GitView() {
       setShowBranchMenu(false)
     }
   }, [branchName, isLocalMode, local])
+
+  const handleUnstage = useCallback(async () => {
+    if (!isLocalMode) return
+    const paths = Array.from(selectedFiles).filter(p => {
+      const entry = changeEntries.find(e => e.path === p)
+      return entry?.source === 'git' && entry.status !== '??'
+    })
+    if (paths.length === 0) return
+    setUnstaging(true)
+    try {
+      await local.unstageFiles(paths)
+    } catch (err) {
+      console.error('Unstage failed:', err)
+    }
+    setUnstaging(false)
+  }, [isLocalMode, selectedFiles, changeEntries, local])
+
+  const handleUndoCommit = useCallback(async () => {
+    if (!isLocalMode) return
+    setUndoingCommit(true)
+    setCommitError(null)
+    try {
+      await local.undoLastCommit()
+      setConfirmUndo(false)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setCommitError(`Undo failed: ${msg}`)
+    }
+    setUndoingCommit(false)
+  }, [isLocalMode, local])
+
+  const stagedSelectedCount = useMemo(() => {
+    return Array.from(selectedFiles).filter(p => {
+      const entry = changeEntries.find(e => e.path === p)
+      return entry?.source === 'git' && entry.status !== '??'
+    }).length
+  }, [selectedFiles, changeEntries])
 
   const loadHistory = useCallback(async () => {
     if (!repo) return
@@ -524,6 +564,17 @@ export function GitView() {
                     {selectedFiles.size} of {changeEntries.length} selected
                   </span>
                 </label>
+                {isLocalMode && stagedSelectedCount > 0 && (
+                  <button
+                    onClick={handleUnstage}
+                    disabled={unstaging}
+                    className="flex items-center gap-1 px-1.5 h-[20px] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-40 text-[9px] font-medium"
+                    title="Unstage selected files"
+                  >
+                    <Icon icon="lucide:minus-circle" width={10} height={10} />
+                    {unstaging ? 'Unstaging...' : 'Unstage'}
+                  </button>
+                )}
                 {isLocalMode && (
                   <button
                     onClick={() => local.refresh()}
@@ -662,6 +713,35 @@ export function GitView() {
                   </>
                 )}
               </button>
+
+              {isLocalMode && (
+                confirmUndo ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-[var(--text-tertiary)] flex-1">Undo last commit?</span>
+                    <button
+                      onClick={handleUndoCommit}
+                      disabled={undoingCommit}
+                      className="h-[24px] px-2 text-[10px] font-medium rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-deletions)_12%,transparent)] text-[var(--color-deletions)] hover:bg-[color-mix(in_srgb,var(--color-deletions)_20%,transparent)] cursor-pointer transition-colors disabled:opacity-40"
+                    >
+                      {undoingCommit ? 'Undoing...' : 'Confirm'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmUndo(false)}
+                      className="h-[24px] px-2 text-[10px] font-medium rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] cursor-pointer transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmUndo(true)}
+                    className="w-full flex items-center justify-center gap-1.5 h-[26px] rounded-[var(--radius-sm)] text-[10px] font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer transition-colors"
+                  >
+                    <Icon icon="lucide:undo-2" width={11} height={11} />
+                    Undo last commit
+                  </button>
+                )
+              )}
             </div>
           </>
         ) : (

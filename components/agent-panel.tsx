@@ -742,6 +742,39 @@ export function AgentPanel() {
       }
       return
     }
+    if (text === '/unstage') {
+      appendMessage({ id: crypto.randomUUID(), role: 'user', type: 'text', content: text, timestamp: Date.now() })
+      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'error', content: 'Unstage requires a local git repository.', timestamp: Date.now() })
+        return
+      }
+      const staged = local.gitInfo.status?.filter(s => s.status !== '??').map(s => s.path) ?? []
+      if (staged.length === 0) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: 'No staged files to unstage.', timestamp: Date.now() })
+        return
+      }
+      try {
+        await local.unstageFiles(staged)
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: `Unstaged ${staged.length} file(s).`, timestamp: Date.now() })
+      } catch (err) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'error', content: `Unstage failed: ${err instanceof Error ? err.message : String(err)}`, timestamp: Date.now() })
+      }
+      return
+    }
+    if (text === '/undo') {
+      appendMessage({ id: crypto.randomUUID(), role: 'user', type: 'text', content: text, timestamp: Date.now() })
+      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'error', content: 'Undo commit requires a local git repository.', timestamp: Date.now() })
+        return
+      }
+      try {
+        await local.undoLastCommit()
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: 'Undid last commit. Changes are back in the working tree.', timestamp: Date.now() })
+      } catch (err) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'error', content: `Undo failed: ${err instanceof Error ? err.message : String(err)}`, timestamp: Date.now() })
+      }
+      return
+    }
 
     setSending(true)
 
@@ -993,6 +1026,8 @@ export function AgentPanel() {
       { cmd: '/commit', desc: 'Commit changes', icon: 'lucide:git-commit-horizontal' },
       { cmd: '/diff', desc: 'Show changes', icon: 'lucide:git-compare' },
       { cmd: '/changes', desc: 'Pre-commit review', icon: 'lucide:eye' },
+      { cmd: '/unstage', desc: 'Unstage all staged files', icon: 'lucide:minus-circle' },
+      { cmd: '/undo', desc: 'Undo last commit', icon: 'lucide:undo-2' },
     ]
     const term = input.toLowerCase()
     return cmds.filter(c => c.cmd.startsWith(term))

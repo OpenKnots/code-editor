@@ -13,6 +13,7 @@ import { SourceSwitcher } from '@/components/source-switcher'
 const FileExplorer = dynamic(() => import('@/components/file-explorer').then(m => ({ default: m.FileExplorer })), { ssr: false })
 const CodeEditor = dynamic(() => import('@/components/code-editor').then(m => ({ default: m.CodeEditor })), { ssr: false })
 const EnginePanel = dynamic(() => import('@/components/engine-panel').then(m => ({ default: m.EnginePanel })), { ssr: false })
+const AgentPanel = dynamic(() => import('@/components/agent-panel').then(m => ({ default: m.AgentPanel })), { ssr: false })
 
 export function EditorView() {
   const { files, activeFile } = useEditor()
@@ -25,14 +26,23 @@ export function EditorView() {
     try { const s = parseInt(localStorage.getItem('ce:tree-w') || ''); return s >= 160 && s <= 400 ? s : 220 } catch { return 220 }
   })
   const [engineVisible, setEngineVisible] = useState(false)
+  const [chatVisible, setChatVisible] = useState(() => {
+    try { return localStorage.getItem('ce:chat-visible') === 'true' } catch { return false }
+  })
+  const [chatWidth, setChatWidth] = useState(() => {
+    try { const s = parseInt(localStorage.getItem('ce:chat-w') || ''); return s >= 280 && s <= 600 ? s : 360 } catch { return 360 }
+  })
 
   // Persist tree width
   useEffect(() => { try { localStorage.setItem('ce:tree-w', String(treeWidth)) } catch {} }, [treeWidth])
+  useEffect(() => { try { localStorage.setItem('ce:chat-visible', String(chatVisible)) } catch {} }, [chatVisible])
+  useEffect(() => { try { localStorage.setItem('ce:chat-w', String(chatWidth)) } catch {} }, [chatWidth])
 
   // ⌘B toggle tree
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); setTreeVisible(v => !v) }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'i' && !e.shiftKey) { e.preventDefault(); setChatVisible(v => !v) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -135,13 +145,46 @@ export function EditorView() {
             <Icon icon="lucide:cpu" width={11} height={11} />
           </button>
           <div className="flex-1" />
+          <button onClick={() => setChatVisible(v => !v)} className={`p-0.5 rounded hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] cursor-pointer ${chatVisible ? 'text-[var(--brand)]' : 'text-[var(--text-disabled)]'}`} title="Chat (⌘I)">
+            <Icon icon="lucide:message-square" width={11} height={11} />
+          </button>
           {branchName && (
-            <span className="text-[9px] font-mono text-[var(--text-disabled)] flex items-center gap-1">
+            <span className="text-[9px] font-mono text-[var(--text-disabled)] flex items-center gap-1 ml-1">
               <Icon icon="lucide:git-branch" width={9} height={9} />{branchName}
             </span>
           )}
         </div>
       </div>
+
+      {/* Chat resize handle */}
+      {chatVisible && (
+        <div className="resize-handle w-[3px] cursor-col-resize hover:bg-[var(--brand)] transition-all opacity-0 hover:opacity-50 shrink-0 z-10"
+          onMouseDown={e => {
+            e.preventDefault(); const startX = e.clientX; const startW = chatWidth
+            const onMove = (ev: MouseEvent) => setChatWidth(Math.max(280, Math.min(600, startW - (ev.clientX - startX))))
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+            document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp)
+          }}
+        />
+      )}
+
+      {/* Chat sidebar */}
+      {chatVisible && (
+        <div className="shrink-0 flex flex-col border-l border-[var(--border)] bg-[var(--bg)] overflow-hidden" style={{ width: chatWidth }}>
+          <div className="flex items-center justify-between h-7 px-2.5 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] flex items-center gap-1.5">
+              <Icon icon="lucide:bot" width={10} height={10} className="text-[var(--brand)]" />
+              Agent
+            </span>
+            <button onClick={() => setChatVisible(false)} className="p-0.5 rounded hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer" title="Hide (⌘I)">
+              <Icon icon="lucide:panel-right-close" width={11} height={11} />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <AgentPanel />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

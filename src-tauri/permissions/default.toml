@@ -89,3 +89,13 @@ commands.allow = ["local_git_branches"]
 identifier = "allow-local-git-checkout"
 description = "Allows checking out a git branch"
 commands.allow = ["local_git_checkout"]
+
+[[permission]]
+identifier = "allow-local-git-unstage"
+description = "Allows unstaging files via git reset"
+commands.allow = ["local_git_unstage"]
+
+[[permission]]
+identifier = "allow-local-git-undo-commit"
+description = "Allows undoing the last commit via git reset --soft"
+commands.allow = ["local_git_undo_commit"]

@@ -34,6 +34,8 @@
     "allow-local-git-diff",
     "allow-local-git-commit",
     "allow-local-git-branches",
-    "allow-local-git-checkout"
+    "allow-local-git-checkout",
+    "allow-local-git-unstage",
+    "allow-local-git-undo-commit"
   ]
 }

@@ -41,6 +41,8 @@ const SECTIONS = [
       { keys: ['/search'], desc: 'Search repo' },
       { keys: ['/commit'], desc: 'Commit changes' },
       { keys: ['/diff'], desc: 'Show changes' },
+      { keys: ['/unstage'], desc: 'Unstage all staged files' },
+      { keys: ['/undo'], desc: 'Undo last commit' },
     ],
   },
 ]

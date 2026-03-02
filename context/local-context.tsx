@@ -48,6 +48,10 @@ interface LocalContextValue {
   commitFiles: (message: string, paths: string[]) => Promise<string>
   /** Get diff for a file */
   getDiff: (path: string) => Promise<string>
+  /** Unstage files (git reset HEAD) */
+  unstageFiles: (paths: string[]) => Promise<void>
+  /** Undo the last commit (git reset --soft HEAD~1) */
+  undoLastCommit: () => Promise<void>
   /** Local branches */
   branches: string[]
   /** Switch to a different local branch */
@@ -298,16 +302,30 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     return diff ?? ''
   }, [desktop, rootPath])
 
+  const unstageFiles = useCallback(async (paths: string[]) => {
+    if (!desktop || !rootPath) throw new Error('Unstage requires the desktop app')
+    await tauriInvoke<string>('local_git_unstage', { root: rootPath, paths })
+    await refresh()
+  }, [desktop, rootPath, refresh])
+
+  const undoLastCommit = useCallback(async () => {
+    if (!desktop || !rootPath) throw new Error('Undo commit requires the desktop app')
+    await tauriInvoke<string>('local_git_undo_commit', { root: rootPath })
+    await refresh()
+  }, [desktop, rootPath, refresh])
+
   const isWebFS = !desktop && localMode
 
   const value = useMemo<LocalContextValue>(() => ({
     localMode, rootPath, localTree, gitInfo, branches,
     available: true, isWebFS,
     openFolder, setRootPath, exitLocalMode,
-    readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff, switchBranch,
+    readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff,
+    unstageFiles, undoLastCommit, switchBranch,
   }), [localMode, rootPath, localTree, gitInfo, branches, isWebFS,
     openFolder, setRootPath, exitLocalMode,
-    readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff, switchBranch])
+    readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff,
+    unstageFiles, undoLastCommit, switchBranch])
 
   return (
     <LocalContext.Provider value={value}>

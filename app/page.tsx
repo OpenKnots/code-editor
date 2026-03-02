@@ -53,7 +53,7 @@ export default function EditorLayout() {
   const { status } = useGateway()
   const { repo } = useRepo()
   const { files, activeFile, openFile, setActiveFile, markClean, updateFileContent } = useEditor()
-  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath } = useLocal()
+  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath, commitFiles: localCommitFiles } = useLocal()
   const { activeView, setView } = useView()
 
   // ─── Minimal state ──────────────────────────────────────
@@ -228,20 +228,51 @@ export default function EditorLayout() {
   useEffect(() => {
     const handler = async (e: Event) => {
       const { message } = (e as CustomEvent).detail ?? {}
-      if (!message || !repo) return
+      if (!message) return
+
+      if (localMode && localRootPath && gitInfo?.is_repo) {
+        const dirtyFiles = files.filter(f => f.dirty)
+        const gitPaths = gitInfo.status?.map(s => s.path) ?? []
+        const allPaths = [...new Set([...dirtyFiles.map(f => f.path), ...gitPaths])]
+        if (allPaths.length === 0) {
+          window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: false, error: 'No changes to commit' } }))
+          return
+        }
+        try {
+          await localCommitFiles(message, allPaths)
+          dirtyFiles.forEach(f => markClean(f.path))
+          window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: true, fileCount: allPaths.length } }))
+        } catch (err) {
+          window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: false, error: String(err) } }))
+        }
+        return
+      }
+
+      if (!repo) return
       const dirtyFiles = files.filter(f => f.dirty)
       if (dirtyFiles.length === 0) return
       try {
         await commitFiles(repo.fullName, dirtyFiles.map(f => ({ path: f.path, content: f.content, sha: f.sha })), message, repo.branch)
         dirtyFiles.forEach(f => markClean(f.path))
-        window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: true, message: `Committed ${dirtyFiles.length} file(s)` } }))
+        window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: true, fileCount: dirtyFiles.length } }))
       } catch (err) {
-        window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: false, message: String(err) } }))
+        window.dispatchEvent(new CustomEvent('agent-commit-result', { detail: { success: false, error: String(err) } }))
       }
     }
     window.addEventListener('agent-commit', handler)
     return () => window.removeEventListener('agent-commit', handler)
-  }, [repo, files, markClean])
+  }, [repo, files, markClean, localMode, localRootPath, gitInfo, localCommitFiles])
+
+  // ─── Git panel / changes panel navigation ─────────────
+  useEffect(() => {
+    const openGit = () => setView('git')
+    window.addEventListener('open-git-panel', openGit)
+    window.addEventListener('open-changes-panel', openGit)
+    return () => {
+      window.removeEventListener('open-git-panel', openGit)
+      window.removeEventListener('open-changes-panel', openGit)
+    }
+  }, [setView])
 
   // ─── Save handler (⌘S + save-file event) ──────────────
   const saveFile = useCallback(async (path: string) => {
