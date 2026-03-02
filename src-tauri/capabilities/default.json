@@ -36,6 +36,10 @@
     "allow-local-git-branches",
     "allow-local-git-checkout",
     "allow-local-git-unstage",
-    "allow-local-git-undo-commit"
+    "allow-local-git-undo-commit",
+    "allow-local-git-remote-url",
+    "allow-local-git-push",
+    "allow-local-git-log",
+    "allow-local-git-ahead-behind"
   ]
 }

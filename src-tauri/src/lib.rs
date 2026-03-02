@@ -199,6 +199,10 @@ pub fn run() {
             local_fs::local_git_checkout,
             local_fs::local_git_unstage,
             local_fs::local_git_undo_commit,
+            local_fs::local_git_remote_url,
+            local_fs::local_git_push,
+            local_fs::local_git_log,
+            local_fs::local_git_ahead_behind,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

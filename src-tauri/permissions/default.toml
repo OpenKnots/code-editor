@@ -99,3 +99,23 @@ commands.allow = ["local_git_unstage"]
 identifier = "allow-local-git-undo-commit"
 description = "Allows undoing the last commit via git reset --soft"
 commands.allow = ["local_git_undo_commit"]
+
+[[permission]]
+identifier = "allow-local-git-remote-url"
+description = "Allows reading the git remote origin URL"
+commands.allow = ["local_git_remote_url"]
+
+[[permission]]
+identifier = "allow-local-git-push"
+description = "Allows pushing to the git remote"
+commands.allow = ["local_git_push"]
+
+[[permission]]
+identifier = "allow-local-git-log"
+description = "Allows reading git log entries"
+commands.allow = ["local_git_log"]
+
+[[permission]]
+identifier = "allow-local-git-ahead-behind"
+description = "Allows checking commits ahead/behind remote"
+commands.allow = ["local_git_ahead_behind"]

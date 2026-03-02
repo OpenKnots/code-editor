@@ -21,45 +21,43 @@ interface GitInfo {
   status: GitFileStatus[]
 }
 
+interface GitLogEntry {
+  hash: string
+  message: string
+  author: string
+  date: string
+}
+
 interface LocalContextValue {
-  /** Whether we're in local mode (vs GitHub remote mode) */
   localMode: boolean
-  /** Root folder path on disk */
   rootPath: string | null
-  /** File tree from local filesystem */
   localTree: FileEntry[]
-  /** Git info (branch, status) */
   gitInfo: GitInfo | null
-  /** Open a folder via native dialog */
   openFolder: () => Promise<void>
-  /** Set a folder directly (e.g. from recent — Tauri only) */
   setRootPath: (path: string) => void
-  /** Exit local mode */
   exitLocalMode: () => void
-  /** Read a local file as text */
   readFile: (path: string) => Promise<string>
-  /** Read a local file as base64 */
   readFileBase64: (path: string) => Promise<string>
-  /** Write a local file */
   writeFile: (path: string, content: string) => Promise<void>
-  /** Refresh tree + git status */
   refresh: () => Promise<void>
-  /** Commit files locally */
   commitFiles: (message: string, paths: string[]) => Promise<string>
-  /** Get diff for a file */
   getDiff: (path: string) => Promise<string>
-  /** Unstage files (git reset HEAD) */
   unstageFiles: (paths: string[]) => Promise<void>
-  /** Undo the last commit (git reset --soft HEAD~1) */
   undoLastCommit: () => Promise<void>
-  /** Local branches */
   branches: string[]
-  /** Switch to a different local branch */
   switchBranch: (branch: string) => Promise<void>
-  /** Always true — local mode works via Tauri or the browser File System Access API */
   available: boolean
-  /** Whether we're using the web File System Access API (vs Tauri) */
   isWebFS: boolean
+  /** GitHub owner/repo parsed from git remote origin (Tauri only) */
+  remoteRepo: string | null
+  /** Push current branch to origin */
+  push: (branch?: string) => Promise<string>
+  /** Get recent git log entries */
+  gitLog: (count?: number) => Promise<GitLogEntry[]>
+  /** Commits ahead/behind origin */
+  aheadBehind: { ahead: number; behind: number }
+  /** Refresh ahead/behind count */
+  refreshAheadBehind: () => Promise<void>
 }
 
 const LocalContext = createContext<LocalContextValue | null>(null)
@@ -137,6 +135,8 @@ export function LocalProvider({ children }: { children: ReactNode }) {
   const [gitInfo, setGitInfo] = useState<GitInfo | null>(null)
   const [branches, setBranches] = useState<string[]>([])
   const [desktop, setDesktop] = useState(false)
+  const [remoteRepo, setRemoteRepo] = useState<string | null>(null)
+  const [aheadBehind, setAheadBehind] = useState<{ ahead: number; behind: number }>({ ahead: 0, behind: 0 })
 
   const webDirHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
 
@@ -164,9 +164,20 @@ export function LocalProvider({ children }: { children: ReactNode }) {
       if (git.is_repo) {
         const branchList = await tauriInvoke<string[]>('local_git_branches', { root })
         if (branchList) setBranches(branchList)
+
+        const remote = await tauriInvoke<string>('local_git_remote_url', { root })
+        setRemoteRepo(remote ?? null)
+
+        if (git.branch) {
+          const ab = await tauriInvoke<[number, number]>('local_git_ahead_behind', { root, branch: git.branch })
+          if (ab) setAheadBehind({ ahead: ab[0], behind: ab[1] })
+          else setAheadBehind({ ahead: 0, behind: 0 })
+        }
       }
     } else {
       setBranches([])
+      setRemoteRepo(null)
+      setAheadBehind({ ahead: 0, behind: 0 })
     }
   }, [])
 
@@ -219,6 +230,8 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     setLocalTree([])
     setGitInfo(null)
     setBranches([])
+    setRemoteRepo(null)
+    setAheadBehind({ ahead: 0, behind: 0 })
     webDirHandleRef.current = null
   }, [])
 
@@ -314,18 +327,41 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     await refresh()
   }, [desktop, rootPath, refresh])
 
+  const push = useCallback(async (branch?: string): Promise<string> => {
+    if (!desktop || !rootPath) throw new Error('Push requires the desktop app')
+    const br = branch || gitInfo?.branch
+    if (!br) throw new Error('No branch to push')
+    const hasUpstream = aheadBehind.ahead > 0 || aheadBehind.behind > 0
+    const result = await tauriInvoke<string>('local_git_push', { root: rootPath, branch: br, setUpstream: !hasUpstream })
+    await refresh()
+    return result ?? 'Pushed'
+  }, [desktop, rootPath, gitInfo, aheadBehind, refresh])
+
+  const gitLog = useCallback(async (count = 20): Promise<GitLogEntry[]> => {
+    if (!desktop || !rootPath) return []
+    const entries = await tauriInvoke<GitLogEntry[]>('local_git_log', { root: rootPath, count })
+    return entries ?? []
+  }, [desktop, rootPath])
+
+  const refreshAheadBehind = useCallback(async () => {
+    if (!desktop || !rootPath || !gitInfo?.branch) return
+    const ab = await tauriInvoke<[number, number]>('local_git_ahead_behind', { root: rootPath, branch: gitInfo.branch })
+    if (ab) setAheadBehind({ ahead: ab[0], behind: ab[1] })
+    else setAheadBehind({ ahead: 0, behind: 0 })
+  }, [desktop, rootPath, gitInfo])
+
   const isWebFS = !desktop && localMode
 
   const value = useMemo<LocalContextValue>(() => ({
     localMode, rootPath, localTree, gitInfo, branches,
-    available: true, isWebFS,
+    available: true, isWebFS, remoteRepo, aheadBehind,
     openFolder, setRootPath, exitLocalMode,
     readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff,
-    unstageFiles, undoLastCommit, switchBranch,
-  }), [localMode, rootPath, localTree, gitInfo, branches, isWebFS,
+    unstageFiles, undoLastCommit, switchBranch, push, gitLog, refreshAheadBehind,
+  }), [localMode, rootPath, localTree, gitInfo, branches, isWebFS, remoteRepo, aheadBehind,
     openFolder, setRootPath, exitLocalMode,
     readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff,
-    unstageFiles, undoLastCommit, switchBranch])
+    unstageFiles, undoLastCommit, switchBranch, push, gitLog, refreshAheadBehind])
 
   return (
     <LocalContext.Provider value={value}>

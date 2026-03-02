@@ -88,7 +88,7 @@ export function GitView() {
   const { repo } = useRepo()
   const local = useLocal()
   const { files, markClean } = useEditor()
-  const { goBack } = useView()
+  const { goBack, setView } = useView()
 
   const isLocalMode = local.localMode && local.rootPath && local.gitInfo?.is_repo
 
@@ -118,6 +118,9 @@ export function GitView() {
   const [unstaging, setUnstaging] = useState(false)
   const [undoingCommit, setUndoingCommit] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
+  const [pushing, setPushing] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+  const [pushSuccess, setPushSuccess] = useState(false)
 
   const commitInputRef = useRef<HTMLInputElement>(null)
   const branchMenuRef = useRef<HTMLDivElement>(null)
@@ -307,6 +310,23 @@ export function GitView() {
       setCommitError(`Undo failed: ${msg}`)
     }
     setUndoingCommit(false)
+  }, [isLocalMode, local])
+
+  const handlePush = useCallback(async () => {
+    if (!isLocalMode) return
+    setPushing(true)
+    setPushError(null)
+    setPushSuccess(false)
+    try {
+      await local.push()
+      setPushSuccess(true)
+      await local.refreshAheadBehind()
+      setTimeout(() => setPushSuccess(false), 3000)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPushError(msg)
+    }
+    setPushing(false)
   }, [isLocalMode, local])
 
   const stagedSelectedCount = useMemo(() => {
@@ -741,6 +761,59 @@ export function GitView() {
                     Undo last commit
                   </button>
                 )
+              )}
+
+              {/* Push & upstream status */}
+              {isLocalMode && (
+                <div className="border-t border-[var(--border)] pt-2 mt-1 space-y-1.5">
+                  {(local.aheadBehind.ahead > 0 || local.aheadBehind.behind > 0) && (
+                    <div className="flex items-center gap-2 text-[10px] text-[var(--text-tertiary)]">
+                      {local.aheadBehind.ahead > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Icon icon="lucide:arrow-up" width={10} height={10} className="text-[var(--color-additions)]" />
+                          {local.aheadBehind.ahead} ahead
+                        </span>
+                      )}
+                      {local.aheadBehind.behind > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Icon icon="lucide:arrow-down" width={10} height={10} className="text-[var(--brand)]" />
+                          {local.aheadBehind.behind} behind
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    onClick={handlePush}
+                    disabled={pushing}
+                    className={`w-full flex items-center justify-center gap-1.5 h-[28px] rounded-[var(--radius-sm)] text-[10px] font-semibold transition-all cursor-pointer ${
+                      pushing ? 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed' : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] border border-[var(--border)]'
+                    }`}
+                  >
+                    {pushing ? (
+                      <><Icon icon="lucide:loader" width={11} height={11} className="animate-spin" /> Pushing...</>
+                    ) : pushSuccess ? (
+                      <><Icon icon="lucide:check" width={11} height={11} className="text-[var(--color-additions)]" /> Pushed</>
+                    ) : (
+                      <><Icon icon="lucide:arrow-up-circle" width={11} height={11} /> Push to origin</>
+                    )}
+                  </button>
+                  {pushError && (
+                    <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)]">
+                      <Icon icon="lucide:alert-circle" width={10} height={10} className="text-[var(--color-deletions)] shrink-0 mt-0.5" />
+                      <span className="text-[9px] text-[var(--color-deletions)] leading-snug">{pushError}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      setView('prs')
+                      setTimeout(() => window.dispatchEvent(new CustomEvent('pr-open-create')), 100)
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 h-[28px] rounded-[var(--radius-sm)] text-[10px] font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]"
+                  >
+                    <Icon icon="lucide:git-pull-request-create-arrow" width={11} height={11} />
+                    Create Pull Request
+                  </button>
+                </div>
               )}
             </div>
           </>

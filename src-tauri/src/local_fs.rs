@@ -208,3 +208,85 @@ pub fn local_git_unstage(root: String, paths: Vec<String>) -> Result<String, Str
 pub fn local_git_undo_commit(root: String) -> Result<String, String> {
     run_git(&root, &["reset", "--soft", "HEAD~1"])
 }
+
+#[tauri::command]
+pub fn local_git_remote_url(root: String) -> Result<String, String> {
+    let url = run_git(&root, &["remote", "get-url", "origin"])?;
+    let url = url.trim();
+
+    // Parse owner/repo from HTTPS (https://github.com/owner/repo.git)
+    // or SSH (git@github.com:owner/repo.git) URLs
+    if let Some(rest) = url.strip_prefix("https://github.com/") {
+        let repo = rest.trim_end_matches(".git");
+        return Ok(repo.to_string());
+    }
+    if let Some(rest) = url.strip_prefix("git@github.com:") {
+        let repo = rest.trim_end_matches(".git");
+        return Ok(repo.to_string());
+    }
+    // Fallback: try to extract from any github URL pattern
+    if url.contains("github.com") {
+        let parts: Vec<&str> = url.split("github.com").collect();
+        if parts.len() > 1 {
+            let path = parts[1].trim_start_matches('/').trim_start_matches(':');
+            let repo = path.trim_end_matches(".git");
+            return Ok(repo.to_string());
+        }
+    }
+    Err(format!("Could not parse GitHub repo from remote URL: {}", url))
+}
+
+#[tauri::command]
+pub fn local_git_push(root: String, branch: String, set_upstream: bool) -> Result<String, String> {
+    if set_upstream {
+        run_git(&root, &["push", "-u", "origin", &branch])
+    } else {
+        run_git(&root, &["push", "origin", &branch])
+    }
+}
+
+#[derive(Clone, Serialize)]
+pub struct GitLogEntry {
+    pub hash: String,
+    pub message: String,
+    pub author: String,
+    pub date: String,
+}
+
+#[tauri::command]
+pub fn local_git_log(root: String, count: u32) -> Result<Vec<GitLogEntry>, String> {
+    let count_str = format!("-{}", count);
+    let output = run_git(&root, &["log", &count_str, "--format=%H%n%s%n%an%n%aI", "--"])?;
+    let lines: Vec<&str> = output.lines().collect();
+    let mut entries = Vec::new();
+    for chunk in lines.chunks(4) {
+        if chunk.len() >= 4 {
+            entries.push(GitLogEntry {
+                hash: chunk[0].to_string(),
+                message: chunk[1].to_string(),
+                author: chunk[2].to_string(),
+                date: chunk[3].to_string(),
+            });
+        }
+    }
+    Ok(entries)
+}
+
+#[tauri::command]
+pub fn local_git_ahead_behind(root: String, branch: String) -> Result<(u32, u32), String> {
+    let range = format!("origin/{}...{}", branch, branch);
+    let output = run_git(&root, &["rev-list", "--left-right", "--count", &range]);
+    match output {
+        Ok(out) => {
+            let parts: Vec<&str> = out.trim().split_whitespace().collect();
+            if parts.len() == 2 {
+                let behind = parts[0].parse::<u32>().unwrap_or(0);
+                let ahead = parts[1].parse::<u32>().unwrap_or(0);
+                Ok((ahead, behind))
+            } else {
+                Ok((0, 0))
+            }
+        }
+        Err(_) => Ok((0, 0)),
+    }
+}

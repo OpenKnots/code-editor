@@ -775,6 +775,33 @@ export function AgentPanel() {
       }
       return
     }
+    if (text === '/push') {
+      appendMessage({ id: crypto.randomUUID(), role: 'user', type: 'text', content: text, timestamp: Date.now() })
+      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'error', content: 'Push requires a local git repository.', timestamp: Date.now() })
+        return
+      }
+      appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: `Pushing ${local.gitInfo.branch} to origin...`, timestamp: Date.now() })
+      try {
+        await local.push()
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: `Pushed ${local.gitInfo.branch} to origin.`, timestamp: Date.now() })
+      } catch (err) {
+        appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'error', content: `Push failed: ${err instanceof Error ? err.message : String(err)}`, timestamp: Date.now() })
+      }
+      return
+    }
+    if (text === '/pr') {
+      appendMessage({ id: crypto.randomUUID(), role: 'user', type: 'text', content: text, timestamp: Date.now() })
+      window.dispatchEvent(new CustomEvent('open-prs-panel'))
+      appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: 'Opening pull requests...', timestamp: Date.now() })
+      return
+    }
+    if (text === '/pr create') {
+      appendMessage({ id: crypto.randomUUID(), role: 'user', type: 'text', content: text, timestamp: Date.now() })
+      window.dispatchEvent(new CustomEvent('open-pr-create'))
+      appendMessage({ id: crypto.randomUUID(), role: 'system', type: 'status', content: 'Opening PR creation form...', timestamp: Date.now() })
+      return
+    }
 
     setSending(true)
 
@@ -1028,6 +1055,9 @@ export function AgentPanel() {
       { cmd: '/changes', desc: 'Pre-commit review', icon: 'lucide:eye' },
       { cmd: '/unstage', desc: 'Unstage all staged files', icon: 'lucide:minus-circle' },
       { cmd: '/undo', desc: 'Undo last commit', icon: 'lucide:undo-2' },
+      { cmd: '/push', desc: 'Push to origin', icon: 'lucide:arrow-up-circle' },
+      { cmd: '/pr', desc: 'View pull requests', icon: 'lucide:git-pull-request' },
+      { cmd: '/pr create', desc: 'Create pull request', icon: 'lucide:git-pull-request-create-arrow' },
     ]
     const term = input.toLowerCase()
     return cmds.filter(c => c.cmd.startsWith(term))

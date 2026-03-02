@@ -297,6 +297,7 @@ export interface PullRequestSummary {
   mergedAt: string | null
   labels: Array<{ name: string; color: string }>
   headRef: string
+  headSha: string
   baseRef: string
   additions: number
   deletions: number
@@ -326,7 +327,7 @@ interface GitHubPullRaw {
   created_at: string
   updated_at: string
   labels?: Array<{ name: string; color: string }>
-  head?: { ref: string }
+  head?: { ref: string; sha: string }
   base?: { ref: string }
   additions?: number
   deletions?: number
@@ -349,6 +350,7 @@ function mapPullRequest(p: GitHubPullRaw): PullRequestSummary {
     mergedAt: p.merged_at,
     labels: (p.labels || []).map(l => ({ name: l.name, color: l.color })),
     headRef: p.head?.ref ?? '',
+    headSha: p.head?.sha ?? '',
     baseRef: p.base?.ref ?? '',
     additions: p.additions ?? 0,
     deletions: p.deletions ?? 0,
@@ -440,6 +442,165 @@ export async function mergePullRequest(
   const data = (await res.json()) as { merged?: boolean; message?: string; sha?: string }
   if (!res.ok) throw new Error(data.message || `Failed to merge PR: ${res.status}`)
   return { merged: data.merged ?? true, message: data.message ?? 'Merged', sha: data.sha ?? '' }
+}
+
+// ─── PR Comments, Reviews, Checks ──────────────────────────────
+
+export interface IssueComment {
+  id: number
+  body: string
+  user: { login: string; avatar_url: string }
+  created_at: string
+  updated_at: string
+  html_url: string
+  author_association?: string
+}
+
+export interface ReviewComment {
+  id: number
+  body: string
+  path: string
+  line: number | null
+  original_line: number | null
+  side: 'LEFT' | 'RIGHT'
+  diff_hunk: string
+  in_reply_to_id?: number
+  user: { login: string; avatar_url: string }
+  created_at: string
+  updated_at: string
+  html_url: string
+}
+
+export interface PRReview {
+  id: number
+  user: { login: string; avatar_url: string }
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING'
+  submitted_at: string
+  body: string | null
+  html_url: string
+}
+
+export interface CheckRun {
+  id: number
+  name: string
+  status: 'queued' | 'in_progress' | 'completed'
+  conclusion: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required' | null
+  html_url: string
+  started_at: string | null
+  completed_at: string | null
+}
+
+export async function fetchIssueComments(
+  repoFullName: string,
+  number: number,
+): Promise<IssueComment[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/issues/${number}/comments?per_page=100`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch comments: ${res.status}`)
+  return (await res.json()) as IssueComment[]
+}
+
+export async function fetchPRReviewComments(
+  repoFullName: string,
+  number: number,
+): Promise<ReviewComment[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/comments?per_page=100`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch review comments: ${res.status}`)
+  return (await res.json()) as ReviewComment[]
+}
+
+export async function fetchPRReviews(
+  repoFullName: string,
+  number: number,
+): Promise<PRReview[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/reviews`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch reviews: ${res.status}`)
+  return (await res.json()) as PRReview[]
+}
+
+export async function fetchPRChecks(
+  repoFullName: string,
+  headSha: string,
+): Promise<CheckRun[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/commits/${headSha}/check-runs?per_page=100`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch checks: ${res.status}`)
+  const data = (await res.json()) as { check_runs: CheckRun[] }
+  return data.check_runs
+}
+
+export async function addPRComment(
+  repoFullName: string,
+  number: number,
+  body: string,
+): Promise<IssueComment> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/issues/${number}/comments`,
+    { method: 'POST', body: JSON.stringify({ body }) }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as Record<string, string>
+    throw new Error(err.message || `Failed to add comment: ${res.status}`)
+  }
+  return (await res.json()) as IssueComment
+}
+
+export async function closePullRequest(
+  repoFullName: string,
+  number: number,
+): Promise<PullRequestSummary> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}`,
+    { method: 'PATCH', body: JSON.stringify({ state: 'closed' }) }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as Record<string, string>
+    throw new Error(err.message || `Failed to close PR: ${res.status}`)
+  }
+  const p = (await res.json()) as GitHubPullRaw
+  return mapPullRequest(p)
+}
+
+export async function updatePullRequest(
+  repoFullName: string,
+  number: number,
+  updates: { title?: string; body?: string; state?: 'open' | 'closed'; draft?: boolean },
+): Promise<PullRequestSummary> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}`,
+    { method: 'PATCH', body: JSON.stringify(updates) }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as Record<string, string>
+    throw new Error(err.message || `Failed to update PR: ${res.status}`)
+  }
+  const p = (await res.json()) as GitHubPullRaw
+  return mapPullRequest(p)
+}
+
+export async function submitPRReview(
+  repoFullName: string,
+  number: number,
+  event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT',
+  body?: string,
+): Promise<PRReview> {
+  const payload: Record<string, unknown> = { event }
+  if (body) payload.body = body
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/reviews`,
+    { method: 'POST', body: JSON.stringify(payload) }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as Record<string, string>
+    throw new Error(err.message || `Failed to submit review: ${res.status}`)
+  }
+  return (await res.json()) as PRReview
 }
 
 // ─── OAuth Device Flow (direct, no proxy) ──────────────────────

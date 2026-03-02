@@ -51,9 +51,10 @@ const VISIBLE_VIEWS: ViewId[] = ['chat', 'editor', 'preview', 'workflows', 'git'
 
 export default function EditorLayout() {
   const { status } = useGateway()
-  const { repo } = useRepo()
+  const { repo, setRepo } = useRepo()
+  const local = useLocal()
   const { files, activeFile, openFile, setActiveFile, markClean, updateFileContent } = useEditor()
-  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath, commitFiles: localCommitFiles } = useLocal()
+  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath, commitFiles: localCommitFiles } = local
   const { activeView, setView } = useView()
 
   // ─── Minimal state ──────────────────────────────────────
@@ -87,6 +88,18 @@ export default function EditorLayout() {
     setIsTauriDesktop(isTauri())
     setIsMacTauri(isTauri() && navigator.platform?.includes('Mac'))
   }, [])
+
+  // ─── Auto-populate RepoContext from local git remote ───
+  useEffect(() => {
+    if (local.remoteRepo && local.gitInfo?.branch) {
+      const [owner, repoName] = local.remoteRepo.split('/')
+      if (owner && repoName) {
+        if (repo?.fullName !== local.remoteRepo || repo?.branch !== local.gitInfo.branch) {
+          setRepo({ owner, repo: repoName, branch: local.gitInfo.branch, fullName: local.remoteRepo })
+        }
+      }
+    }
+  }, [local.remoteRepo, local.gitInfo?.branch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Persist sidebar state ─────────────────────────────
   useEffect(() => {
@@ -263,16 +276,39 @@ export default function EditorLayout() {
     return () => window.removeEventListener('agent-commit', handler)
   }, [repo, files, markClean, localMode, localRootPath, gitInfo, localCommitFiles])
 
-  // ─── Git panel / changes panel navigation ─────────────
+  // ─── Git panel / changes panel / PR panel navigation ───
   useEffect(() => {
     const openGit = () => setView('git')
+    const openPrs = () => setView('prs')
+    const openPrCreate = () => {
+      setView('prs')
+      setTimeout(() => window.dispatchEvent(new CustomEvent('pr-open-create')), 100)
+    }
     window.addEventListener('open-git-panel', openGit)
     window.addEventListener('open-changes-panel', openGit)
+    window.addEventListener('open-prs-panel', openPrs)
+    window.addEventListener('open-pr-create', openPrCreate)
     return () => {
       window.removeEventListener('open-git-panel', openGit)
       window.removeEventListener('open-changes-panel', openGit)
+      window.removeEventListener('open-prs-panel', openPrs)
+      window.removeEventListener('open-pr-create', openPrCreate)
     }
   }, [setView])
+
+  // ─── Push handler ─────────────────────────────────────
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        await local.push()
+        window.dispatchEvent(new CustomEvent('agent-push-result', { detail: { success: true } }))
+      } catch (err) {
+        window.dispatchEvent(new CustomEvent('agent-push-result', { detail: { success: false, error: String(err) } }))
+      }
+    }
+    window.addEventListener('agent-push', handler)
+    return () => window.removeEventListener('agent-push', handler)
+  }, [local])
 
   // ─── Save handler (⌘S + save-file event) ──────────────
   const saveFile = useCallback(async (path: string) => {
