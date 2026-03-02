@@ -448,6 +448,8 @@
   --sidebar-bg: #f6f1ff;
   --foreground: #0a0a0f;
   --subtle: #9b8fb5;
+  --font-sans: 'Space Grotesk', Inter, system-ui, sans-serif;
+  --font-mono: 'Space Mono', 'JetBrains Mono', monospace;
 
   --brand: #9333ea;
   --brand-hover: #7e22ce;
@@ -517,6 +519,8 @@
   --sidebar-bg: #181825;
   --foreground: #cdd6f4;
   --subtle: #6c7086;
+  --font-sans: 'Nunito', 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', monospace;
 
   --brand: #cba6f7;
   --brand-hover: #b4befe;
@@ -586,6 +590,8 @@
   --sidebar-bg: #dce0e8;
   --foreground: #4c4f69;
   --subtle: #9ca0b0;
+  --font-sans: 'Nunito', 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', monospace;
 
   --brand: #8839ef;
   --brand-hover: #7629d9;
@@ -2590,6 +2596,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #140f0a;
   --foreground: #e8dcc8;
   --subtle: #8a7a65;
+  --font-sans: 'Source Serif 4', 'Lora', Georgia, serif;
+  --font-mono: 'Source Code Pro', monospace;
 
   --brand: #c49a5c;
   --brand-hover: #d4aa6c;
@@ -2662,6 +2670,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #171726;
   --foreground: #e0dff4;
   --subtle: #7574a0;
+  --font-sans: 'DM Sans', 'Poppins', system-ui, sans-serif;
+  --font-mono: 'DM Mono', 'JetBrains Mono', monospace;
 
   --brand: #b48ead;
   --brand-hover: #c9a0c2;
@@ -2734,6 +2744,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #060606;
   --foreground: #ededed;
   --subtle: #666;
+  --font-sans: 'Geist', Inter, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
 
   --brand: #ededed;
   --brand-hover: #ffffff;
@@ -2806,6 +2818,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #ede5da;
   --foreground: #3a3228;
   --subtle: #9a8d7e;
+  --font-sans: 'Crimson Pro', 'Libre Baskerville', Georgia, serif;
+  --font-mono: 'Courier Prime', monospace;
 
   --brand: #8b5e3c;
   --brand-hover: #a06e48;
@@ -2878,6 +2892,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #25201c;
   --foreground: #e0d5c8;
   --subtle: #8a7d6e;
+  --font-sans: 'Crimson Pro', 'Libre Baskerville', Georgia, serif;
+  --font-mono: 'Courier Prime', monospace;
 
   --brand: #b87d54;
   --brand-hover: #cc8d60;
@@ -2950,6 +2966,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #f4eee6;
   --foreground: #3d3428;
   --subtle: #a0917e;
+  --font-sans: 'Source Serif 4', 'Lora', Georgia, serif;
+  --font-mono: 'Source Code Pro', monospace;
 
   --brand: #9a6e3a;
   --brand-hover: #b07e44;
@@ -3022,6 +3040,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #e8e6f6;
   --foreground: #2e2d40;
   --subtle: #8886a8;
+  --font-sans: 'DM Sans', 'Poppins', system-ui, sans-serif;
+  --font-mono: 'DM Mono', 'JetBrains Mono', monospace;
 
   --brand: #9b72cf;
   --brand-hover: #ab82df;
@@ -3094,6 +3114,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #f8f8f8;
   --foreground: #171717;
   --subtle: #999;
+  --font-sans: 'Geist', Inter, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
 
   --brand: #000000;
   --brand-hover: #333333;
@@ -3439,6 +3461,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #0a0710;
   --foreground: #e8e0f0;
   --subtle: #6b5f80;
+  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Victor Mono', 'JetBrains Mono', monospace;
 
   --brand: #8b5cf6;
   --brand-hover: #a78bfa;
@@ -3512,6 +3536,8 @@ p { line-height: 1.6; }
   --sidebar-bg: #f5f0fa;
   --foreground: #1a1225;
   --subtle: #9488a8;
+  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Victor Mono', 'JetBrains Mono', monospace;
 
   --brand: #7c3aed;
   --brand-hover: #6d28d9;
