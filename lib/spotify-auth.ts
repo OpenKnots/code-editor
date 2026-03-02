@@ -71,7 +71,7 @@ function getRedirectUri(): string {
  * Start Spotify PKCE login.
  *
  * In Tauri: opens the system browser for login. Spotify redirects back to
- * http://localhost:3000/?code=..., which the dev server serves. That browser
+ * http://editor.openknot.ai/?code=..., which the dev server serves. That browser
  * tab exchanges the code (same localStorage), and we detect the token via
  * a storage event listener. The Tauri webview stays on the editor.
  *
