@@ -315,48 +315,26 @@ export interface PullRequestFile {
   raw_url?: string
 }
 
-export async function fetchPullRequests(
-  repoFullName: string,
-  state: 'open' | 'closed' | 'all' = 'open',
-  perPage = 30,
-): Promise<PullRequestSummary[]> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls?state=${state}&per_page=${perPage}&sort=updated&direction=desc`
-  )
-  if (!res.ok) throw new Error(`Failed to fetch PRs: ${res.status}`)
-  const data = (await res.json()) as any[]
-  return data.map(p => ({
-    number: p.number,
-    title: p.title,
-    body: p.body,
-    state: p.state,
-    draft: p.draft ?? false,
-    merged: !!p.merged_at,
-    author: p.user?.login ?? 'unknown',
-    authorAvatar: p.user?.avatar_url ?? '',
-    createdAt: p.created_at,
-    updatedAt: p.updated_at,
-    mergedAt: p.merged_at,
-    labels: (p.labels || []).map((l: any) => ({ name: l.name, color: l.color })),
-    headRef: p.head?.ref ?? '',
-    baseRef: p.base?.ref ?? '',
-    additions: p.additions ?? 0,
-    deletions: p.deletions ?? 0,
-    changedFiles: p.changed_files ?? 0,
-    url: p.html_url,
-    reviewDecision: undefined,
-  }))
+interface GitHubPullRaw {
+  number: number
+  title: string
+  body: string | null
+  state: 'open' | 'closed'
+  draft?: boolean
+  merged_at: string | null
+  user?: { login: string; avatar_url: string }
+  created_at: string
+  updated_at: string
+  labels?: Array<{ name: string; color: string }>
+  head?: { ref: string }
+  base?: { ref: string }
+  additions?: number
+  deletions?: number
+  changed_files?: number
+  html_url: string
 }
 
-export async function fetchPullRequest(
-  repoFullName: string,
-  number: number,
-): Promise<PullRequestSummary> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}`
-  )
-  if (!res.ok) throw new Error(`Failed to fetch PR #${number}: ${res.status}`)
-  const p = (await res.json()) as any
+function mapPullRequest(p: GitHubPullRaw): PullRequestSummary {
   return {
     number: p.number,
     title: p.title,
@@ -369,7 +347,7 @@ export async function fetchPullRequest(
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     mergedAt: p.merged_at,
-    labels: (p.labels || []).map((l: any) => ({ name: l.name, color: l.color })),
+    labels: (p.labels || []).map(l => ({ name: l.name, color: l.color })),
     headRef: p.head?.ref ?? '',
     baseRef: p.base?.ref ?? '',
     additions: p.additions ?? 0,
@@ -377,6 +355,31 @@ export async function fetchPullRequest(
     changedFiles: p.changed_files ?? 0,
     url: p.html_url,
   }
+}
+
+export async function fetchPullRequests(
+  repoFullName: string,
+  state: 'open' | 'closed' | 'all' = 'open',
+  perPage = 30,
+): Promise<PullRequestSummary[]> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls?state=${state}&per_page=${perPage}&sort=updated&direction=desc`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch PRs: ${res.status}`)
+  const data = (await res.json()) as GitHubPullRaw[]
+  return data.map(mapPullRequest)
+}
+
+export async function fetchPullRequest(
+  repoFullName: string,
+  number: number,
+): Promise<PullRequestSummary> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}`
+  )
+  if (!res.ok) throw new Error(`Failed to fetch PR #${number}: ${res.status}`)
+  const p = (await res.json()) as GitHubPullRaw
+  return mapPullRequest(p)
 }
 
 export async function fetchPullRequestFiles(
@@ -387,7 +390,7 @@ export async function fetchPullRequestFiles(
     `https://api.github.com/repos/${repoFullName}/pulls/${number}/files?per_page=100`
   )
   if (!res.ok) throw new Error(`Failed to fetch PR files: ${res.status}`)
-  const data = (await res.json()) as any[]
+  const data = (await res.json()) as PullRequestFile[]
   return data.map(f => ({
     filename: f.filename,
     status: f.status,
@@ -418,27 +421,8 @@ export async function createPullRequest(
     const err = await res.json().catch(() => ({})) as Record<string, string>
     throw new Error(err.message || `Failed to create PR: ${res.status}`)
   }
-  const p = (await res.json()) as any
-  return {
-    number: p.number,
-    title: p.title,
-    body: p.body,
-    state: p.state,
-    draft: p.draft ?? false,
-    merged: false,
-    author: p.user?.login ?? 'unknown',
-    authorAvatar: p.user?.avatar_url ?? '',
-    createdAt: p.created_at,
-    updatedAt: p.updated_at,
-    mergedAt: null,
-    labels: [],
-    headRef: p.head?.ref ?? '',
-    baseRef: p.base?.ref ?? '',
-    additions: 0,
-    deletions: 0,
-    changedFiles: 0,
-    url: p.html_url,
-  }
+  const p = (await res.json()) as GitHubPullRaw
+  return mapPullRequest(p)
 }
 
 export async function mergePullRequest(
@@ -453,7 +437,7 @@ export async function mergePullRequest(
     `https://api.github.com/repos/${repoFullName}/pulls/${number}/merge`,
     { method: 'PUT', body: JSON.stringify(payload) }
   )
-  const data = (await res.json()) as any
+  const data = (await res.json()) as { merged?: boolean; message?: string; sha?: string }
   if (!res.ok) throw new Error(data.message || `Failed to merge PR: ${res.status}`)
   return { merged: data.merged ?? true, message: data.message ?? 'Merged', sha: data.sha ?? '' }
 }

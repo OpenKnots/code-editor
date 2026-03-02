@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useGateway } from '@/context/gateway-context'
 import { setGithubToken, requestDeviceCode, pollDeviceToken } from '@/lib/github-api'
 
@@ -188,20 +188,22 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
     setOAuthStep({ type: 'idle' })
   }, [])
 
-  // Poll for token once user has authorised the device
-  useEffect(() => {
-    if (oauthStep.type !== 'device-pending') return
+  // Extract stable values to use as deps (avoids ternary expression in dep array)
+  const pendingDeviceCode = oauthStep.type === 'device-pending' ? oauthStep.deviceCode : null
+  const pendingInterval = oauthStep.type === 'device-pending' ? oauthStep.interval : 5
 
-    const { deviceCode, interval } = oauthStep
+  useEffect(() => {
+    if (!pendingDeviceCode) return
+
     oauthCancelled.current = false
 
     const poll = async () => {
       while (!oauthCancelled.current) {
-        await new Promise(r => setTimeout(r, interval * 1000))
+        await new Promise(r => setTimeout(r, pendingInterval * 1000))
         if (oauthCancelled.current) break
 
         try {
-          const data = await pollDeviceToken(GITHUB_CLIENT_ID, deviceCode)
+          const data = await pollDeviceToken(GITHUB_CLIENT_ID, pendingDeviceCode)
 
           if (data.access_token) {
             saveToken(data.access_token, 'oauth')
@@ -212,7 +214,6 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
             setOAuthStep({ type: 'error', message: 'Authorisation was denied or timed out.' })
             break
           }
-          // 'authorization_pending' or 'slow_down' — keep polling
         } catch {
           // network hiccup — keep polling
         }
@@ -221,22 +222,18 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
 
     poll()
     return () => { oauthCancelled.current = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [oauthStep.type === 'device-pending' ? oauthStep.deviceCode : null, saveToken])
+  }, [pendingDeviceCode, pendingInterval, saveToken])
+
+  const authenticated = !!token
+  const oauthAvailable = !!GITHUB_CLIENT_ID
+
+  const value = useMemo<GitHubAuthContextValue>(() => ({
+    token, source, loading, setManualToken, clearToken,
+    authenticated, oauthAvailable, oauthStep, startOAuth, cancelOAuth,
+  }), [token, source, loading, setManualToken, clearToken, authenticated, oauthAvailable, oauthStep, startOAuth, cancelOAuth])
 
   return (
-    <GitHubAuthContext.Provider value={{
-      token,
-      source,
-      loading,
-      setManualToken,
-      clearToken,
-      authenticated: !!token,
-      oauthAvailable: !!GITHUB_CLIENT_ID,
-      oauthStep,
-      startOAuth,
-      cancelOAuth,
-    }}>
+    <GitHubAuthContext.Provider value={value}>
       {children}
     </GitHubAuthContext.Provider>
   )

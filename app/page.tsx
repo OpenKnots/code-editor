@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { useEffect, useState, useCallback, useRef, useLayoutEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
@@ -39,6 +39,8 @@ const VIEW_ICONS: Record<ViewId, { icon: string; label: string }> = {
   settings: { icon: 'lucide:settings', label: 'Settings' },
 }
 
+const VISIBLE_VIEWS: ViewId[] = ['chat', 'editor', 'git', 'prs']
+
 export default function EditorLayout() {
   const { status } = useGateway()
   const { repo } = useRepo()
@@ -54,10 +56,9 @@ export default function EditorLayout() {
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
   const [isMacTauri, setIsMacTauri] = useState(false)
   const [showLanding, setShowLanding] = useState(false)
-  const [agentMode, setAgentMode] = useState<string>('agent')
   const [flashedTab, setFlashedTab] = useState<ViewId | null>(null)
-  const [prevStatus, setPrevStatus] = useState(status)
   const [connectionAnim, setConnectionAnim] = useState<'pop' | 'pulse' | null>(null)
+  const prevStatusRef = useRef(status)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const tabContainerRef = useRef<HTMLDivElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 })
@@ -85,9 +86,8 @@ export default function EditorLayout() {
   }, [sidebarCollapsed])
 
   // ─── Sliding tab indicator measurement ─────────────────
-  const visibleViews: ViewId[] = ['chat', 'editor', 'git', 'prs']
   useLayoutEffect(() => {
-    const idx = visibleViews.indexOf(activeView)
+    const idx = VISIBLE_VIEWS.indexOf(activeView)
     const tab = tabRefs.current[idx]
     const container = tabContainerRef.current
     if (tab && container) {
@@ -99,15 +99,14 @@ export default function EditorLayout() {
 
   // ─── Connection state transitions ─────────────────────
   useEffect(() => {
-    if (prevStatus !== status) {
-      if (status === 'connected' && prevStatus !== 'connected') {
-        setConnectionAnim('pop')
-        const t = setTimeout(() => setConnectionAnim(null), 600)
-        return () => clearTimeout(t)
-      }
+    const prev = prevStatusRef.current
+    prevStatusRef.current = status
+    if (status === 'connected' && prev !== 'connected') {
+      setConnectionAnim('pop')
+      const t = setTimeout(() => setConnectionAnim(null), 600)
+      return () => clearTimeout(t)
     }
-    setPrevStatus(status)
-  }, [status, prevStatus])
+  }, [status])
 
   // ─── Keyboard shortcuts ────────────────────────────────
   useEffect(() => {
@@ -280,11 +279,11 @@ export default function EditorLayout() {
     if (!hasVisited && !isTauriDesktop) setShowLanding(true)
   }, [isTauriDesktop])
 
+  const dirtyCount = useMemo(() => files.filter(f => f.dirty).length, [files])
+
   if (showLanding) {
     return <Landing onEnter={() => { setShowLanding(false); localStorage.setItem('code-editor:visited', 'true') }} />
   }
-
-  const dirtyCount = files.filter(f => f.dirty).length
 
   return (
     <div className="flex h-full w-full bg-[var(--bg)] text-[var(--text-primary)] overflow-hidden">
@@ -319,7 +318,7 @@ export default function EditorLayout() {
                 opacity: indicatorStyle.width > 0 ? 1 : 0,
               }}
             />
-            {visibleViews.map((v, i) => (
+            {VISIBLE_VIEWS.map((v, i) => (
               <button
                 key={v}
                 ref={el => { tabRefs.current[i] = el }}

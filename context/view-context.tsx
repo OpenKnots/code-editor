@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
 export type ViewId = 'chat' | 'editor' | 'diff' | 'git' | 'prs' | 'settings'
 
@@ -46,17 +46,24 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('view-change', handler)
   }, [setView])
 
-  // Listen for file-select → auto-switch to editor
+  // Use a ref to avoid re-subscribing on every activeView change
+  const activeViewRef = useRef(activeView)
+  activeViewRef.current = activeView
+
   useEffect(() => {
     const handler = () => {
-      if (activeView === 'chat') setView('editor')
+      if (activeViewRef.current === 'chat') setView('editor')
     }
     window.addEventListener('file-select', handler)
     return () => window.removeEventListener('file-select', handler)
-  }, [activeView, setView])
+  }, [setView])
+
+  const value = useMemo<ViewState>(() => ({
+    activeView, previousView, setView, goBack, direction,
+  }), [activeView, previousView, setView, goBack, direction])
 
   return (
-    <ViewContext.Provider value={{ activeView, previousView, setView, goBack, direction }}>
+    <ViewContext.Provider value={value}>
       {children}
     </ViewContext.Provider>
   )

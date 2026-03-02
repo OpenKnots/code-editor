@@ -184,4 +184,5 @@ pub fn local_git_branches(root: String) -> Result<Vec<String>, String> {
 #[tauri::command]
 pub fn local_git_checkout(root: String, branch: String) -> Result<String, String> {
     run_git(&root, &["checkout", &branch])
+        .or_else(|_| run_git(&root, &["checkout", "-b", &branch]))
 }

@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -458,21 +459,13 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const value = useMemo<GatewayContextValue>(() => ({
+    status, snapshot, error, connect, disconnect, reconnect,
+    sendRequest, onEvent, gatewayUrl, grantedScopes,
+  }), [status, snapshot, error, connect, disconnect, reconnect, sendRequest, onEvent, gatewayUrl, grantedScopes])
+
   return (
-    <GatewayContext.Provider
-      value={{
-        status,
-        snapshot,
-        error,
-        connect,
-        disconnect,
-        reconnect,
-        sendRequest,
-        onEvent,
-        gatewayUrl,
-        grantedScopes,
-      }}
-    >
+    <GatewayContext.Provider value={value}>
       {children}
     </GatewayContext.Provider>
   )

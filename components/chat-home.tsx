@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import { KnotLogo } from '@/components/knot-logo'
 import { ModeSelector } from '@/components/mode-selector'
@@ -43,9 +43,9 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
   const { token: ghToken, authenticated, setManualToken, clearToken } = useGitHubAuth()
   const isConnected = status === 'connected'
 
-  const repoShort = repo?.fullName?.split('/').pop() ?? local.rootPath?.split('/').pop() ?? null
+  const repoShort = useMemo(() => repo?.fullName?.split('/').pop() ?? local.rootPath?.split('/').pop() ?? null, [repo?.fullName, local.rootPath])
   const hasWorkspace = !!repoShort
-  const recentFolders = getRecentFolders()
+  const recentFolders = useMemo(() => getRecentFolders(), [])
 
   const isTyping = isFocused && !!input.trim()
 
@@ -87,7 +87,10 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 100)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      cancelAnimationFrame(rafRef.current)
+    }
   }, [])
 
   const handleSubmit = () => {

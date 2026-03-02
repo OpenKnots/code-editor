@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { isTauri, tauriInvoke } from '@/lib/tauri'
 
 interface FileEntry {
@@ -158,7 +158,15 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     const tree = await tauriInvoke<FileEntry[]>('local_read_tree', { root })
     if (tree) setLocalTree(tree)
     const git = await tauriInvoke<GitInfo>('local_git_info', { root })
-    if (git) setGitInfo(git)
+    if (git) {
+      setGitInfo(git)
+      if (git.is_repo) {
+        const branchList = await tauriInvoke<string[]>('local_git_branches', { root })
+        if (branchList) setBranches(branchList)
+      }
+    } else {
+      setBranches([])
+    }
   }, [])
 
   // ── Web tree loader ──
@@ -242,9 +250,12 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     const file = await fileHandle.getFile()
     const buf = await file.arrayBuffer()
     const bytes = new Uint8Array(buf)
-    let binary = ''
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-    return btoa(binary)
+    const CHUNK = 8192
+    const chunks: string[] = []
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      chunks.push(String.fromCharCode(...bytes.subarray(i, i + CHUNK)))
+    }
+    return btoa(chunks.join(''))
   }, [desktop, rootPath])
 
   const writeFile = useCallback(async (path: string, content: string) => {
@@ -292,14 +303,19 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     return diff ?? ''
   }, [desktop, rootPath])
 
+  const isWebFS = !desktop && localMode
+
+  const value = useMemo<LocalContextValue>(() => ({
+    localMode, rootPath, localTree, gitInfo, branches,
+    available: true, isWebFS,
+    openFolder, setRootPath, exitLocalMode,
+    readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff, switchBranch,
+  }), [localMode, rootPath, localTree, gitInfo, branches, isWebFS,
+    openFolder, setRootPath, exitLocalMode,
+    readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff, switchBranch])
+
   return (
-    <LocalContext.Provider value={{
-      localMode, rootPath, localTree, gitInfo, branches,
-      available: true,
-      isWebFS: !desktop && localMode,
-      openFolder, setRootPath, exitLocalMode,
-      readFile, readFileBase64, writeFile, refresh, commitFiles, getDiff, switchBranch,
-    }}>
+    <LocalContext.Provider value={value}>
       {children}
     </LocalContext.Provider>
   )

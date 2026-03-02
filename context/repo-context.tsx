@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { fetchRepoTreeByName as fetchRepoTree } from '@/lib/github-api'
 
 export interface RepoInfo {
@@ -48,8 +48,12 @@ export function RepoProvider({ children }: { children: ReactNode }) {
     }
   }, [repo])
 
+  const value = useMemo<RepoContextValue>(() => ({
+    repo, setRepo, tree, treeLoading, treeError, loadTree,
+  }), [repo, setRepo, tree, treeLoading, treeError, loadTree])
+
   return (
-    <RepoContext.Provider value={{ repo, setRepo, tree, treeLoading, treeError, loadTree }}>
+    <RepoContext.Provider value={value}>
       {children}
     </RepoContext.Provider>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
 export type OpenFileKind = 'text' | 'image' | 'video' | 'audio'
 
@@ -106,7 +106,10 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const getFile = useCallback((path: string) => files.find(f => f.path === path), [files])
+  const filesRef = useRef(files)
+  filesRef.current = files
+
+  const getFile = useCallback((path: string) => filesRef.current.find(f => f.path === path), [])
 
   // Persist open tab paths to localStorage
   useEffect(() => {
@@ -117,8 +120,13 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [files, activeFile])
 
+  const value = useMemo<EditorContextValue>(() => ({
+    files, activeFile, setActiveFile, openFile, closeFile,
+    updateFileContent, markClean, reorderFiles, getFile,
+  }), [files, activeFile, setActiveFile, openFile, closeFile, updateFileContent, markClean, reorderFiles, getFile])
+
   return (
-    <EditorContext.Provider value={{ files, activeFile, setActiveFile, openFile, closeFile, updateFileContent, markClean, reorderFiles, getFile }}>
+    <EditorContext.Provider value={value}>
       {children}
     </EditorContext.Provider>
   )

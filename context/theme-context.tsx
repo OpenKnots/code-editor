@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type ResolvedMode = 'light' | 'dark'
@@ -111,8 +111,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setVersion(v => v + 1)
   }, [themeId])
 
+  const value = useMemo<ThemeContextValue>(() => ({
+    themeId, mode, resolvedMode, setThemeId, setMode, version, bumpVersion,
+  }), [themeId, mode, resolvedMode, setThemeId, setMode, version, bumpVersion])
+
   return (
-    <ThemeContext.Provider value={{ themeId, mode, resolvedMode, setThemeId, setMode, version, bumpVersion }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )

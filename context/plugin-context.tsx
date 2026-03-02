@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode, type ComponentType } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, memo, type ReactNode, type ComponentType } from 'react'
 
 export type PluginSlot = 'status-bar-left' | 'status-bar-right' | 'floating' | 'settings'
 
@@ -52,8 +52,12 @@ export function PluginProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const value = useMemo<PluginState>(() => ({
+    slots, registerPlugin, unregisterPlugin,
+  }), [slots, registerPlugin, unregisterPlugin])
+
   return (
-    <PluginContext.Provider value={{ slots, registerPlugin, unregisterPlugin }}>
+    <PluginContext.Provider value={value}>
       {children}
     </PluginContext.Provider>
   )
@@ -65,7 +69,7 @@ export function usePlugins() {
   return ctx
 }
 
-export function PluginSlotRenderer({ slot }: { slot: PluginSlot }) {
+export const PluginSlotRenderer = memo(function PluginSlotRenderer({ slot }: { slot: PluginSlot }) {
   const { slots } = usePlugins()
   const entries = slots[slot]
   if (entries.length === 0) return null
@@ -77,4 +81,4 @@ export function PluginSlotRenderer({ slot }: { slot: PluginSlot }) {
       })}
     </>
   )
-}
+})
