@@ -71,6 +71,7 @@ export function SettingsPanel({ open, onClose }: Props) {
     { keys: '⌘S', desc: 'Save file' },
     { keys: '⌘⇧F', desc: 'Global search' },
     { keys: '⌘⇧P', desc: 'Command palette' },
+    { keys: '⌘⇧I', desc: 'Isolate component' },
     { keys: 'Esc', desc: 'Close overlays' },
   ]
 

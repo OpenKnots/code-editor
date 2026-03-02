@@ -18,8 +18,20 @@ export function ComponentIsolatorListener() {
       isolateComponent({ name, filePath: activeFile, props: {} })
       setView('preview')
     }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'i') {
+        e.preventDefault()
+        handler()
+      }
+    }
+
     window.addEventListener('preview-isolate-component', handler)
-    return () => window.removeEventListener('preview-isolate-component', handler)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('preview-isolate-component', handler)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [activeFile, isolateComponent, setView])
 
   return null
