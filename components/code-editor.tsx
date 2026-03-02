@@ -14,6 +14,16 @@ import { InlineEdit } from '@/components/inline-edit'
 import { MarkdownPreview } from '@/components/markdown-preview'
 import { MarkdownModeToggle, type MarkdownViewMode } from '@/components/markdown-mode-toggle'
 
+if (typeof self !== 'undefined' && !(self as any).MonacoEnvironment) {
+  const noop = URL.createObjectURL(
+    new Blob(['self.onmessage = function() {}'], { type: 'application/javascript' })
+  );
+  (self as any).MonacoEnvironment = {
+    getWorker() { return new Worker(noop) },
+    getWorkerUrl() { return noop },
+  }
+}
+
 function WelcomeView() {
   const recentFolders = (() => {
     try {

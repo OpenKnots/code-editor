@@ -6,9 +6,7 @@ import { ModeSelector } from '@/components/mode-selector'
 import { ChatHome } from '@/components/chat-home'
 import { ChatHeader } from '@/components/chat-header'
 import type { AgentMode } from '@/components/mode-selector'
-import { RuntimeSelector } from '@/components/runtime-selector'
 import { PermissionsToggle, usePermissions } from '@/components/permissions-toggle'
-import { useRuntime } from '@/components/runtime-selector'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
 import { useRepo } from '@/context/repo-context'
@@ -147,7 +145,6 @@ export function AgentPanel() {
   const { repo, tree: repoTree } = useRepo()
   const local = useLocal()
   const permissions = usePermissions()
-  const runtime = useRuntime()
 
   const [chatId, setChatId] = useState(() => crypto.randomUUID())
   // Each chat gets its own gateway session for isolation
@@ -571,10 +568,10 @@ export function AgentPanel() {
       activeFileContent: file?.content,
       activeFileLanguage: file?.language,
       openFiles: files.map(f => ({ path: f.path, dirty: f.dirty })),
-      runtime,
+      runtime: 'local',
       permissions,
     })
-  }, [repo, activeFile, files, getFile, runtime, permissions])
+  }, [repo, activeFile, files, getFile, permissions])
 
 
   // ─── Message helpers ──────────────────────────────────────────
@@ -1430,7 +1427,6 @@ export function AgentPanel() {
           {/* Row 2: Runtime, permissions, model, context */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <RuntimeSelector />
               <PermissionsToggle />
             </div>
             <div className="flex items-center gap-2">

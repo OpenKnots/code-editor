@@ -5,7 +5,6 @@ import { Icon } from '@iconify/react'
 import { KnotLogo } from '@/components/knot-logo'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
-import { RuntimeSelector } from '@/components/runtime-selector'
 import { PermissionsToggle } from '@/components/permissions-toggle'
 import { useRepo } from '@/context/repo-context'
 import { useLocal } from '@/context/local-context'
@@ -178,7 +177,6 @@ export function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
               </div>
 
               <div className="flex items-center gap-1.5">
-                <RuntimeSelector size="sm" />
                 <PermissionsToggle size="sm" />
                 <button
                   onClick={handleSubmit}

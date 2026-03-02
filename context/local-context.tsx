@@ -127,7 +127,7 @@ async function webResolveOrCreateFile(
 // ─── Provider ───────────────────────────────────────────────────
 
 export function LocalProvider({ children }: { children: ReactNode }) {
-  const [localMode, setLocalMode] = useState(false)
+  const [localMode, setLocalMode] = useState(true)
   const [rootPath, setRootPathState] = useState<string | null>(null)
   const [localTree, setLocalTree] = useState<FileEntry[]>([])
   const [gitInfo, setGitInfo] = useState<GitInfo | null>(null)
@@ -139,16 +139,13 @@ export function LocalProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const isDesktop = isTauri()
     setDesktop(isDesktop)
+    setLocalMode(true)
 
     if (isDesktop) {
       const recent = getRecentFolders()
-      const lastMode = localStorage.getItem('code-editor:source-mode')
-      if (lastMode !== 'remote' && recent.length > 0) {
+      if (recent.length > 0) {
         setRootPathState(recent[0])
-        setLocalMode(true)
         loadTreeTauri(recent[0])
-      } else if (lastMode !== 'remote') {
-        setLocalMode(true)
       }
     }
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -214,13 +211,11 @@ export function LocalProvider({ children }: { children: ReactNode }) {
   }, [desktop, setRootPath, loadTreeWeb])
 
   const exitLocalMode = useCallback(() => {
-    setLocalMode(false)
     setRootPathState(null)
     setLocalTree([])
     setGitInfo(null)
     setBranches([])
     webDirHandleRef.current = null
-    localStorage.setItem('code-editor:source-mode', 'remote')
   }, [])
 
   const readFile = useCallback(async (path: string): Promise<string> => {

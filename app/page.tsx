@@ -15,6 +15,7 @@ import { PluginSlotRenderer } from '@/context/plugin-context'
 import { usePreview } from '@/context/preview-context'
 import { SpotifyPlugin } from '@/components/plugins/spotify/spotify-plugin'
 import { BranchPicker } from '@/components/branch-picker'
+import { FolderIndicator } from '@/components/source-switcher'
 
 // View components — lazy loaded
 const ChatView = dynamic(() => import('@/components/views/chat-view').then(m => ({ default: m.ChatView })), { ssr: false })
@@ -52,7 +53,7 @@ export default function EditorLayout() {
   const { status } = useGateway()
   const { repo } = useRepo()
   const { files, activeFile, openFile, setActiveFile, markClean, updateFileContent } = useEditor()
-  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo } = useLocal()
+  const { localMode, readFile: localReadFile, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath } = useLocal()
   const { activeView, setView } = useView()
 
   // ─── Minimal state ──────────────────────────────────────
@@ -157,17 +158,23 @@ export default function EditorLayout() {
   // ─── Event listeners ───────────────────────────────────
   useEffect(() => {
     const openSettings = () => setSettingsVisible(true)
-    const openFolder = () => { /* Handled by local context */ }
+    const openFolder = () => { localOpenFolder() }
+    const openRecent = (e: Event) => {
+      const path = (e as CustomEvent).detail?.path
+      if (path) localSetRootPath(path)
+    }
     const toggleTerminal = () => setTerminalVisible(v => !v)
     window.addEventListener('open-settings', openSettings)
     window.addEventListener('open-folder', openFolder)
+    window.addEventListener('open-recent', openRecent)
     window.addEventListener('toggle-terminal', toggleTerminal)
     return () => {
       window.removeEventListener('open-settings', openSettings)
       window.removeEventListener('open-folder', openFolder)
+      window.removeEventListener('open-recent', openRecent)
       window.removeEventListener('toggle-terminal', toggleTerminal)
     }
-  }, [])
+  }, [localOpenFolder, localSetRootPath])
 
   // ─── File open handler ─────────────────────────────────
   useEffect(() => {
@@ -398,6 +405,7 @@ export default function EditorLayout() {
         {/* Status bar */}
         <footer className="flex items-center justify-between px-3 h-[22px] border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[10px] text-[var(--text-tertiary)] shrink-0">
           <div className="flex items-center gap-3">
+            <FolderIndicator />
             <BranchPicker />
             {dirtyCount > 0 && (
               <span key={dirtyCount} className="flex items-center gap-1 text-[var(--warning,#eab308)] animate-badge-pop">
