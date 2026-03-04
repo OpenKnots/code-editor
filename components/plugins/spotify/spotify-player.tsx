@@ -1,226 +1,149 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Icon } from '@iconify/react'
-import {
-  spotifyAvailable,
-  isSpotifyAuthenticated,
-  ensureSpotifyToken,
-  spotifyFetch,
-  startSpotifyLogin,
-  clearSpotifyAuth,
-  handleSpotifyCallback,
-} from '@/lib/spotify-auth'
 
-declare global {
-  interface Window {
-    Spotify: { Player: new (opts: Record<string, unknown>) => Spotify.Player }
-    onSpotifyWebPlaybackSDKReady: () => void
-  }
+const STORAGE_KEY = 'knot:spotify-playlist'
+const HISTORY_KEY = 'knot:spotify-history'
+const MAX_HISTORY = 8
+
+interface PlaylistInfo {
+  type: 'playlist' | 'album' | 'track' | 'artist' | 'episode' | 'show'
+  id: string
+  url: string
+  label: string
 }
 
-declare namespace Spotify {
-  interface Player {
-    connect(): Promise<boolean>
-    disconnect(): void
-    addListener(event: string, cb: (...args: any[]) => void): boolean
-    removeListener(event: string, cb?: (...args: any[]) => void): boolean
-    getCurrentState(): Promise<PlayerState | null>
-    setVolume(v: number): Promise<void>
-    getVolume(): Promise<number>
-    pause(): Promise<void>
-    resume(): Promise<void>
-    togglePlay(): Promise<void>
-    seek(ms: number): Promise<void>
-    previousTrack(): Promise<void>
-    nextTrack(): Promise<void>
-  }
-  interface PlayerState {
-    paused: boolean
-    position: number
-    duration: number
-    track_window: {
-      current_track: {
-        id: string
-        uri: string
-        name: string
-        artists: Array<{ name: string; uri: string }>
-        album: { name: string; images: Array<{ url: string; width: number; height: number }> }
-        duration_ms: number
-      }
+function parseSpotifyUrl(input: string): PlaylistInfo | null {
+  const trimmed = input.trim()
+
+  // open.spotify.com/playlist/ID, /album/ID, /track/ID, etc.
+  const urlMatch = trimmed.match(
+    /open\.spotify\.com\/(playlist|album|track|artist|episode|show)\/([A-Za-z0-9]+)/
+  )
+  if (urlMatch) {
+    return {
+      type: urlMatch[1] as PlaylistInfo['type'],
+      id: urlMatch[2],
+      url: trimmed,
+      label: `${urlMatch[1].charAt(0).toUpperCase() + urlMatch[1].slice(1)}`,
     }
   }
+
+  // spotify:playlist:ID URI format
+  const uriMatch = trimmed.match(
+    /spotify:(playlist|album|track|artist|episode|show):([A-Za-z0-9]+)/
+  )
+  if (uriMatch) {
+    return {
+      type: uriMatch[1] as PlaylistInfo['type'],
+      id: uriMatch[2],
+      url: `https://open.spotify.com/${uriMatch[1]}/${uriMatch[2]}`,
+      label: `${uriMatch[1].charAt(0).toUpperCase() + uriMatch[1].slice(1)}`,
+    }
+  }
+
+  return null
 }
 
-interface SearchResult {
+function buildEmbedUrl(info: PlaylistInfo): string {
+  return `https://open.spotify.com/embed/${info.type}/${info.id}?utm_source=generator&theme=0`
+}
+
+interface HistoryEntry {
+  type: PlaylistInfo['type']
   id: string
-  name: string
-  subtitle: string
-  imageUrl?: string
-  uri: string
-  type: 'track' | 'album' | 'playlist'
+  url: string
+  label: string
+  addedAt: number
 }
 
-const SDK_URL = 'https://sdk.scdn.co/spotify-player.js'
+function loadHistory(): HistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return []
+}
 
-function formatMs(ms: number): string {
-  const s = Math.floor(ms / 1000)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+function saveHistory(entries: HistoryEntry[]) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY))) } catch {}
 }
 
 export function SpotifyPlayer() {
-  const [authenticated, setAuthenticated] = useState(false)
-  const [visible, setVisible] = useState(true)
-  const [loggingIn, setLoggingIn] = useState(false)
+  const [input, setInput] = useState('')
+  const [current, setCurrent] = useState<PlaylistInfo | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) return JSON.parse(raw)
+    } catch {}
+    return null
+  })
+  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory)
   const [error, setError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
-
-  const [sdkReady, setSdkReady] = useState(false)
-  const [deviceId, setDeviceId] = useState<string | null>(null)
-  const [playerState, setPlayerState] = useState<Spotify.PlayerState | null>(null)
-  const [localPosition, setLocalPosition] = useState(0)
-  const [volume, setVolume] = useState(0.5)
-  const [muted, setMuted] = useState(false)
-  const volumeBeforeMute = useRef(0.5)
-
-  const playerRef = useRef<Spotify.Player | null>(null)
-  const positionTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  const lastStateTime = useRef(0)
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showInput, setShowInput] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    handleSpotifyCallback()
-      .catch(err => setError(err instanceof Error ? err.message : 'Auth failed'))
-      .finally(() => setAuthenticated(isSpotifyAuthenticated()))
-    const handler = () => setAuthenticated(isSpotifyAuthenticated())
-    window.addEventListener('spotify-auth-changed', handler)
-    const storageHandler = (e: StorageEvent) => {
-      if (e.key === 'knot:spotify-token' && e.newValue) setAuthenticated(true)
+    if (current) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(current)) } catch {}
+      window.dispatchEvent(new CustomEvent('spotify-state-changed', {
+        detail: { playing: true, type: current.type, id: current.id },
+      }))
+    } else {
+      try { localStorage.removeItem(STORAGE_KEY) } catch {}
+      window.dispatchEvent(new CustomEvent('spotify-state-changed', { detail: null }))
     }
-    window.addEventListener('storage', storageHandler)
-    return () => { window.removeEventListener('spotify-auth-changed', handler); window.removeEventListener('storage', storageHandler) }
-  }, [])
+  }, [current])
 
-  useEffect(() => {
-    if (!authenticated) return
-    if (document.querySelector(`script[src="${SDK_URL}"]`)) { if (window.Spotify) setSdkReady(true); return }
-    window.onSpotifyWebPlaybackSDKReady = () => setSdkReady(true)
-    const script = document.createElement('script'); script.src = SDK_URL; script.async = true; document.body.appendChild(script)
-  }, [authenticated])
+  const loadPlaylist = useCallback((value?: string) => {
+    const raw = value ?? input
+    if (!raw.trim()) return
 
-  useEffect(() => {
-    if (!sdkReady || !authenticated) return
-    const player = new window.Spotify.Player({
-      name: 'Knot Code',
-      getOAuthToken: async (cb: (t: string) => void) => { const token = await ensureSpotifyToken(); if (token) cb(token) },
-      volume: 0.5,
-    })
-    player.addListener('ready', ({ device_id }: { device_id: string }) => {
-      setDeviceId(device_id); setError(null)
-      player.getVolume().then((v: number) => { setVolume(v); setMuted(v === 0) }).catch(() => {})
-      spotifyFetch('/me/player', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device_ids: [device_id], play: false }) }).catch(() => {})
-    })
-    player.addListener('not_ready', () => setDeviceId(null))
-    player.addListener('player_state_changed', (state: Spotify.PlayerState) => {
-      setPlayerState(state ?? null)
-      if (state) { setLocalPosition(state.position); lastStateTime.current = Date.now() }
-      window.dispatchEvent(new CustomEvent('spotify-state-changed', { detail: state }))
-    })
-    player.addListener('authentication_error', ({ message }: { message: string }) => setError(`Auth: ${message}`))
-    player.addListener('account_error', () => setError('Premium required'))
-    player.addListener('initialization_error', ({ message }: { message: string }) => setError(`Init: ${message}`))
-    player.connect()
-    playerRef.current = player
-    return () => { player.disconnect(); playerRef.current = null }
-  }, [sdkReady, authenticated])
-
-  useEffect(() => {
-    if (positionTimer.current) clearInterval(positionTimer.current)
-    if (playerState && !playerState.paused) {
-      positionTimer.current = setInterval(() => {
-        setLocalPosition(playerState.position + (Date.now() - lastStateTime.current))
-      }, 250)
+    const info = parseSpotifyUrl(raw)
+    if (!info) {
+      setError('Paste a Spotify link (playlist, album, track, etc.)')
+      return
     }
-    return () => { if (positionTimer.current) clearInterval(positionTimer.current) }
-  }, [playerState])
 
-  const togglePlay = useCallback(() => { playerRef.current?.togglePlay() }, [])
-  const prevTrack = useCallback(() => { playerRef.current?.previousTrack() }, [])
-  const nextTrack = useCallback(() => { playerRef.current?.nextTrack() }, [])
+    setError(null)
+    setCurrent(info)
+    setInput('')
+    setShowInput(false)
 
-  const handleVolume = useCallback((v: number) => {
-    const clamped = Math.max(0, Math.min(1, v))
-    setVolume(clamped); setMuted(clamped === 0)
-    playerRef.current?.setVolume(clamped)
+    setHistory(prev => {
+      const filtered = prev.filter(h => h.id !== info.id)
+      const next: HistoryEntry[] = [
+        { type: info.type, id: info.id, url: info.url, label: info.label, addedAt: Date.now() },
+        ...filtered,
+      ].slice(0, MAX_HISTORY)
+      saveHistory(next)
+      return next
+    })
+  }, [input])
+
+  const clearCurrent = useCallback(() => {
+    setCurrent(null)
   }, [])
 
-  const toggleMute = useCallback(() => {
-    if (muted) { handleVolume(volumeBeforeMute.current) }
-    else { volumeBeforeMute.current = volume; handleVolume(0) }
-  }, [muted, volume, handleVolume])
-
-  const handleLogin = useCallback(async () => {
-    setLoggingIn(true); setError(null)
-    try { await startSpotifyLogin() } catch (err) { setError(err instanceof Error ? err.message : 'Login failed') }
-    finally { setLoggingIn(false) }
+  const removeHistoryItem = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setHistory(prev => {
+      const next = prev.filter(h => h.id !== id)
+      saveHistory(next)
+      return next
+    })
   }, [])
 
-  const handleLogout = useCallback(() => {
-    clearSpotifyAuth(); setAuthenticated(false); setPlayerState(null); setDeviceId(null)
-  }, [])
+  const TYPE_ICONS: Record<string, string> = {
+    playlist: 'lucide:list-music',
+    album: 'lucide:disc-3',
+    track: 'lucide:music',
+    artist: 'lucide:mic-2',
+    episode: 'lucide:podcast',
+    show: 'lucide:podcast',
+  }
 
-  const onQueryChange = useCallback((v: string) => {
-    setQuery(v)
-    if (searchTimeout.current) clearTimeout(searchTimeout.current)
-    if (!v.trim()) { setResults([]); return }
-    setSearching(true)
-    searchTimeout.current = setTimeout(async () => {
-      try {
-        const params = new URLSearchParams({ q: v, type: 'track,album,playlist', limit: '8', market: 'US' })
-        const res = await spotifyFetch(`/search?${params}`)
-        if (!res.ok) { setResults([]); return }
-        const data = await res.json()
-        const items: SearchResult[] = [
-          ...(data.tracks?.items ?? []).map((t: Record<string, unknown>) => ({
-            id: t.id as string, name: t.name as string, subtitle: ((t.artists as Array<{ name: string }>)?.[0]?.name ?? ''),
-            imageUrl: ((t.album as { images: Array<{ url: string }> })?.images?.[2]?.url ?? (t.album as { images: Array<{ url: string }> })?.images?.[0]?.url),
-            uri: t.uri as string, type: 'track' as const,
-          })),
-          ...(data.albums?.items ?? []).slice(0, 3).map((a: Record<string, unknown>) => ({
-            id: a.id as string, name: a.name as string, subtitle: ((a.artists as Array<{ name: string }>)?.[0]?.name ?? 'Album'),
-            imageUrl: ((a.images as Array<{ url: string }>)?.[2]?.url ?? (a.images as Array<{ url: string }>)?.[0]?.url),
-            uri: a.uri as string, type: 'album' as const,
-          })),
-        ]
-        setResults(items)
-      } catch {} finally { setSearching(false) }
-    }, 350)
-  }, [])
-
-  const playItem = useCallback(async (r: SearchResult) => {
-    if (!deviceId) return
-    try {
-      const body = r.type === 'track' ? { uris: [r.uri] } : { context_uri: r.uri }
-      await spotifyFetch(`/me/player/play?device_id=${deviceId}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      })
-      setShowSearch(false); setQuery(''); setResults([])
-    } catch {}
-  }, [deviceId])
-
-  if (!visible || !spotifyAvailable()) return null
-
-  const track = authenticated ? (playerState?.track_window.current_track ?? null) : null
-  const paused = playerState?.paused ?? true
-  const duration = playerState?.duration ?? 0
-  const progressPct = duration > 0 ? Math.min(100, (localPosition / duration) * 100) : 0
-  const albumArt = track?.album?.images?.[0]?.url
-
-  // ─── Thin sidebar panel ───
   return (
     <div className="flex flex-col w-full h-full bg-[var(--bg)] overflow-hidden">
       {/* Header */}
@@ -228,153 +151,123 @@ export function SpotifyPlayer() {
         <Icon icon="simple-icons:spotify" width={11} height={11} className="text-[#1DB954] shrink-0" />
         <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] ml-1.5">Music</span>
         <div className="flex-1" />
-        {authenticated && (
-          <button onClick={() => setShowSearch(v => !v)} className={`p-0.5 rounded cursor-pointer ${showSearch ? 'text-[#1DB954]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`} title="Search">
-            <Icon icon="lucide:search" width={11} height={11} />
+        {current && (
+          <button
+            onClick={() => { setShowInput(v => !v); setTimeout(() => inputRef.current?.focus(), 100) }}
+            className={`p-0.5 rounded cursor-pointer ${showInput ? 'text-[#1DB954]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`}
+            title="Change playlist"
+          >
+            <Icon icon="lucide:replace" width={11} height={11} />
           </button>
         )}
       </div>
 
-      {!authenticated ? (
-        /* ─── Connect state ─── */
-        <div className="flex flex-col items-center justify-center gap-2.5 py-6 px-3">
-          <Icon icon="simple-icons:spotify" width={20} height={20} className="text-[var(--text-disabled)]" />
-          <p className="text-[10px] text-[var(--text-tertiary)] text-center">Connect Spotify to play music while you code</p>
-          <button onClick={handleLogin} disabled={loggingIn} className="h-7 px-3 rounded-md text-[10px] font-medium bg-[#1DB954] text-white hover:bg-[#1ed760] disabled:opacity-50 cursor-pointer">
-            {loggingIn ? 'Connecting…' : 'Connect'}
-          </button>
-          {error && <p className="text-[9px] text-[var(--error)] text-center">{error}</p>}
-        </div>
-      ) : (
-        <>
-          {/* ─── Search ─── */}
-          {showSearch && (
-            <div className="border-b border-[var(--border)]">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5">
-                <Icon icon="lucide:search" width={10} height={10} className="text-[var(--text-disabled)] shrink-0" />
-                <input
-                  ref={inputRef}
-                  type="text" value={query} onChange={e => onQueryChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Escape') { setShowSearch(false); setQuery(''); setResults([]) } }}
-                  placeholder="Search songs…"
-                  className="flex-1 bg-transparent text-[10px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
-                  autoFocus spellCheck={false}
-                />
-                {query && (
-                  <button onClick={() => { setQuery(''); setResults([]) }} className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-pointer">
-                    <Icon icon="lucide:x" width={10} height={10} />
-                  </button>
-                )}
-              </div>
-              {(results.length > 0 || searching) && (
-                <div className="max-h-[200px] overflow-y-auto border-t border-[var(--border)]">
-                  {searching ? (
-                    <div className="flex items-center gap-2 px-3 py-2.5">
-                      <Icon icon="lucide:loader-2" width={11} height={11} className="text-[var(--text-disabled)] animate-spin" />
-                      <span className="text-[9px] text-[var(--text-disabled)]">Searching…</span>
-                    </div>
-                  ) : results.map(r => (
-                    <button key={`${r.type}-${r.id}`} onClick={() => playItem(r)} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--bg-subtle)] cursor-pointer text-left">
-                      {r.imageUrl ? <img src={r.imageUrl} alt="" className="w-6 h-6 rounded object-cover shrink-0" /> : <div className="w-6 h-6 rounded bg-[var(--bg-subtle)] shrink-0" />}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-[var(--text-primary)] truncate">{r.name}</div>
-                        <div className="text-[9px] text-[var(--text-tertiary)] truncate">{r.subtitle}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── Now playing ─── */}
-          <div className="flex-1 flex flex-col">
-            {track ? (
-              <div className="flex flex-col gap-2 p-3">
-                {/* Album art */}
-                {albumArt && (
-                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-[var(--bg-subtle)]">
-                    <img src={albumArt} alt={track.album.name} className="w-full h-full object-cover" />
-                  </div>
-                )}
-
-                {/* Track info */}
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-[var(--text-primary)] truncate">{track.name}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] truncate">{track.artists.map(a => a.name).join(', ')}</p>
-                </div>
-
-                {/* Progress */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[8px] font-mono text-[var(--text-disabled)] w-7 text-right shrink-0">{formatMs(localPosition)}</span>
-                  <div className="flex-1 h-1 rounded-full bg-[var(--bg-subtle)] cursor-pointer" onClick={e => {
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    const pct = (e.clientX - rect.left) / rect.width
-                    playerRef.current?.seek(Math.floor(pct * duration))
-                  }}>
-                    <div className="h-full rounded-full bg-[#1DB954]" style={{ width: `${progressPct}%` }} />
-                  </div>
-                  <span className="text-[8px] font-mono text-[var(--text-disabled)] w-7 shrink-0">{formatMs(duration)}</span>
-                </div>
-
-                {/* Controls */}
-                <div className="flex items-center justify-center gap-3">
-                  <button onClick={prevTrack} className="w-7 h-7 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] flex items-center justify-center cursor-pointer" title="Previous">
-                    <Icon icon="lucide:skip-back" width={13} height={13} />
-                  </button>
-                  <button onClick={togglePlay} className="w-8 h-8 rounded-full bg-[var(--text-primary)] text-[var(--bg)] flex items-center justify-center cursor-pointer hover:opacity-90" title={paused ? 'Play' : 'Pause'}>
-                    <Icon icon={paused ? 'lucide:play' : 'lucide:pause'} width={14} height={14} />
-                  </button>
-                  <button onClick={nextTrack} className="w-7 h-7 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] flex items-center justify-center cursor-pointer" title="Next">
-                    <Icon icon="lucide:skip-forward" width={13} height={13} />
-                  </button>
-                </div>
-
-                {/* Volume */}
-                <div className="flex items-center gap-1.5 mt-1">
-                  <button onClick={toggleMute} className="w-5 h-5 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer shrink-0">
-                    <Icon icon={muted || volume === 0 ? 'lucide:volume-x' : volume < 0.5 ? 'lucide:volume-1' : 'lucide:volume-2'} width={12} height={12} />
-                  </button>
-                  <div className="flex-1 h-1 rounded-full bg-[var(--bg-subtle)] cursor-pointer group relative" onClick={e => {
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    handleVolume((e.clientX - rect.left) / rect.width)
-                  }}>
-                    <div className="h-full rounded-full bg-[var(--text-tertiary)] group-hover:bg-[#1DB954] transition-colors relative" style={{ width: `${volume * 100}%` }}>
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--text-primary)] shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </div>
-                  <span className="text-[8px] font-mono text-[var(--text-disabled)] w-5 text-right shrink-0">{Math.round(volume * 100)}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 px-3">
-                {!deviceId ? (
-                  <>
-                    <Icon icon="lucide:loader-2" width={18} height={18} className="text-[var(--text-disabled)] animate-spin" />
-                    <p className="text-[10px] text-[var(--text-disabled)]">Connecting…</p>
-                  </>
-                ) : (
-                  <>
-                    <Icon icon="lucide:music" width={18} height={18} className="text-[var(--text-disabled)]" />
-                    <p className="text-[10px] text-[var(--text-tertiary)]">Nothing playing</p>
-                    <button onClick={() => { setShowSearch(true); setTimeout(() => inputRef.current?.focus(), 100) }}
-                      className="h-6 px-2.5 rounded-md text-[9px] font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer mt-1"
-                    >
-                      Search for a song
-                    </button>
-                  </>
-                )}
-              </div>
+      {/* Paste input */}
+      {(showInput || !current) && (
+        <div className="border-b border-[var(--border)]">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5">
+            <Icon icon="lucide:link" width={10} height={10} className="text-[var(--text-disabled)] shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={e => { setInput(e.target.value); setError(null) }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') loadPlaylist()
+                if (e.key === 'Escape') { setShowInput(false); setInput(''); setError(null) }
+              }}
+              onPaste={e => {
+                const text = e.clipboardData.getData('text')
+                if (parseSpotifyUrl(text)) {
+                  e.preventDefault()
+                  setInput(text)
+                  setTimeout(() => loadPlaylist(text), 0)
+                }
+              }}
+              placeholder="Paste Spotify link…"
+              className="flex-1 bg-transparent text-[10px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
+              autoFocus
+              spellCheck={false}
+            />
+            {input && (
+              <button onClick={() => loadPlaylist()} className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[#1DB954] cursor-pointer" title="Load">
+                <Icon icon="lucide:arrow-right" width={10} height={10} />
+              </button>
             )}
           </div>
+          {error && (
+            <p className="px-2.5 pb-1.5 text-[9px] text-[var(--error)]">{error}</p>
+          )}
 
-          {/* Footer */}
-          <div className="flex items-center h-6 px-2.5 border-t border-[var(--border)] shrink-0">
-            <span className="text-[8px] text-[var(--text-disabled)]">{deviceId ? 'Knot Code' : 'Connecting…'}</span>
-            <div className="flex-1" />
-            <button onClick={handleLogout} className="text-[8px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer">Disconnect</button>
+          {/* History */}
+          {!current && history.length > 0 && (
+            <div className="max-h-[160px] overflow-y-auto border-t border-[var(--border)]">
+              <div className="px-2.5 pt-1.5 pb-1">
+                <span className="text-[8px] font-semibold uppercase tracking-wider text-[var(--text-disabled)]">Recent</span>
+              </div>
+              {history.map(h => (
+                <button
+                  key={h.id}
+                  onClick={() => {
+                    const info: PlaylistInfo = { type: h.type, id: h.id, url: h.url, label: h.label }
+                    setCurrent(info)
+                    setShowInput(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--bg-subtle)] cursor-pointer text-left group"
+                >
+                  <Icon icon={TYPE_ICONS[h.type] ?? 'lucide:music'} width={10} height={10} className="text-[#1DB954] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] text-[var(--text-primary)] truncate">{h.label} · {h.id}</div>
+                  </div>
+                  <button
+                    onClick={e => removeHistoryItem(h.id, e)}
+                    className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 cursor-pointer"
+                  >
+                    <Icon icon="lucide:x" width={8} height={8} />
+                  </button>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Embedded player */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {current ? (
+          <div className="flex-1 flex flex-col min-h-0">
+            <iframe
+              src={buildEmbedUrl(current)}
+              className="flex-1 w-full border-0 rounded-none"
+              style={{ minHeight: 152 }}
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              title={`Spotify ${current.label}`}
+            />
           </div>
-        </>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2.5 py-8 px-3">
+            <Icon icon="simple-icons:spotify" width={20} height={20} className="text-[var(--text-disabled)]" />
+            <p className="text-[10px] text-[var(--text-tertiary)] text-center leading-relaxed">
+              Paste a public Spotify playlist, album, or track link to play music
+            </p>
+            <p className="text-[8px] text-[var(--text-disabled)] text-center">
+              No account or API key needed
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      {current && (
+        <div className="flex items-center h-6 px-2.5 border-t border-[var(--border)] shrink-0">
+          <Icon icon={TYPE_ICONS[current.type] ?? 'lucide:music'} width={9} height={9} className="text-[var(--text-disabled)]" />
+          <span className="text-[8px] text-[var(--text-disabled)] ml-1 truncate">{current.label}</span>
+          <div className="flex-1" />
+          <button onClick={clearCurrent} className="text-[8px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer">
+            Clear
+          </button>
+        </div>
       )}
     </div>
   )

@@ -104,9 +104,9 @@ Copy `.env.example` → `.env` and fill in:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_GITHUB_CLIENT_ID` | Optional | GitHub OAuth App Client ID for device-flow login. Create at [github.com/settings/developers](https://github.com/settings/developers). Without this, users can still paste a PAT manually in Settings. |
-| `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` | Optional | Spotify PKCE OAuth Client ID for the music plugin. Create at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard). |
-
 > **Note:** These are `NEXT_PUBLIC_` variables — they're embedded in the client bundle. Only put client IDs here, never secrets.
+
+> **Spotify:** The Spotify add-on uses Spotify's public embed player — no API key or authentication needed. Just paste a public playlist/album/track URL.
 
 ---
 
