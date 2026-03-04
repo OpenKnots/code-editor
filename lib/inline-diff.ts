@@ -33,77 +33,162 @@ export function showInlineDiff(
 
   const origLines = originalContent.split('\n')
   const propLines = proposedContent.split('\n')
+  const sameLineCount = origLines.length === propLines.length
 
-  // Simple line-level diff
-  const decorations: import('monaco-editor').editor.IModelDeltaDecoration[] = []
-  const maxLen = Math.max(origLines.length, propLines.length)
+  const buildDecorations = (a: string[], b: string[]) => {
+    const decorations: import('monaco-editor').editor.IModelDeltaDecoration[] = []
+    const maxLen = Math.max(a.length, b.length)
+    for (let i = 0; i < maxLen; i++) {
+      const left = a[i]
+      const right = b[i]
+      const lineNumber = i + 1
 
-  for (let i = 0; i < maxLen; i++) {
-    const origLine = origLines[i]
-    const propLine = propLines[i]
-
-    if (origLine === undefined && propLine !== undefined) {
-      // Added line — highlight green
-      decorations.push({
-        range: new monaco.Range(i + 1, 1, i + 1, 1),
-        options: {
-          isWholeLine: true,
-          className: 'inline-diff-added',
-          glyphMarginClassName: 'inline-diff-glyph-added',
-          minimap: { color: '#22c55e40', position: 2 },
-        },
-      })
-    } else if (propLine === undefined && origLine !== undefined) {
-      // Removed line — highlight red (strikethrough)
-      if (i < model.getLineCount()) {
+      if (left === undefined && right !== undefined) {
         decorations.push({
-          range: new monaco.Range(i + 1, 1, i + 1, model.getLineMaxColumn(i + 1)),
+          range: new monaco.Range(lineNumber, 1, lineNumber, 1),
           options: {
             isWholeLine: true,
-            className: 'inline-diff-removed',
-            glyphMarginClassName: 'inline-diff-glyph-removed',
-            minimap: { color: '#ef444440', position: 2 },
+            className: 'inline-diff-added',
+            glyphMarginClassName: 'inline-diff-glyph-added',
+            minimap: { color: '#22c55e40', position: 2 },
           },
         })
+        continue
       }
-    } else if (origLine !== propLine) {
-      // Changed line — highlight with modified background
-      if (i < model.getLineCount()) {
-        decorations.push({
-          range: new monaco.Range(i + 1, 1, i + 1, model.getLineMaxColumn(i + 1)),
-          options: {
-            isWholeLine: true,
-            className: 'inline-diff-modified',
-            glyphMarginClassName: 'inline-diff-glyph-modified',
-            minimap: { color: '#eab30840', position: 2 },
-          },
-        })
+      if (right === undefined && left !== undefined) {
+        if (i < model.getLineCount()) {
+          decorations.push({
+            range: new monaco.Range(lineNumber, 1, lineNumber, model.getLineMaxColumn(lineNumber)),
+            options: {
+              isWholeLine: true,
+              className: 'inline-diff-removed',
+              glyphMarginClassName: 'inline-diff-glyph-removed',
+              minimap: { color: '#ef444440', position: 2 },
+            },
+          })
+        }
+        continue
+      }
+      if (left !== right) {
+        if (i < model.getLineCount()) {
+          decorations.push({
+            range: new monaco.Range(lineNumber, 1, lineNumber, model.getLineMaxColumn(lineNumber)),
+            options: {
+              isWholeLine: true,
+              className: 'inline-diff-modified',
+              glyphMarginClassName: 'inline-diff-glyph-modified',
+              minimap: { color: '#eab30840', position: 2 },
+            },
+          })
+        }
       }
     }
+    return decorations
+  }
+
+  const buildHunks = (a: string[], b: string[]) => {
+    const changed: number[] = []
+    const maxLen = Math.max(a.length, b.length)
+    for (let i = 0; i < maxLen; i++) {
+      if (a[i] !== b[i]) changed.push(i + 1)
+    }
+    const hunks: Array<{ startLine: number; endLine: number }> = []
+    for (const ln of changed) {
+      const last = hunks[hunks.length - 1]
+      if (!last || ln > last.endLine + 1) hunks.push({ startLine: ln, endLine: ln })
+      else last.endLine = ln
+    }
+    return hunks
+  }
+
+  let decorationIds: string[] = []
+  let widgets: import('monaco-editor').editor.IContentWidget[] = []
+
+  const applyDecorationsAndWidgets = () => {
+    const currentLines = model.getValue().split('\n')
+    const decorations = buildDecorations(origLines, currentLines)
+    decorationIds = editor.deltaDecorations(decorationIds, decorations)
+
+    // Clean old widgets
+    for (const w of widgets) editor.removeContentWidget(w)
+    widgets = []
+
+    // Pragmatic baseline: per-hunk controls only when line counts match.
+    if (!sameLineCount) return
+
+    const hunks = buildHunks(origLines, currentLines)
+    widgets = hunks.map((h, idx) => {
+      const dom = document.createElement('div')
+      dom.className = 'inline-diff-hunk-widget tauri-no-drag'
+      dom.innerHTML = `
+        <span class="inline-diff-hunk-label">Hunk ${idx + 1}</span>
+        <button class="inline-diff-hunk-btn inline-diff-hunk-accept" type="button">Accept</button>
+        <button class="inline-diff-hunk-btn inline-diff-hunk-reject" type="button">Reject</button>
+      `
+
+      const onAcceptHunk = () => {
+        // Ensure this hunk matches the proposed content.
+        const text = propLines.slice(h.startLine - 1, h.endLine).join('\n')
+        editor.executeEdits('inline-diff-hunk', [{
+          range: new monaco.Range(h.startLine, 1, h.endLine, model.getLineMaxColumn(h.endLine)),
+          text,
+          forceMoveMarkers: true,
+        }])
+        applyDecorationsAndWidgets()
+      }
+
+      const onRejectHunk = () => {
+        const text = origLines.slice(h.startLine - 1, h.endLine).join('\n')
+        editor.executeEdits('inline-diff-hunk', [{
+          range: new monaco.Range(h.startLine, 1, h.endLine, model.getLineMaxColumn(h.endLine)),
+          text,
+          forceMoveMarkers: true,
+        }])
+        applyDecorationsAndWidgets()
+      }
+
+      dom.querySelector('.inline-diff-hunk-accept')?.addEventListener('click', onAcceptHunk)
+      dom.querySelector('.inline-diff-hunk-reject')?.addEventListener('click', onRejectHunk)
+
+      const widget: import('monaco-editor').editor.IContentWidget = {
+        getId: () => `inline-diff-hunk-${idx}-${h.startLine}`,
+        getDomNode: () => dom,
+        getPosition: () => ({
+          position: { lineNumber: h.startLine, column: 1 },
+          preference: [monaco.editor.ContentWidgetPositionPreference.ABOVE],
+        }),
+      }
+      editor.addContentWidget(widget)
+      return widget
+    })
   }
 
   // Apply content change (show proposed) and decorations
   const currentContent = model.getValue()
   model.setValue(proposedContent)
-  const decorationIds = editor.deltaDecorations([], decorations)
+  applyDecorationsAndWidgets()
 
   // Scroll to first change
-  const firstDeco = decorations[0]
-  if (firstDeco) {
-    editor.revealLineInCenter(firstDeco.range.startLineNumber)
-  }
+  const hunks = buildHunks(origLines, model.getValue().split('\n'))
+  if (hunks[0]) editor.revealLineInCenter(hunks[0].startLine)
 
   return {
     dispose: () => {
       editor.deltaDecorations(decorationIds, [])
+      for (const w of widgets) editor.removeContentWidget(w)
+      widgets = []
     },
     accept: () => {
       editor.deltaDecorations(decorationIds, [])
+      for (const w of widgets) editor.removeContentWidget(w)
+      widgets = []
       // Content already set to proposed
       onAccept?.()
     },
     reject: () => {
       editor.deltaDecorations(decorationIds, [])
+      for (const w of widgets) editor.removeContentWidget(w)
+      widgets = []
       model.setValue(currentContent)
       onReject?.()
     },

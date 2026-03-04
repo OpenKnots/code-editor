@@ -10,6 +10,7 @@ import { useRepo } from '@/context/repo-context'
 import { useView } from '@/context/view-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { EditorTabs } from '@/components/editor-tabs'
+import { FloatingPanel } from '@/components/floating-panel'
 
 const FileExplorer = dynamic(() => import('@/components/file-explorer').then(m => ({ default: m.FileExplorer })), { ssr: false })
 const CodeEditor = dynamic(() => import('@/components/code-editor').then(m => ({ default: m.CodeEditor })), { ssr: false })
@@ -31,6 +32,8 @@ export function EditorView() {
   const { repo } = useRepo()
   const { setView } = useView()
   const layout = useLayout()
+  const isMobile = layout.isAtMost('lte768')
+  const isNarrow = layout.isAtMost('lte992')
 
   // Derived from layout context
   const treeVisible = layout.isVisible('tree')
@@ -39,6 +42,7 @@ export function EditorView() {
   const chatVisible = layout.isVisible('chat')
   const chatWidth = layout.getSize('chat')
   const editorCollapsed = layout.editorCollapsed
+  const chatFloating = layout.isFloating('chat')
 
   // Resize hooks
   const treeResize = usePanelResize('tree')
@@ -160,31 +164,33 @@ export function EditorView() {
         </div>
       ) : (
         <>
-          {/* File Tree — animated */}
-          <AnimatePresence initial={false}>
-            {treeVisible && (
-              <motion.div
-                key="file-tree"
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: treeResize.resizing ? undefined : treeWidth, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={treeResize.resizing ? { duration: 0 } : PANEL_SPRING}
-                style={treeResize.resizing ? { width: treeWidth } : undefined}
-                className="shrink-0 bg-[var(--sidebar-bg)] overflow-hidden border-r border-[var(--border)] flex flex-col"
-              >
-                <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border)] shrink-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-disabled)]">Explorer</span>
-                  <button onClick={() => layout.hide('tree')} className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer" title="Hide (⌘B)">
-                    <Icon icon="lucide:panel-left-close" width={15} height={15} />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto"><FileExplorer /></div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* File Tree — docked (desktop/tablet) */}
+          {!isMobile && (
+            <AnimatePresence initial={false}>
+              {treeVisible && (
+                <motion.div
+                  key="file-tree"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: treeResize.resizing ? undefined : treeWidth, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={treeResize.resizing ? { duration: 0 } : PANEL_SPRING}
+                  style={treeResize.resizing ? { width: treeWidth } : undefined}
+                  className="shrink-0 bg-[var(--sidebar-bg)] overflow-hidden border-r border-[var(--border)] flex flex-col"
+                >
+                  <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border)] shrink-0">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-disabled)]">Explorer</span>
+                    <button onClick={() => layout.hide('tree')} className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer" title="Hide (⌘B)">
+                      <Icon icon="lucide:panel-left-close" width={15} height={15} />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto"><FileExplorer /></div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
 
           {/* Tree resize handle */}
-          {treeVisible && (
+          {treeVisible && !isMobile && (
             <div
               className="resize-handle w-[5px] cursor-col-resize shrink-0 z-10 group/resize relative"
               onMouseDown={treeResize.onResizeStart}
@@ -197,9 +203,18 @@ export function EditorView() {
           {/* Editor column */}
           <div className="flex-1 flex flex-col min-w-0 min-h-0">
             {/* Tree toggle when collapsed */}
-            {!treeVisible && (
+            {!treeVisible && !isMobile && (
               <button onClick={() => layout.show('tree')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-5 h-12 flex items-center justify-center bg-[var(--bg-elevated)] border border-l-0 border-[var(--border)] rounded-r-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer" title="Show explorer (⌘B)">
                   <Icon icon="lucide:chevron-right" width={14} height={14} />
+              </button>
+            )}
+            {!treeVisible && isMobile && (
+              <button
+                onClick={() => layout.show('tree')}
+                className="absolute left-2 top-2 z-30 h-9 w-9 flex items-center justify-center rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer"
+                title="Files (⌘B)"
+              >
+                <Icon icon="lucide:folder" width={16} height={16} />
               </button>
             )}
 
@@ -270,18 +285,18 @@ export function EditorView() {
                   />
                 )}
 
-                <button data-active={treeVisible} onClick={() => layout.toggle('tree')} className={`relative z-[1] h-7 px-3 rounded-md text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors ${treeVisible ? 'text-[var(--text-primary)]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`} title="Explorer (⌘B)">
+                <button data-active={treeVisible} onClick={() => layout.toggle('tree')} className={`relative z-[1] h-7 ${isNarrow ? 'px-2.5' : 'px-3'} rounded-md text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors ${treeVisible ? 'text-[var(--text-primary)]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`} title="Explorer (⌘B)">
                   <Icon icon="lucide:folder" width={14} height={14} />
-                  <span>Files</span>
+                  {!isNarrow && <span>Files</span>}
                 </button>
                 <button onClick={() => layout.toggle('terminal')} className="relative z-[1] h-7 px-3 rounded-md text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors text-[var(--text-disabled)] hover:text-[var(--text-secondary)]" title="Terminal (⌘J)">
                   <Icon icon="lucide:terminal" width={14} height={14} />
-                  <span>Terminal</span>
+                  {!isNarrow && <span>Terminal</span>}
                   {terminalActive && <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />}
                 </button>
                 <button data-active={engineVisible} onClick={() => layout.toggle('engine')} className={`relative z-[1] h-7 px-3 rounded-md text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors ${engineVisible ? 'text-[var(--text-primary)]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`} title="Engine">
                   <Icon icon="lucide:cpu" width={14} height={14} />
-                  <span>Engine</span>
+                  {!isNarrow && <span>Engine</span>}
                   {engineRunning && <Icon icon="lucide:loader-2" width={11} height={11} className="animate-spin text-[var(--brand)]" />}
                 </button>
               </div>
@@ -301,7 +316,7 @@ export function EditorView() {
 
               <button onClick={() => layout.toggle('chat')} className={`relative h-7 px-3 rounded-lg text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors ${chatVisible ? 'bg-[color-mix(in_srgb,var(--brand)_14%,transparent)] text-[var(--brand)]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]'}`} title="Chat (⌘I)">
                 <Icon icon="lucide:message-square" width={14} height={14} />
-                <span>Agent</span>
+                {!isNarrow && <span>Agent</span>}
                 {agentUnread && (
                   <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--brand)] animate-pulse ring-2 ring-[var(--bg-elevated)]" />
                 )}
@@ -312,7 +327,7 @@ export function EditorView() {
       )}
 
       {/* Chat resize handle */}
-      {chatVisible && !editorCollapsed && (
+      {chatVisible && !editorCollapsed && !isMobile && !chatFloating && (
         <div
           className="resize-handle w-[5px] cursor-col-resize shrink-0 z-10 group/resize relative"
           onMouseDown={chatResize.onResizeStart}
@@ -324,7 +339,7 @@ export function EditorView() {
 
       {/* Chat panel — animated open/close, direct width during resize */}
       <AnimatePresence initial={false}>
-        {chatVisible && (
+        {chatVisible && !isMobile && !chatFloating && (
           <motion.div
             key="chat-panel"
             initial={editorCollapsed ? { opacity: 0 } : { width: 0, opacity: 0 }}
@@ -334,16 +349,23 @@ export function EditorView() {
             style={chatResize.resizing && !editorCollapsed ? { width: chatWidth } : undefined}
             className={`shrink-0 flex flex-col bg-[var(--bg)] overflow-hidden ${editorCollapsed ? 'flex-1' : 'border-l border-[var(--border)]'}`}
           >
-            <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-disabled)] flex items-center gap-2">
-                <Icon icon="lucide:bot" width={15} height={15} className="text-[var(--brand)]" />
-                Agent
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    if (editorCollapsed) {
-                      layout.setEditorCollapsed(false)
+              <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-disabled)] flex items-center gap-2">
+                  <Icon icon="lucide:bot" width={15} height={15} className="text-[var(--brand)]" />
+                  Agent
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => layout.setFloating('chat', true)}
+                    className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer"
+                    title="Float panel"
+                  >
+                    <Icon icon="lucide:app-window" width={15} height={15} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editorCollapsed) {
+                        layout.setEditorCollapsed(false)
                     } else {
                       layout.setEditorCollapsed(true)
                     }
@@ -356,14 +378,103 @@ export function EditorView() {
                 <button onClick={() => layout.hide('chat')} className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer" title="Hide (⌘I)">
                   <Icon icon="lucide:panel-right-close" width={15} height={15} />
                 </button>
+                </div>
               </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <AgentPanel />
-            </div>
-          </motion.div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <AgentPanel />
+              </div>
+            </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile drawers */}
+      <AnimatePresence initial={false}>
+        {isMobile && treeVisible && !editorCollapsed && (
+          <>
+            <motion.button
+              key="tree-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40 bg-black/40"
+              onClick={() => layout.hide('tree')}
+              aria-label="Close files"
+            />
+            <motion.div
+              key="tree-drawer"
+              initial={{ x: -420 }}
+              animate={{ x: 0 }}
+              exit={{ x: -420 }}
+              transition={PANEL_SPRING}
+              className="absolute inset-y-0 left-0 z-50 w-[min(92vw,360px)] bg-[var(--sidebar-bg)] border-r border-[var(--border)] flex flex-col"
+            >
+              <div className="flex items-center justify-between h-11 px-3 border-b border-[var(--border)] shrink-0 bg-[var(--bg-elevated)]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-disabled)]">Explorer</span>
+                <button onClick={() => layout.hide('tree')} className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer" title="Close">
+                  <Icon icon="lucide:x" width={14} height={14} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto"><FileExplorer /></div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {isMobile && chatVisible && !editorCollapsed && !chatFloating && (
+          <>
+            <motion.button
+              key="chat-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40 bg-black/40"
+              onClick={() => layout.hide('chat')}
+              aria-label="Close chat"
+            />
+            <motion.div
+              key="chat-drawer"
+              initial={{ x: 420 }}
+              animate={{ x: 0 }}
+              exit={{ x: 420 }}
+              transition={PANEL_SPRING}
+              className="absolute inset-y-0 right-0 z-50 w-[min(96vw,420px)] bg-[var(--bg)] border-l border-[var(--border)] flex flex-col overflow-hidden"
+            >
+              <div className="flex items-center justify-between h-11 px-3 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-disabled)] flex items-center gap-2">
+                  <Icon icon="lucide:bot" width={15} height={15} className="text-[var(--brand)]" />
+                  Agent
+                </span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => layout.setFloating('chat', true)} className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer" title="Float panel">
+                    <Icon icon="lucide:app-window" width={14} height={14} />
+                  </button>
+                  <button onClick={() => layout.hide('chat')} className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer" title="Close">
+                    <Icon icon="lucide:x" width={14} height={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <AgentPanel />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {chatVisible && chatFloating && (
+        <FloatingPanel
+          panel="chat"
+          title="Agent"
+          icon="lucide:bot"
+          onDock={() => layout.setFloating('chat', false)}
+          onClose={() => { layout.setFloating('chat', false); layout.hide('chat') }}
+          minW={340}
+          minH={320}
+        >
+          <AgentPanel />
+        </FloatingPanel>
+      )}
     </div>
   )
 }

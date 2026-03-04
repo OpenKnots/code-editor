@@ -11,6 +11,7 @@ import { useLocal } from '@/context/local-context'
 import { useView, type ViewId } from '@/context/view-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { WorkspaceSidebar } from '@/components/workspace-sidebar'
+import { FloatingPanel } from '@/components/floating-panel'
 import { isTauri } from '@/lib/tauri'
 import { fetchFileContentsByName as fetchFileContents, commitFilesByName as commitFiles } from '@/lib/github-api'
 import { PluginSlotRenderer, usePlugins } from '@/context/plugin-context'
@@ -20,6 +21,7 @@ import { YouTubePlugin } from '@/components/plugins/youtube/youtube-plugin'
 import { BranchPicker } from '@/components/branch-picker'
 import { FolderIndicator } from '@/components/source-switcher'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { OnboardingTour, isOnboardingComplete } from '@/components/onboarding-tour'
 
 // View components — lazy loaded
 const EditorView = dynamic(() => import('@/components/views/editor-view').then(m => ({ default: m.EditorView })), { ssr: false })
@@ -128,6 +130,7 @@ function ActivityPulseRing({ status, agentActive }: { status: string; agentActiv
 function SidebarPluginSlot() {
   const { slots } = usePlugins()
   const layout = useLayout()
+  const hiddenByLayout = !layout.isVisible('plugins') || layout.isAtMost('lte1200')
   const pluginsResize = usePanelResize('plugins')
   const pluginsWidth = layout.getSize('plugins')
   const entries = slots.sidebar
@@ -182,6 +185,7 @@ function SidebarPluginSlot() {
   }, [ratios, sorted])
 
   if (entries.length === 0) return null
+  if (hiddenByLayout) return null
 
   const count = sorted.length
   const defaultRatio = 1 / count
@@ -249,9 +253,11 @@ export default function EditorLayout() {
   const { localMode, readFile: localReadFile, readFileBase64: localReadFileBase64, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath, commitFiles: localCommitFiles } = local
   const { activeView, setView, direction } = useView()
   const layout = useLayout()
+  const isMobile = layout.isAtMost('lte768')
   const sidebarCollapsed = !layout.isVisible('sidebar')
   const terminalVisible = layout.isVisible('terminal')
   const terminalHeight = layout.getSize('terminal')
+  const terminalFloating = layout.isFloating('terminal')
 
   // ─── Minimal state ──────────────────────────────────
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
@@ -274,11 +280,21 @@ export default function EditorLayout() {
   const [commandPaletteVisible, setCommandPaletteVisible] = useState(false)
   const [shortcutsVisible, setShortcutsVisible] = useState(false)
   const [settingsVisible, setSettingsVisible] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
 
   // ─── Tauri detection ───────────────────────────────────
   useEffect(() => {
     setIsTauriDesktop(isTauri())
     setIsMacTauri(isTauri() && navigator.platform?.includes('Mac'))
+  }, [])
+
+  // ─── First-run onboarding (reopen via command palette/settings) ───
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!isOnboardingComplete()) setOnboardingOpen(true)
+    const open = () => setOnboardingOpen(true)
+    window.addEventListener('open-onboarding', open)
+    return () => window.removeEventListener('open-onboarding', open)
   }, [])
 
   // ─── Auto-populate RepoContext from local git remote ───
@@ -347,6 +363,15 @@ export default function EditorLayout() {
       if (meta && (e.key === 'j' || e.key === '`') && !e.shiftKey) { e.preventDefault(); layout.toggle('terminal') }
       // ⌘L — Open side chat panel and focus input
       if (meta && e.key === 'l' && !e.shiftKey) { e.preventDefault(); if (activeViewRef.current !== 'editor') setView('editor'); window.dispatchEvent(new CustomEvent('open-side-chat')); requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('focus-agent-input'))) }
+      // ⌘⌥1-4 — Focus key regions (explorer/editor/chat/terminal)
+      if (meta && e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault()
+        if (activeViewRef.current !== 'editor') setView('editor')
+        if (e.key === '1') { layout.show('tree'); requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('focus-tree'))) }
+        if (e.key === '2') { requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('focus-editor'))) }
+        if (e.key === '3') { layout.show('chat'); requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('focus-agent-input'))) }
+        if (e.key === '4') { layout.show('terminal'); requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('focus-terminal'))) }
+      }
       // Esc — Close overlays
       if (e.key === 'Escape') {
         setQuickOpenVisible(false); setGlobalSearchVisible(false)
@@ -679,30 +704,106 @@ export default function EditorLayout() {
           </AnimatePresence>
         </div>
 
-        {/* Terminal — spring-animated height, persists so PTY sessions survive */}
-        <motion.div
-          initial={false}
-          animate={{ height: terminalVisible ? terminalHeight + 3 : 0 }}
-          transition={TERMINAL_SPRING}
-          style={{ overflow: 'hidden' }}
-          className="shrink-0"
-        >
-          <div
-            className="h-[3px] cursor-row-resize hover:bg-[var(--brand)] transition-colors opacity-0 hover:opacity-50 shrink-0"
-            onMouseDown={e => {
-              e.preventDefault()
-              const startY = e.clientY
-              const startH = terminalHeight
-              const onMove = (ev: MouseEvent) => layout.resize('terminal', startH - (ev.clientY - startY))
-              const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
-              document.addEventListener('mousemove', onMove)
-              document.addEventListener('mouseup', onUp)
-            }}
-          />
-          <div className="shrink-0 border-t border-[var(--border)]" style={{ height: terminalHeight }}>
-            <TerminalPanel visible={terminalVisible} height={terminalHeight} onHeightChange={(h: number) => layout.resize('terminal', h)} />
-          </div>
-        </motion.div>
+        {/* Terminal — docked (desktop) / drawer (mobile) / floating */}
+        {!isMobile ? (
+          <motion.div
+            initial={false}
+            animate={{ height: (terminalVisible && !terminalFloating) ? terminalHeight + 3 : 0 }}
+            transition={TERMINAL_SPRING}
+            style={{ overflow: 'hidden' }}
+            className="shrink-0"
+          >
+            <div
+              className="h-[3px] cursor-row-resize hover:bg-[var(--brand)] transition-colors opacity-0 hover:opacity-50 shrink-0"
+              onMouseDown={e => {
+                e.preventDefault()
+                const startY = e.clientY
+                const startH = terminalHeight
+                const onMove = (ev: MouseEvent) => layout.resize('terminal', startH - (ev.clientY - startY))
+                const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+                document.addEventListener('mousemove', onMove)
+                document.addEventListener('mouseup', onUp)
+              }}
+            />
+            <div className="shrink-0 border-t border-[var(--border)]" style={{ height: terminalHeight }}>
+              <TerminalPanel
+                visible={terminalVisible && !terminalFloating}
+                height={terminalHeight}
+                onHeightChange={(h: number) => layout.resize('terminal', h)}
+                floating={terminalFloating}
+                onToggleFloating={() => layout.setFloating('terminal', !terminalFloating)}
+              />
+            </div>
+          </motion.div>
+        ) : (
+          <AnimatePresence initial={false}>
+            {terminalVisible && !terminalFloating && (
+              <>
+                <motion.button
+                  key="terminal-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[70] bg-black/40"
+                  onClick={() => layout.hide('terminal')}
+                  aria-label="Close terminal"
+                />
+                <motion.div
+                  key="terminal-drawer"
+                  initial={{ y: 520 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: 520 }}
+                  transition={TERMINAL_SPRING}
+                  className="fixed left-2 right-2 bottom-2 z-[80] rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden"
+                  style={{ height: Math.min(Math.max(terminalHeight, 260), Math.floor(window.innerHeight * 0.72)) }}
+                >
+                  <div className="h-10 flex items-center justify-between px-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+                    <span className="text-[11px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                      <Icon icon="lucide:terminal" width={14} height={14} className="text-[var(--brand)]" />
+                      Terminal
+                    </span>
+                    <button
+                      onClick={() => layout.hide('terminal')}
+                      className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer tauri-no-drag"
+                      title="Close"
+                    >
+                      <Icon icon="lucide:x" width={14} height={14} />
+                    </button>
+                  </div>
+                  <div className="h-[calc(100%-40px)]">
+                    <TerminalPanel
+                      visible={terminalVisible && !terminalFloating}
+                      height={terminalHeight}
+                      onHeightChange={(h: number) => layout.resize('terminal', h)}
+                      floating={terminalFloating}
+                      onToggleFloating={() => layout.setFloating('terminal', !terminalFloating)}
+                    />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        )}
+
+        {terminalVisible && terminalFloating && (
+          <FloatingPanel
+            panel="terminal"
+            title="Terminal"
+            icon="lucide:terminal"
+            onDock={() => layout.setFloating('terminal', false)}
+            onClose={() => { layout.setFloating('terminal', false); layout.hide('terminal') }}
+            minW={520}
+            minH={280}
+          >
+            <TerminalPanel
+              visible={terminalVisible}
+              height={terminalHeight}
+              onHeightChange={(h: number) => layout.resize('terminal', h)}
+              floating={terminalFloating}
+              onToggleFloating={() => layout.setFloating('terminal', !terminalFloating)}
+            />
+          </FloatingPanel>
+        )}
 
         {/* Status bar */}
         <footer className="flex items-center justify-between px-3 h-[22px] border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[10px] text-[var(--text-tertiary)] shrink-0">
@@ -756,6 +857,7 @@ export default function EditorLayout() {
             case 'toggle-terminal': layout.toggle('terminal'); break
             case 'toggle-engine': layout.toggle('engine'); break
             case 'toggle-chat': layout.toggle('chat'); break
+            case 'toggle-plugins': layout.toggle('plugins'); break
             case 'collapse-editor': layout.setEditorCollapsed(true); break
             // Layout presets
             case 'layout-focus': layout.preset('focus'); break
@@ -781,6 +883,8 @@ export default function EditorLayout() {
             case 'pr-create': window.dispatchEvent(new CustomEvent('open-pr-create')); break
             // Preview operations
             case 'preview-refresh': window.dispatchEvent(new CustomEvent('preview-refresh')); break
+            // Onboarding
+            case 'open-onboarding': setOnboardingOpen(true); break
           }
         }}
       />
@@ -788,6 +892,7 @@ export default function EditorLayout() {
       {settingsVisible && activeView !== 'settings' && (
         <SettingsPanel open={settingsVisible} onClose={() => setSettingsVisible(false)} />
       )}
+      <OnboardingTour open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
     </div>
   )
 }

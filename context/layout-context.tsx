@@ -9,6 +9,43 @@ export type PanelId = 'sidebar' | 'tree' | 'chat' | 'engine' | 'terminal' | 'plu
 
 export type PanelAxis = 'horizontal' | 'vertical'
 
+export type Breakpoint = 'gt1200' | 'lte1200' | 'lte992' | 'lte768' | 'lte640'
+
+export interface ViewportInfo {
+  width: number
+  height: number
+  breakpoint: Breakpoint
+}
+
+export type FloatingPanelId = 'chat' | 'terminal'
+
+export interface FloatingPanelState {
+  floating: boolean
+  x: number
+  y: number
+  w: number
+  h: number
+  z: number
+}
+
+function computeBreakpoint(width: number): Breakpoint {
+  if (width <= 640) return 'lte640'
+  if (width <= 768) return 'lte768'
+  if (width <= 992) return 'lte992'
+  if (width <= 1200) return 'lte1200'
+  return 'gt1200'
+}
+
+function bpRank(bp: Breakpoint): number {
+  switch (bp) {
+    case 'gt1200': return 5
+    case 'lte1200': return 4
+    case 'lte992': return 3
+    case 'lte768': return 2
+    case 'lte640': return 1
+  }
+}
+
 interface PanelDef {
   /** localStorage key suffix */
   key: string
@@ -48,6 +85,7 @@ export interface LayoutState {
   panels: Record<PanelId, PanelState>
   /** Editor area collapsed (no files open / intentionally collapsed) */
   editorCollapsed: boolean
+  floating: Record<FloatingPanelId, FloatingPanelState>
 }
 
 // ─── Actions ────────────────────────────────────────────
@@ -59,6 +97,9 @@ type LayoutAction =
   | { type: 'SET_VISIBLE'; panel: PanelId; visible: boolean }
   | { type: 'RESIZE'; panel: PanelId; size: number }
   | { type: 'SET_EDITOR_COLLAPSED'; collapsed: boolean }
+  | { type: 'SET_FLOATING'; panel: FloatingPanelId; floating: boolean }
+  | { type: 'SET_FLOAT_BOUNDS'; panel: FloatingPanelId; x: number; y: number; w: number; h: number }
+  | { type: 'BRING_FLOAT_FRONT'; panel: FloatingPanelId; z: number }
   | { type: 'PRESET'; preset: LayoutPreset }
   | { type: 'HYDRATE'; state: Partial<LayoutState> }
   | { type: 'BATCH'; actions: LayoutAction[] }
@@ -121,6 +162,26 @@ function layoutReducer(state: LayoutState, action: LayoutAction): LayoutState {
     case 'SET_EDITOR_COLLAPSED':
       if (state.editorCollapsed === action.collapsed) return state
       return { ...state, editorCollapsed: action.collapsed }
+    case 'SET_FLOATING': {
+      const cur = state.floating[action.panel]
+      if (cur.floating === action.floating) return state
+      return { ...state, floating: { ...state.floating, [action.panel]: { ...cur, floating: action.floating } } }
+    }
+    case 'SET_FLOAT_BOUNDS': {
+      const cur = state.floating[action.panel]
+      return {
+        ...state,
+        floating: {
+          ...state.floating,
+          [action.panel]: { ...cur, x: action.x, y: action.y, w: action.w, h: action.h },
+        },
+      }
+    }
+    case 'BRING_FLOAT_FRONT': {
+      const cur = state.floating[action.panel]
+      if (cur.z === action.z) return state
+      return { ...state, floating: { ...state.floating, [action.panel]: { ...cur, z: action.z } } }
+    }
     case 'PRESET': {
       const preset = PRESETS[action.preset]
       const panels = { ...state.panels }
@@ -137,17 +198,28 @@ function layoutReducer(state: LayoutState, action: LayoutAction): LayoutState {
       }
     }
     case 'HYDRATE': {
-      if (!action.state.panels) return state
+      if (!action.state.panels && !action.state.floating) return state
       const panels = { ...state.panels }
-      for (const [id, ps] of Object.entries(action.state.panels)) {
-        if (id in panels) {
-          panels[id as PanelId] = { ...panels[id as PanelId], ...ps }
+      if (action.state.panels) {
+        for (const [id, ps] of Object.entries(action.state.panels)) {
+          if (id in panels) {
+            panels[id as PanelId] = { ...panels[id as PanelId], ...ps }
+          }
+        }
+      }
+      const floating = { ...state.floating }
+      if (action.state.floating) {
+        for (const [id, fs] of Object.entries(action.state.floating)) {
+          if (id in floating) {
+            floating[id as FloatingPanelId] = { ...floating[id as FloatingPanelId], ...(fs as Partial<FloatingPanelState>) }
+          }
         }
       }
       return {
         ...state,
         panels,
         editorCollapsed: action.state.editorCollapsed ?? state.editorCollapsed,
+        floating,
       }
     }
     case 'BATCH': {
@@ -166,7 +238,14 @@ function buildInitialState(): LayoutState {
     const def = PANEL_DEFS[id]
     panels[id] = { visible: def.defaultVisible, size: def.defaultSize }
   }
-  return { panels, editorCollapsed: false }
+  return {
+    panels,
+    editorCollapsed: false,
+    floating: {
+      chat: { floating: false, x: 24, y: 72, w: 420, h: 560, z: 80 },
+      terminal: { floating: false, x: 24, y: 120, w: 720, h: 360, z: 80 },
+    },
+  }
 }
 
 // ─── Persistence ────────────────────────────────────────
@@ -214,6 +293,16 @@ function hydrateFromStorage(): Partial<LayoutState> {
     if (raw !== null) editorCollapsed = raw === 'true'
   } catch {}
 
+  const floating: Partial<Record<FloatingPanelId, Partial<FloatingPanelState>>> = {}
+  try {
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}floating-chat`)
+    if (raw) floating.chat = JSON.parse(raw)
+  } catch {}
+  try {
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}floating-terminal`)
+    if (raw) floating.terminal = JSON.parse(raw)
+  } catch {}
+
   // Also check legacy keys
   try {
     const legacyTermVis = localStorage.getItem('code-editor:terminal-visible')
@@ -227,7 +316,7 @@ function hydrateFromStorage(): Partial<LayoutState> {
     }
   } catch {}
 
-  return { panels: panels as Record<PanelId, PanelState>, editorCollapsed }
+  return { panels: panels as Record<PanelId, PanelState>, editorCollapsed, floating: floating as Record<FloatingPanelId, FloatingPanelState> }
 }
 
 function persistToStorage(state: LayoutState) {
@@ -246,6 +335,8 @@ function persistToStorage(state: LayoutState) {
       }
     }
     localStorage.setItem(`${STORAGE_PREFIX}editor-collapsed`, String(state.editorCollapsed))
+    localStorage.setItem(`${STORAGE_PREFIX}floating-chat`, JSON.stringify(state.floating.chat))
+    localStorage.setItem(`${STORAGE_PREFIX}floating-terminal`, JSON.stringify(state.floating.terminal))
     // Also persist legacy keys for backward compat
     localStorage.setItem('code-editor:terminal-visible', String(state.panels.terminal.visible))
     localStorage.setItem('code-editor:terminal-height', String(state.panels.terminal.size))
@@ -257,6 +348,13 @@ function persistToStorage(state: LayoutState) {
 interface LayoutContextValue {
   state: LayoutState
   dispatch: Dispatch<LayoutAction>
+  viewport: ViewportInfo
+  isAtMost: (bp: Exclude<Breakpoint, 'gt1200'>) => boolean
+  floating: (panel: FloatingPanelId) => FloatingPanelState
+  isFloating: (panel: FloatingPanelId) => boolean
+  setFloating: (panel: FloatingPanelId, floating: boolean) => void
+  setFloatingBounds: (panel: FloatingPanelId, x: number, y: number, w: number, h: number) => void
+  bringFloatingToFront: (panel: FloatingPanelId) => void
   /** Toggle panel visibility */
   toggle: (panel: PanelId) => void
   /** Show a panel */
@@ -286,6 +384,12 @@ const LayoutContext = createContext<LayoutContextValue | null>(null)
 export function LayoutProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(layoutReducer, undefined, buildInitialState)
   const hydrated = useRef(false)
+  const [viewport, setViewport] = useState<ViewportInfo>(() => {
+    if (typeof window === 'undefined') return { width: 1400, height: 900, breakpoint: 'gt1200' }
+    const w = window.innerWidth
+    const h = window.innerHeight
+    return { width: w, height: h, breakpoint: computeBreakpoint(w) }
+  })
 
   // Hydrate from localStorage after mount
   useEffect(() => {
@@ -294,6 +398,52 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     const stored = hydrateFromStorage()
     dispatch({ type: 'HYDRATE', state: stored })
   }, [])
+
+  // Track viewport + derive breakpoints for responsive logic
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onResize = () => {
+      const w = window.innerWidth
+      const h = window.innerHeight
+      setViewport(prev => {
+        const nextBp = computeBreakpoint(w)
+        if (prev.width === w && prev.height === h && prev.breakpoint === nextBp) return prev
+        return { width: w, height: h, breakpoint: nextBp }
+      })
+    }
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // Pragmatic responsive defaults: when the viewport shrinks into smaller breakpoints,
+  // collapse secondary panels to avoid overflow/clipping at tablet/mobile widths.
+  // Treat first computed breakpoint as a "shrink" from desktop so narrow screens start collapsed.
+  const lastBpRef = useRef<Breakpoint>('gt1200')
+  useEffect(() => {
+    const prev = lastBpRef.current
+    const next = viewport.breakpoint
+    if (prev === next) return
+    lastBpRef.current = next
+
+    // Only apply on shrink (moving to a smaller breakpoint).
+    if (bpRank(next) >= bpRank(prev)) return
+
+    const actions: LayoutAction[] = []
+    if (bpRank(next) <= bpRank('lte1200')) {
+      actions.push({ type: 'HIDE', panel: 'plugins' })
+    }
+    if (bpRank(next) <= bpRank('lte992')) {
+      actions.push({ type: 'HIDE', panel: 'sidebar' })
+      actions.push({ type: 'HIDE', panel: 'chat' })
+    }
+    if (bpRank(next) <= bpRank('lte768')) {
+      actions.push({ type: 'HIDE', panel: 'tree' })
+      actions.push({ type: 'HIDE', panel: 'engine' })
+      actions.push({ type: 'HIDE', panel: 'terminal' })
+    }
+    if (actions.length) dispatch({ type: 'BATCH', actions })
+  }, [viewport.breakpoint])
 
   // Persist on every state change (after hydration)
   const stateRef = useRef(state)
@@ -310,11 +460,22 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const resize = useCallback((panel: PanelId, size: number) => dispatch({ type: 'RESIZE', panel, size }), [])
   const preset = useCallback((p: LayoutPreset) => dispatch({ type: 'PRESET', preset: p }), [])
   const setEditorCollapsed = useCallback((collapsed: boolean) => dispatch({ type: 'SET_EDITOR_COLLAPSED', collapsed }), [])
+  const setFloating = useCallback((panel: FloatingPanelId, floating: boolean) => dispatch({ type: 'SET_FLOATING', panel, floating }), [])
+  const setFloatingBounds = useCallback((panel: FloatingPanelId, x: number, y: number, w: number, h: number) => dispatch({ type: 'SET_FLOAT_BOUNDS', panel, x, y, w, h }), [])
+  const bringFloatingToFront = useCallback((panel: FloatingPanelId) => {
+    const maxZ = Math.max(...Object.values(stateRef.current.floating).map(f => f.z ?? 0), 80)
+    dispatch({ type: 'BRING_FLOAT_FRONT', panel, z: maxZ + 1 })
+  }, [])
 
   const panel = useCallback((id: PanelId) => state.panels[id], [state.panels])
   const panelDef = useCallback((id: PanelId) => PANEL_DEFS[id], [])
   const isVisible = useCallback((id: PanelId) => state.panels[id].visible, [state.panels])
   const getSize = useCallback((id: PanelId) => state.panels[id].size, [state.panels])
+  const isAtMost = useCallback((bp: Exclude<Breakpoint, 'gt1200'>) => {
+    return bpRank(viewport.breakpoint) <= bpRank(bp)
+  }, [viewport.breakpoint])
+  const floating = useCallback((panel: FloatingPanelId) => state.floating[panel], [state.floating])
+  const isFloating = useCallback((panel: FloatingPanelId) => state.floating[panel].floating, [state.floating])
 
   // ─── Window event bridge (backward compat) ───
   useEffect(() => {
@@ -346,10 +507,12 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   }, [toggle, show, hide, preset, setEditorCollapsed])
 
   const value = useMemo<LayoutContextValue>(() => ({
-    state, dispatch, toggle, show, hide, resize, preset,
+    state, dispatch, viewport, isAtMost,
+    floating, isFloating, setFloating, setFloatingBounds, bringFloatingToFront,
+    toggle, show, hide, resize, preset,
     panel, panelDef, isVisible, getSize,
     setEditorCollapsed, editorCollapsed: state.editorCollapsed,
-  }), [state, toggle, show, hide, resize, preset, panel, panelDef, isVisible, getSize, setEditorCollapsed])
+  }), [state, viewport, isAtMost, floating, isFloating, setFloating, setFloatingBounds, bringFloatingToFront, toggle, show, hide, resize, preset, panel, panelDef, isVisible, getSize, setEditorCollapsed])
 
   return (
     <LayoutContext.Provider value={value}>

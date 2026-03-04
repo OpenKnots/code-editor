@@ -70,6 +70,26 @@
   --shadow-xl: 0px 16px 40px 0px rgba(0, 0, 0, 0.12), 0px 8px 12px -2px rgba(0, 0, 0, 0.08);
   --shadow-2xl: 0px 24px 60px 0px rgba(0, 0, 0, 0.16);
   --tracking-normal: -0.015em;
+
+  /* Focus ring */
+  --focus-ring: color-mix(in srgb, var(--brand) 75%, white 0%);
+  --focus-ring-soft: color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
+/* Consistent keyboard focus across the app */
+:where(
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  summary,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--focus-ring-soft);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -102,6 +122,24 @@
   --text-secondary: #a1a1a1;
   --text-tertiary: #666;
   --text-disabled: #444;
+
+  /* Syntax tokens (Monaco) */
+  --syntax-comment: #666666;
+  --syntax-keyword: #c084fc;
+  --syntax-string: #86efac;
+  --syntax-string-escape: #6ee7b7;
+  --syntax-number: #fbbf24;
+  --syntax-regexp: #f87171;
+  --syntax-type: #67e8f9;
+  --syntax-function: #93c5fd;
+  --syntax-variable: #ededed;
+  --syntax-variable-predefined: #fca5a5;
+  --syntax-constant: #fbbf24;
+  --syntax-tag: #f87171;
+  --syntax-attribute-name: #c084fc;
+  --syntax-attribute-value: #86efac;
+  --syntax-delimiter: #a1a1a1;
+  --syntax-operator: #a1a1a1;
 
   --border: #262626;
   --border-hover: #383838;
@@ -173,6 +211,24 @@
   --text-secondary: #525252;
   --text-tertiary: #a3a3a3;
   --text-disabled: #d4d4d4;
+
+  /* Syntax tokens (Monaco) */
+  --syntax-comment: #a3a3a3;
+  --syntax-keyword: #7c3aed;
+  --syntax-string: #16a34a;
+  --syntax-string-escape: #15803d;
+  --syntax-number: #b45309;
+  --syntax-regexp: #dc2626;
+  --syntax-type: #0891b2;
+  --syntax-function: #2563eb;
+  --syntax-variable: #171717;
+  --syntax-variable-predefined: #dc2626;
+  --syntax-constant: #b45309;
+  --syntax-tag: #dc2626;
+  --syntax-attribute-name: #7c3aed;
+  --syntax-attribute-value: #16a34a;
+  --syntax-delimiter: #525252;
+  --syntax-operator: #525252;
 
   --border: #e5e5e5;
   --border-hover: #d4d4d4;
@@ -250,6 +306,24 @@
   --text-tertiary: #6b7280;
   --text-disabled: #4b5563;
 
+  /* Syntax tokens (Monaco) */
+  --syntax-comment: #6b7280;
+  --syntax-keyword: #e5e7eb;
+  --syntax-string: #86efac;
+  --syntax-string-escape: #6ee7b7;
+  --syntax-number: #fbbf24;
+  --syntax-regexp: #fca5a5;
+  --syntax-type: #7dd3fc;
+  --syntax-function: #93c5fd;
+  --syntax-variable: #e8eaed;
+  --syntax-variable-predefined: #fca5a5;
+  --syntax-constant: #fbbf24;
+  --syntax-tag: #fca5a5;
+  --syntax-attribute-name: #e5e7eb;
+  --syntax-attribute-value: #86efac;
+  --syntax-delimiter: #9ca3af;
+  --syntax-operator: #9ca3af;
+
   --border: #2a3038;
   --border-hover: #3a424e;
   --border-focus: #9ca3af;
@@ -313,6 +387,24 @@
   --brand: #000000;
   --brand-hover: #333333;
   --brand-muted: rgba(0, 0, 0, 0.05);
+
+  /* Syntax tokens (Monaco) */
+  --syntax-comment: #8a8a8a;
+  --syntax-keyword: #1f2937;
+  --syntax-string: #166534;
+  --syntax-string-escape: #14532d;
+  --syntax-number: #92400e;
+  --syntax-regexp: #991b1b;
+  --syntax-type: #0f766e;
+  --syntax-function: #1d4ed8;
+  --syntax-variable: #000000;
+  --syntax-variable-predefined: #991b1b;
+  --syntax-constant: #92400e;
+  --syntax-tag: #991b1b;
+  --syntax-attribute-name: #1f2937;
+  --syntax-attribute-value: #166534;
+  --syntax-delimiter: #4b5563;
+  --syntax-operator: #4b5563;
 
   --success: #636363;
   --warning: #484848;
@@ -1269,6 +1361,45 @@ p { line-height: 1.6; }
 .inline-diff-glyph-added::before { content: '+'; color: var(--color-additions); font-weight: bold; }
 .inline-diff-glyph-removed::before { content: '-'; color: var(--color-deletions); font-weight: bold; }
 .inline-diff-glyph-modified::before { content: '~'; color: var(--warning, #eab308); font-weight: bold; }
+
+/* Inline diff hunk widgets (baseline) */
+.inline-diff-hunk-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+.inline-diff-hunk-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+.inline-diff-hunk-btn {
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+.inline-diff-hunk-accept {
+  background: color-mix(in srgb, var(--color-additions) 14%, transparent);
+  color: var(--color-additions);
+  border-color: color-mix(in srgb, var(--color-additions) 30%, transparent);
+}
+.inline-diff-hunk-reject {
+  background: color-mix(in srgb, var(--color-deletions) 14%, transparent);
+  color: var(--color-deletions);
+  border-color: color-mix(in srgb, var(--color-deletions) 30%, transparent);
+}
+.inline-diff-hunk-btn:hover { opacity: 0.9; }
 
 /* ──────────────────────────────────────────────────────────────────
    Mobile Responsive
@@ -2803,6 +2934,24 @@ p { line-height: 1.6; }
   --text-tertiary: #6b7280;
   --text-disabled: #4b5563;
 
+  /* Syntax tokens (Monaco) */
+  --syntax-comment: #6b7280;
+  --syntax-keyword: #e5e7eb;
+  --syntax-string: #86efac;
+  --syntax-string-escape: #6ee7b7;
+  --syntax-number: #fbbf24;
+  --syntax-regexp: #fca5a5;
+  --syntax-type: #7dd3fc;
+  --syntax-function: #93c5fd;
+  --syntax-variable: #e8eaed;
+  --syntax-variable-predefined: #fca5a5;
+  --syntax-constant: #fbbf24;
+  --syntax-tag: #fca5a5;
+  --syntax-attribute-name: #e5e7eb;
+  --syntax-attribute-value: #86efac;
+  --syntax-delimiter: #9ca3af;
+  --syntax-operator: #9ca3af;
+
   --border: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.12);
   --border-focus: #9ca3af;
@@ -3172,6 +3321,24 @@ p { line-height: 1.6; }
   --text-secondary: #666;
   --text-tertiary: #999;
   --text-disabled: #ccc;
+
+  /* Syntax tokens (Monaco) */
+  --syntax-comment: #999999;
+  --syntax-keyword: #111827;
+  --syntax-string: #166534;
+  --syntax-string-escape: #14532d;
+  --syntax-number: #92400e;
+  --syntax-regexp: #991b1b;
+  --syntax-type: #0f766e;
+  --syntax-function: #1d4ed8;
+  --syntax-variable: #171717;
+  --syntax-variable-predefined: #991b1b;
+  --syntax-constant: #92400e;
+  --syntax-tag: #991b1b;
+  --syntax-attribute-name: #111827;
+  --syntax-attribute-value: #166534;
+  --syntax-delimiter: #666666;
+  --syntax-operator: #666666;
 
   --border: #eaeaea;
   --border-hover: #ddd;

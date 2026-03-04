@@ -68,6 +68,10 @@ export function SettingsPanel({ open, onClose }: Props) {
     { keys: '⌘P', desc: 'Quick open file' },
     { keys: '⌘K', desc: 'Inline edit' },
     { keys: '⌘L', desc: 'Send selection to chat' },
+    { keys: '⌘⌥1', desc: 'Focus explorer' },
+    { keys: '⌘⌥2', desc: 'Focus editor' },
+    { keys: '⌘⌥3', desc: 'Focus chat' },
+    { keys: '⌘⌥4', desc: 'Focus terminal' },
     { keys: '⌘S', desc: 'Save file' },
     { keys: '⌘⇧F', desc: 'Global search' },
     { keys: '⌘⇧P', desc: 'Command palette' },
@@ -147,6 +151,22 @@ export function SettingsPanel({ open, onClose }: Props) {
               {/* Auto Save */}
               <Section title="Auto Save">
                 <Toggle checked={autoSave} onChange={setAutoSave} label="Save files automatically" />
+              </Section>
+
+              <Section title="Onboarding">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[11px] font-medium text-[var(--text-primary)]">Show the tour</div>
+                    <div className="text-[10px] text-[var(--text-tertiary)]">Keyboard shortcuts and layout controls.</div>
+                  </div>
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer"
+                    style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-contrast, #fff)' }}
+                  >
+                    Start
+                  </button>
+                </div>
               </Section>
 
               {/* GitHub Connection */}

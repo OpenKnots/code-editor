@@ -6,10 +6,14 @@ import loader from '@monaco-editor/loader'
 import { Icon } from '@iconify/react'
 import { KnotLogo } from '@/components/knot-logo'
 import { useEditor } from '@/context/editor-context'
+import { useLayout } from '@/context/layout-context'
+import { useLocal } from '@/context/local-context'
+import { useRepo } from '@/context/repo-context'
 import { useTheme } from '@/context/theme-context'
 import { registerEditorTheme } from '@/lib/monaco-theme'
 import { useGateway } from '@/context/gateway-context'
 import { createInlineCompletionsProvider } from '@/lib/inline-completions'
+import { showInlineDiff } from '@/lib/inline-diff'
 import { InlineEdit } from '@/components/inline-edit'
 import { MarkdownPreview } from '@/components/markdown-preview'
 import { MarkdownModeToggle, type MarkdownViewMode } from '@/components/markdown-mode-toggle'
@@ -150,6 +154,9 @@ function WelcomeView() {
 export function CodeEditor() {
   const { files, activeFile, updateFileContent } = useEditor()
   const { sendRequest, status: gatewayStatus } = useGateway()
+  const layout = useLayout()
+  const local = useLocal()
+  const { repo } = useRepo()
   const [completionsEnabled, setCompletionsEnabled] = useState(() => {
     if (typeof window === 'undefined') return true
     return localStorage.getItem('code-editor:ai-completions') !== 'false'
@@ -174,6 +181,7 @@ export function CodeEditor() {
     endLine: number
   }>({ visible: false, position: { top: 0, left: 0 }, selectedText: '', startLine: 0, endLine: 0 })
   const [markdownModes, setMarkdownModes] = useState<Record<string, MarkdownViewMode>>({})
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const getEditor = useCallback(() => {
     const editor = editorRef.current
@@ -186,6 +194,83 @@ export function CodeEditor() {
       return null
     }
   }, [])
+
+  // Inline AI diff UX (baseline): show agent proposals as inline editor decorations
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { proposals?: Array<{ filePath: string; content: string }> } | undefined
+      const proposals = detail?.proposals ?? []
+      if (!proposals.length) return
+      const editor = getEditor()
+      const monaco = monacoInstanceRef.current
+      if (!editor || !monaco) return
+
+      const currentPath = activeFile
+      const match = (currentPath ? proposals.find(p => p.filePath === currentPath) : undefined) ?? proposals[0]
+      if (!match?.filePath) return
+
+      // Only show inline diff for the currently open file to avoid surprising navigation.
+      if (currentPath && match.filePath !== currentPath) return
+
+      const existing = files.find(f => f.path === match.filePath)
+      if (!existing || existing.kind !== 'text') return
+
+      try {
+        inlineDiffRef.current?.dispose()
+        const res = showInlineDiff(
+          editor,
+          monaco as any,
+          existing.content,
+          match.content,
+          () => {
+            setDiffBar(false)
+            try { updateFileContent(existing.path, editor.getModel()?.getValue() ?? match.content) } catch {}
+            inlineDiffRef.current = null
+          },
+          () => {
+            setDiffBar(false)
+            try { updateFileContent(existing.path, editor.getModel()?.getValue() ?? existing.content) } catch {}
+            inlineDiffRef.current = null
+          }
+        )
+        inlineDiffRef.current = res
+        setDiffBar(true)
+      } catch (err) {
+        console.warn('Failed to show inline diff:', err)
+      }
+    }
+    window.addEventListener('show-inline-diff', handler)
+    return () => window.removeEventListener('show-inline-diff', handler)
+  }, [activeFile, files, getEditor, updateFileContent])
+
+  // Keyboard reject: Esc closes current inline diff review.
+  useEffect(() => {
+    if (!diffBar) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (!inlineDiffRef.current) return
+      e.preventDefault()
+      inlineDiffRef.current.reject()
+      setDiffBar(false)
+      inlineDiffRef.current = null
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [diffBar])
+
+  // Keyboard-first: allow global shortcuts to focus the editor region.
+  useEffect(() => {
+    const handler = () => {
+      const editor = getEditor()
+      if (editor) {
+        editor.focus()
+        return
+      }
+      containerRef.current?.focus()
+    }
+    window.addEventListener('focus-editor', handler)
+    return () => window.removeEventListener('focus-editor', handler)
+  }, [getEditor])
 
   useEffect(() => {
     let mounted = true
@@ -583,35 +668,69 @@ export function CodeEditor() {
     )
   }
 
+  const rootLabel = (() => {
+    if (local.localMode && local.rootPath) {
+      const parts = local.rootPath.split(/[\\/]/).filter(Boolean)
+      return parts[parts.length - 1] ?? 'Project'
+    }
+    if (repo?.repo) return repo.repo
+    if (repo?.fullName) return repo.fullName
+    return 'Repo'
+  })()
+  const isCompactBreadcrumb = layout.isAtMost('lte640')
+
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div ref={containerRef} tabIndex={-1} className="flex-1 flex flex-col min-h-0 outline-none">
       {/* Breadcrumb navigation */}
       <div className="flex items-center justify-between gap-2 px-3 py-1 border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
         <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar min-w-0">
           <Icon icon={fileIcon} width={12} height={12} className="text-[var(--text-tertiary)] shrink-0 mr-0.5" />
-          {file.path.split('/').map((segment, i, arr) => (
-            <div key={i} className="flex items-center gap-0.5 shrink-0">
-              {i > 0 && (
-                <Icon icon="lucide:chevron-right" width={8} height={8} className="text-[var(--text-disabled)]" />
-              )}
-              <button
-                className={`text-[10px] font-mono px-1 py-0.5 rounded transition-all duration-150 cursor-pointer ${
-                  i === arr.length - 1
-                    ? 'text-[var(--text-primary)] font-medium hover:bg-[var(--bg-subtle)]'
-                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
-                }`}
-                onClick={() => {
-                  if (i < arr.length - 1) {
-                    const dirPath = arr.slice(0, i + 1).join('/')
-                    window.dispatchEvent(new CustomEvent('quick-open-prefill', { detail: { query: dirPath + '/' } }))
-                  }
-                }}
-                title={arr.slice(0, i + 1).join('/')}
-              >
-                {segment}
-              </button>
-            </div>
-          ))}
+          {(() => {
+            const parts = file.path.split('/').filter(Boolean)
+            const crumbs = [{ label: rootLabel, prefix: '' }, ...parts.map((label, idx) => ({ label, prefix: parts.slice(0, idx + 1).join('/') }))]
+            const visible = isCompactBreadcrumb
+              ? [crumbs[0]!, ...(crumbs.length > 3 ? [{ label: '…', prefix: '__ellipsis__' }] : []), ...crumbs.slice(-2)]
+              : crumbs
+
+            return visible.map((c, i) => {
+              const isEllipsis = c.prefix === '__ellipsis__'
+              const isLast = i === visible.length - 1
+              const title = isEllipsis ? file.path : (c.prefix ? c.prefix : rootLabel)
+              return (
+                <div key={`${c.prefix}:${i}`} className="flex items-center gap-0.5 shrink-0">
+                  {i > 0 && <Icon icon="lucide:chevron-right" width={8} height={8} className="text-[var(--text-disabled)]" />}
+                  {isEllipsis ? (
+                    <span className="text-[10px] font-mono px-1 py-0.5 rounded text-[var(--text-disabled)]" title={title}>…</span>
+                  ) : (
+                    <button
+                      className={`text-[10px] font-mono px-1 py-0.5 rounded transition-all duration-150 cursor-pointer ${
+                        isLast
+                          ? 'text-[var(--text-primary)] font-medium hover:bg-[var(--bg-subtle)]'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+                      }`}
+                      onClick={() => {
+                        if (isLast) {
+                          window.dispatchEvent(new CustomEvent('focus-editor'))
+                          return
+                        }
+                        // Root or folder: open explorer context and prefill search to that folder.
+                        layout.show('tree')
+                        requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('focus-tree')))
+                        if (c.prefix) {
+                          window.dispatchEvent(new CustomEvent('explorer-search', { detail: { query: c.prefix + '/' } }))
+                        } else {
+                          window.dispatchEvent(new CustomEvent('explorer-search', { detail: { query: '' } }))
+                        }
+                      }}
+                      title={title}
+                    >
+                      {c.label}
+                    </button>
+                  )}
+                </div>
+              )
+            })
+          })()}
           {file.dirty && (
             <span className="flex items-center gap-1 text-[9px] text-[var(--brand)] font-medium ml-1.5 shrink-0 px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]">
               <span className="w-1 h-1 rounded-full bg-[var(--brand)]" />

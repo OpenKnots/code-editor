@@ -19,6 +19,7 @@ type CommandId =
   | 'toggle-terminal'
   | 'toggle-engine'
   | 'toggle-chat'
+  | 'toggle-plugins'
   | 'collapse-editor'
   // Layout presets
   | 'layout-focus'
@@ -32,6 +33,7 @@ type CommandId =
   | 'view-git'
   | 'view-prs'
   | 'view-settings'
+  | 'open-onboarding'
   // Git operations
   | 'git-commit'
   | 'git-push'
@@ -74,6 +76,7 @@ const COMMANDS: CommandItem[] = [
   { id: 'toggle-terminal', label: 'Toggle terminal', hint: 'Show or hide the terminal panel', keywords: ['terminal', 'shell', 'console'], icon: 'lucide:terminal', shortcut: '\u2318J', group: 'layout' },
   { id: 'toggle-engine', label: 'Toggle engine panel', hint: 'Show or hide the engine output', keywords: ['engine', 'output', 'build', 'logs'], icon: 'lucide:cpu', group: 'layout' },
   { id: 'toggle-chat', label: 'Toggle agent chat', hint: 'Show or hide the AI agent panel', keywords: ['chat', 'agent', 'ai', 'assistant'], icon: 'lucide:message-square', shortcut: '\u2318I', group: 'layout' },
+  { id: 'toggle-plugins', label: 'Toggle plugins sidebar', hint: 'Show or hide plugin widgets', keywords: ['plugins', 'spotify', 'youtube', 'widgets'], icon: 'lucide:puzzle', group: 'layout' },
   { id: 'collapse-editor', label: 'Collapse editor', hint: 'Minimize editor to icon rail', keywords: ['collapse', 'minimize', 'hide', 'editor'], icon: 'lucide:minimize-2', shortcut: '\u2318E', group: 'layout' },
 
   // Layout presets
@@ -89,6 +92,7 @@ const COMMANDS: CommandItem[] = [
   { id: 'view-git', label: 'Go to Source Control', hint: 'Switch to the git view', keywords: ['git', 'source', 'control', 'diff'], icon: 'lucide:git-branch', group: 'navigate' },
   { id: 'view-prs', label: 'Go to Pull Requests', hint: 'Switch to the PR view', keywords: ['pr', 'pull', 'request', 'review'], icon: 'lucide:git-pull-request', group: 'navigate' },
   { id: 'view-settings', label: 'Go to Settings', hint: 'Open settings panel', keywords: ['settings', 'preferences', 'config'], icon: 'lucide:settings', group: 'navigate' },
+  { id: 'open-onboarding', label: 'Onboarding: Show tour', hint: 'Reopen the first-run tour', keywords: ['onboarding', 'tour', 'help', 'shortcuts'], icon: 'lucide:sparkles', group: 'navigate' },
 
   // Git operations
   { id: 'git-commit', label: 'Git: Commit', hint: 'Open source control to commit changes', keywords: ['git', 'commit', 'save', 'changes'], icon: 'lucide:git-commit-horizontal', group: 'git' },

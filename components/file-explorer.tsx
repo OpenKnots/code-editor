@@ -176,7 +176,13 @@ function buildTree(nodes: TreeNode[]): (TreeDir | TreeFile)[] {
 
 // ─── Tree Item ──────────────────────────────────────────────────
 
-function DirItem({ dir, depth, onContextMenu }: { dir: TreeDir; depth: number; onContextMenu: (e: React.MouseEvent, path: string, isDir: boolean) => void }) {
+function DirItem({ dir, depth, onContextMenu, focusPath, setFocusPath }: {
+  dir: TreeDir
+  depth: number
+  onContextMenu: (e: React.MouseEvent, path: string, isDir: boolean) => void
+  focusPath: string
+  setFocusPath: (path: string) => void
+}) {
   const [expanded, setExpanded] = useState(depth < 1)
   const childFileCount = dir.children.filter(c => c.type === 'file').length
   const childDirCount = dir.children.filter(c => c.type === 'dir').length
@@ -186,6 +192,12 @@ function DirItem({ dir, depth, onContextMenu }: { dir: TreeDir; depth: number; o
       <button
         onClick={() => setExpanded(!expanded)}
         onContextMenu={e => onContextMenu(e, dir.path, true)}
+        onFocus={() => setFocusPath(dir.path)}
+        tabIndex={focusPath === dir.path ? 0 : -1}
+        data-explorer-item="dir"
+        data-path={dir.path}
+        data-depth={depth}
+        data-expanded={expanded}
         className="flex items-center gap-1.5 w-full text-left py-[3px] hover:bg-[var(--bg-subtle)] rounded-sm transition-all duration-150 cursor-pointer group"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
@@ -213,8 +225,8 @@ function DirItem({ dir, depth, onContextMenu }: { dir: TreeDir; depth: number; o
         <div className="animate-fade-in" style={{ animationDuration: '0.15s' }}>
           {dir.children.map(child =>
             child.type === 'dir'
-              ? <DirItem key={child.path} dir={child} depth={depth + 1} onContextMenu={onContextMenu} />
-              : <FileItem key={child.path} file={child} depth={depth + 1} onContextMenu={onContextMenu} />
+              ? <DirItem key={child.path} dir={child} depth={depth + 1} onContextMenu={onContextMenu} focusPath={focusPath} setFocusPath={setFocusPath} />
+              : <FileItem key={child.path} file={child} depth={depth + 1} onContextMenu={onContextMenu} focusPath={focusPath} setFocusPath={setFocusPath} />
           )}
         </div>
       )}
@@ -231,7 +243,13 @@ const GIT_STATUS_COLORS: Record<string, { color: string; label: string }> = {
   '?': { color: 'var(--text-tertiary)', label: 'Untracked' },
 }
 
-function FileItem({ file, depth, onContextMenu }: { file: TreeFile; depth: number; onContextMenu: (e: React.MouseEvent, path: string, isDir: boolean) => void }) {
+function FileItem({ file, depth, onContextMenu, focusPath, setFocusPath }: {
+  file: TreeFile
+  depth: number
+  onContextMenu: (e: React.MouseEvent, path: string, isDir: boolean) => void
+  focusPath: string
+  setFocusPath: (path: string) => void
+}) {
   const { activeFile } = useEditor()
   const local = useLocal()
   const gitStatus = local.gitInfo?.status.find(s => s.path === file.path)?.status
@@ -248,6 +266,11 @@ function FileItem({ file, depth, onContextMenu }: { file: TreeFile; depth: numbe
     <button
       onClick={handleClick}
       onContextMenu={e => onContextMenu(e, file.path, false)}
+      onFocus={() => setFocusPath(file.path)}
+      tabIndex={focusPath === file.path ? 0 : -1}
+      data-explorer-item="file"
+      data-path={file.path}
+      data-depth={depth}
       className={`flex items-center gap-1.5 w-full text-left py-[3px] rounded-sm transition-all duration-150 cursor-pointer group ${
         isActive
           ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
@@ -279,7 +302,7 @@ function FileItem({ file, depth, onContextMenu }: { file: TreeFile; depth: numbe
 export function FileExplorer() {
   const { repo, tree, treeLoading, treeError, loadTree } = useRepo()
   const local = useLocal()
-  const { closeFile, closeFilesUnder } = useEditor()
+  const { closeFile, closeFilesUnder, activeFile } = useEditor()
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ path: string; isDir: boolean } | null>(null)
@@ -334,6 +357,144 @@ export function FileExplorer() {
 
   const fileCount = useMemo(() => effectiveTree.filter(n => n.type === 'blob').length, [effectiveTree])
 
+  // ─── Keyboard-first explorer navigation ──────────────────────────
+  const listRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const [focusPath, setFocusPath] = useState<string>('')
+
+  useEffect(() => {
+    if (activeFile && !focusPath) setFocusPath(activeFile)
+  }, [activeFile, focusPath])
+
+  const firstVisiblePath = useMemo(() => {
+    const walk = (nodes: (TreeDir | TreeFile)[]): string | null => {
+      for (const n of nodes) {
+        if (n.type === 'dir') return n.path
+        return n.path
+      }
+      return null
+    }
+    return walk(filteredTree) ?? ''
+  }, [filteredTree])
+
+  useEffect(() => {
+    if (!focusPath) {
+      if (activeFile) setFocusPath(activeFile)
+      else if (firstVisiblePath) setFocusPath(firstVisiblePath)
+      return
+    }
+    // If the current focus path is filtered out, fall back.
+    const container = listRef.current
+    if (!container) return
+    const esc = (globalThis as any).CSS?.escape ? (globalThis as any).CSS.escape(focusPath) : focusPath.replace(/["\\]/g, '\\$&')
+    const exists = Boolean(container.querySelector(`[data-path="${esc}"]`))
+    if (!exists) {
+      if (activeFile) setFocusPath(activeFile)
+      else if (firstVisiblePath) setFocusPath(firstVisiblePath)
+    }
+  }, [activeFile, firstVisiblePath, focusPath])
+
+  useEffect(() => {
+    const onFocusTree = () => {
+      searchRef.current?.focus()
+    }
+    const onExplorerSearch = (e: Event) => {
+      const query = (e as CustomEvent).detail?.query as string | undefined
+      if (typeof query === 'string') setSearch(query)
+      searchRef.current?.focus()
+    }
+    window.addEventListener('focus-tree', onFocusTree)
+    window.addEventListener('explorer-search', onExplorerSearch)
+    return () => {
+      window.removeEventListener('focus-tree', onFocusTree)
+      window.removeEventListener('explorer-search', onExplorerSearch)
+    }
+  }, [])
+
+  const focusItemByIndex = useCallback((idx: number) => {
+    const container = listRef.current
+    if (!container) return
+    const items = Array.from(container.querySelectorAll<HTMLButtonElement>('[data-explorer-item]'))
+    const el = items[idx]
+    if (!el) return
+    el.focus()
+    const p = el.dataset.path
+    if (p) setFocusPath(p)
+  }, [])
+
+  const onListKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const container = listRef.current
+    if (!container) return
+
+    const active = document.activeElement as HTMLElement | null
+    const activeIsSearch = active === searchRef.current
+    const activeBtn = active?.closest?.('[data-explorer-item]') as HTMLButtonElement | null
+
+    const items = Array.from(container.querySelectorAll<HTMLButtonElement>('[data-explorer-item]'))
+    if (items.length === 0) return
+
+    if (activeIsSearch && e.key === 'ArrowDown') {
+      e.preventDefault()
+      focusItemByIndex(0)
+      return
+    }
+
+    if (!activeBtn) return
+
+    const idx = Math.max(0, items.indexOf(activeBtn))
+    const cur = items[idx]
+    const curType = cur?.dataset.explorerItem
+    const curDepth = parseInt(cur?.dataset.depth ?? '0') || 0
+    const curExpanded = cur?.dataset.expanded === 'true'
+
+    if (e.key === 'ArrowDown') { e.preventDefault(); focusItemByIndex(Math.min(items.length - 1, idx + 1)); return }
+    if (e.key === 'ArrowUp') { e.preventDefault(); focusItemByIndex(Math.max(0, idx - 1)); return }
+    if (e.key === 'Home') { e.preventDefault(); focusItemByIndex(0); return }
+    if (e.key === 'End') { e.preventDefault(); focusItemByIndex(items.length - 1); return }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      cur?.click()
+      return
+    }
+
+    if (e.key === 'ArrowRight' && curType === 'dir') {
+      e.preventDefault()
+      if (!curExpanded) {
+        cur.click()
+        return
+      }
+      const next = items[idx + 1]
+      const nextDepth = parseInt(next?.dataset.depth ?? '0') || 0
+      if (next && nextDepth > curDepth) {
+        next.focus()
+        const p = next.dataset.path
+        if (p) setFocusPath(p)
+      }
+      return
+    }
+
+    if (e.key === 'ArrowLeft') {
+      if (curType === 'dir' && curExpanded) {
+        e.preventDefault()
+        cur.click()
+        return
+      }
+      // Focus parent directory (nearest previous item with smaller depth)
+      for (let i = idx - 1; i >= 0; i--) {
+        const it = items[i]
+        const d = parseInt(it.dataset.depth ?? '0') || 0
+        if (d < curDepth) {
+          e.preventDefault()
+          it.focus()
+          const p = it.dataset.path
+          if (p) setFocusPath(p)
+          return
+        }
+      }
+    }
+  }, [focusItemByIndex])
+
   if (!repo && !local.localMode) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-[var(--sidebar-bg)]">
@@ -377,13 +538,14 @@ export function FileExplorer() {
             placeholder="Search files..."
             value={search}
             onChange={e => setSearch(e.target.value)}
+            ref={searchRef}
             className="w-full pl-7 pr-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)]"
           />
         </div>
       </div>
 
       {/* Tree */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto py-1" ref={listRef} onKeyDown={onListKeyDown}>
         {/* Local mode: no folder selected */}
         {local.localMode && !local.rootPath && effectiveTree.length === 0 && (
           <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
@@ -414,8 +576,8 @@ export function FileExplorer() {
         )}
         {filteredTree.map(node =>
           node.type === 'dir'
-            ? <DirItem key={node.path} dir={node} depth={0} onContextMenu={handleContextMenu} />
-            : <FileItem key={node.path} file={node as TreeFile} depth={0} onContextMenu={handleContextMenu} />
+            ? <DirItem key={node.path} dir={node} depth={0} onContextMenu={handleContextMenu} focusPath={focusPath} setFocusPath={setFocusPath} />
+            : <FileItem key={node.path} file={node as TreeFile} depth={0} onContextMenu={handleContextMenu} focusPath={focusPath} setFocusPath={setFocusPath} />
         )}
       </div>
 

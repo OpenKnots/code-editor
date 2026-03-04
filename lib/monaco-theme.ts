@@ -50,54 +50,72 @@ export function registerEditorTheme(monaco: { editor: typeof editor }) {
   const additions = expandShortHex(getCSSVar('--color-additions', dark ? '#22c55e' : '#16a34a'))
   const deletions = expandShortHex(getCSSVar('--color-deletions', dark ? '#ef4444' : '#dc2626'))
 
+  // Theme-aware syntax tokens (fallbacks are high-contrast defaults)
+  const synComment = expandShortHex(getCSSVar('--syntax-comment', fgTertiary))
+  const synKeyword = expandShortHex(getCSSVar('--syntax-keyword', dark ? '#c084fc' : '#7c3aed'))
+  const synString = expandShortHex(getCSSVar('--syntax-string', dark ? '#86efac' : '#16a34a'))
+  const synStringEscape = expandShortHex(getCSSVar('--syntax-string-escape', dark ? '#6ee7b7' : '#15803d'))
+  const synNumber = expandShortHex(getCSSVar('--syntax-number', dark ? '#fbbf24' : '#b45309'))
+  const synRegexp = expandShortHex(getCSSVar('--syntax-regexp', dark ? '#f87171' : '#dc2626'))
+  const synType = expandShortHex(getCSSVar('--syntax-type', dark ? '#67e8f9' : '#0891b2'))
+  const synFunction = expandShortHex(getCSSVar('--syntax-function', dark ? '#93c5fd' : '#2563eb'))
+  const synVariable = expandShortHex(getCSSVar('--syntax-variable', fg))
+  const synVariablePredef = expandShortHex(getCSSVar('--syntax-variable-predefined', dark ? '#fca5a5' : '#dc2626'))
+  const synConstant = expandShortHex(getCSSVar('--syntax-constant', dark ? '#fbbf24' : '#b45309'))
+  const synTag = expandShortHex(getCSSVar('--syntax-tag', dark ? '#f87171' : '#dc2626'))
+  const synAttrName = expandShortHex(getCSSVar('--syntax-attribute-name', synKeyword))
+  const synAttrValue = expandShortHex(getCSSVar('--syntax-attribute-value', synString))
+  const synDelimiter = expandShortHex(getCSSVar('--syntax-delimiter', fgSecondary))
+  const synOperator = expandShortHex(getCSSVar('--syntax-operator', fgSecondary))
+
   const lightTokens: editor.ITokenThemeRule[] = [
-    { token: 'comment', foreground: toMonacoTokenHex(fgTertiary, 'a3a3a3'), fontStyle: 'italic' },
-    { token: 'keyword', foreground: '7c3aed' },
-    { token: 'keyword.control', foreground: '7c3aed' },
-    { token: 'storage', foreground: '7c3aed' },
-    { token: 'string', foreground: '16a34a' },
-    { token: 'string.escape', foreground: '15803d' },
-    { token: 'number', foreground: 'b45309' },
-    { token: 'regexp', foreground: 'dc2626' },
-    { token: 'type', foreground: '0891b2' },
-    { token: 'type.identifier', foreground: '0891b2' },
-    { token: 'class', foreground: '0891b2' },
-    { token: 'interface', foreground: '0891b2' },
-    { token: 'function', foreground: '2563eb' },
-    { token: 'function.call', foreground: '2563eb' },
-    { token: 'variable', foreground: toMonacoTokenHex(fg, '171717') },
-    { token: 'variable.predefined', foreground: 'dc2626' },
-    { token: 'constant', foreground: 'b45309' },
-    { token: 'tag', foreground: 'dc2626' },
-    { token: 'attribute.name', foreground: '7c3aed' },
-    { token: 'attribute.value', foreground: '16a34a' },
-    { token: 'delimiter', foreground: toMonacoTokenHex(fgSecondary, '525252') },
-    { token: 'operator', foreground: toMonacoTokenHex(fgSecondary, '525252') },
+    { token: 'comment', foreground: toMonacoTokenHex(synComment, 'a3a3a3'), fontStyle: 'italic' },
+    { token: 'keyword', foreground: toMonacoTokenHex(synKeyword, '7c3aed') },
+    { token: 'keyword.control', foreground: toMonacoTokenHex(synKeyword, '7c3aed') },
+    { token: 'storage', foreground: toMonacoTokenHex(synKeyword, '7c3aed') },
+    { token: 'string', foreground: toMonacoTokenHex(synString, '16a34a') },
+    { token: 'string.escape', foreground: toMonacoTokenHex(synStringEscape, '15803d') },
+    { token: 'number', foreground: toMonacoTokenHex(synNumber, 'b45309') },
+    { token: 'regexp', foreground: toMonacoTokenHex(synRegexp, 'dc2626') },
+    { token: 'type', foreground: toMonacoTokenHex(synType, '0891b2') },
+    { token: 'type.identifier', foreground: toMonacoTokenHex(synType, '0891b2') },
+    { token: 'class', foreground: toMonacoTokenHex(synType, '0891b2') },
+    { token: 'interface', foreground: toMonacoTokenHex(synType, '0891b2') },
+    { token: 'function', foreground: toMonacoTokenHex(synFunction, '2563eb') },
+    { token: 'function.call', foreground: toMonacoTokenHex(synFunction, '2563eb') },
+    { token: 'variable', foreground: toMonacoTokenHex(synVariable, '171717') },
+    { token: 'variable.predefined', foreground: toMonacoTokenHex(synVariablePredef, 'dc2626') },
+    { token: 'constant', foreground: toMonacoTokenHex(synConstant, 'b45309') },
+    { token: 'tag', foreground: toMonacoTokenHex(synTag, 'dc2626') },
+    { token: 'attribute.name', foreground: toMonacoTokenHex(synAttrName, '7c3aed') },
+    { token: 'attribute.value', foreground: toMonacoTokenHex(synAttrValue, '16a34a') },
+    { token: 'delimiter', foreground: toMonacoTokenHex(synDelimiter, '525252') },
+    { token: 'operator', foreground: toMonacoTokenHex(synOperator, '525252') },
   ]
 
   const darkTokens: editor.ITokenThemeRule[] = [
-    { token: 'comment', foreground: toMonacoTokenHex(fgTertiary, '666666'), fontStyle: 'italic' },
-    { token: 'keyword', foreground: 'c084fc' },
-    { token: 'keyword.control', foreground: 'c084fc' },
-    { token: 'storage', foreground: 'c084fc' },
-    { token: 'string', foreground: '86efac' },
-    { token: 'string.escape', foreground: '6ee7b7' },
-    { token: 'number', foreground: 'fbbf24' },
-    { token: 'regexp', foreground: 'f87171' },
-    { token: 'type', foreground: '67e8f9' },
-    { token: 'type.identifier', foreground: '67e8f9' },
-    { token: 'class', foreground: '67e8f9' },
-    { token: 'interface', foreground: '67e8f9' },
-    { token: 'function', foreground: '93c5fd' },
-    { token: 'function.call', foreground: '93c5fd' },
-    { token: 'variable', foreground: toMonacoTokenHex(fg, 'e5e5e5') },
-    { token: 'variable.predefined', foreground: 'fca5a5' },
-    { token: 'constant', foreground: 'fbbf24' },
-    { token: 'tag', foreground: 'f87171' },
-    { token: 'attribute.name', foreground: 'c084fc' },
-    { token: 'attribute.value', foreground: '86efac' },
-    { token: 'delimiter', foreground: toMonacoTokenHex(fgSecondary, '999999') },
-    { token: 'operator', foreground: toMonacoTokenHex(fgSecondary, '999999') },
+    { token: 'comment', foreground: toMonacoTokenHex(synComment, '666666'), fontStyle: 'italic' },
+    { token: 'keyword', foreground: toMonacoTokenHex(synKeyword, 'c084fc') },
+    { token: 'keyword.control', foreground: toMonacoTokenHex(synKeyword, 'c084fc') },
+    { token: 'storage', foreground: toMonacoTokenHex(synKeyword, 'c084fc') },
+    { token: 'string', foreground: toMonacoTokenHex(synString, '86efac') },
+    { token: 'string.escape', foreground: toMonacoTokenHex(synStringEscape, '6ee7b7') },
+    { token: 'number', foreground: toMonacoTokenHex(synNumber, 'fbbf24') },
+    { token: 'regexp', foreground: toMonacoTokenHex(synRegexp, 'f87171') },
+    { token: 'type', foreground: toMonacoTokenHex(synType, '67e8f9') },
+    { token: 'type.identifier', foreground: toMonacoTokenHex(synType, '67e8f9') },
+    { token: 'class', foreground: toMonacoTokenHex(synType, '67e8f9') },
+    { token: 'interface', foreground: toMonacoTokenHex(synType, '67e8f9') },
+    { token: 'function', foreground: toMonacoTokenHex(synFunction, '93c5fd') },
+    { token: 'function.call', foreground: toMonacoTokenHex(synFunction, '93c5fd') },
+    { token: 'variable', foreground: toMonacoTokenHex(synVariable, 'e5e5e5') },
+    { token: 'variable.predefined', foreground: toMonacoTokenHex(synVariablePredef, 'fca5a5') },
+    { token: 'constant', foreground: toMonacoTokenHex(synConstant, 'fbbf24') },
+    { token: 'tag', foreground: toMonacoTokenHex(synTag, 'f87171') },
+    { token: 'attribute.name', foreground: toMonacoTokenHex(synAttrName, 'c084fc') },
+    { token: 'attribute.value', foreground: toMonacoTokenHex(synAttrValue, '86efac') },
+    { token: 'delimiter', foreground: toMonacoTokenHex(synDelimiter, '999999') },
+    { token: 'operator', foreground: toMonacoTokenHex(synOperator, '999999') },
   ]
 
   monaco.editor.defineTheme('code-editor', {

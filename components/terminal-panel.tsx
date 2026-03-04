@@ -19,6 +19,8 @@ interface TerminalPanelProps {
   visible: boolean
   height: number
   onHeightChange: (h: number) => void
+  floating?: boolean
+  onToggleFloating?: () => void
 }
 
 // Common file extensions used to identify file paths in terminal output
@@ -107,6 +109,8 @@ interface TerminalPaneProps {
   height: number
   isDesktop: boolean
   themeVersion: number
+  floating?: boolean
+  onToggleFloating?: () => void
   showSplitButton: boolean
   onSplit: () => void
   onClose?: () => void
@@ -119,6 +123,8 @@ function TerminalPane({
   height,
   isDesktop,
   themeVersion,
+  floating,
+  onToggleFloating,
   showSplitButton,
   onSplit,
   onClose,
@@ -139,6 +145,16 @@ function TerminalPane({
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   useEffect(() => { tabsRef.current = tabs }, [tabs])
   useEffect(() => { onFileOpenRef.current = onFileOpen }, [onFileOpen])
+
+  // Keyboard-first: allow global shortcuts to focus the active terminal.
+  useEffect(() => {
+    const handler = () => {
+      if (!visible) return
+      try { xtermRef.current?.focus?.() } catch {}
+    }
+    window.addEventListener('focus-terminal', handler)
+    return () => window.removeEventListener('focus-terminal', handler)
+  }, [visible])
 
   // Kill all PTY sessions and dispose xterm on unmount
   useEffect(() => {
@@ -395,6 +411,16 @@ function TerminalPane({
 
         <div className="flex-1" />
 
+        {onToggleFloating && (
+          <button
+            onClick={onToggleFloating}
+            className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
+            title={floating ? 'Dock terminal' : 'Float terminal'}
+          >
+            <Icon icon={floating ? 'lucide:pin' : 'lucide:app-window'} width={13} height={13} />
+          </button>
+        )}
+
         {showSplitButton && (
           <button
             onClick={onSplit}
@@ -449,7 +475,7 @@ function TerminalPane({
 
 // ─── Terminal Panel (host for 1 or 2 panes) ───────────────────────────────
 
-export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanelProps) {
+export function TerminalPanel({ visible, height, onHeightChange, floating, onToggleFloating }: TerminalPanelProps) {
   const { version: themeVersion } = useTheme()
   const local = useLocal()
   const [splitEnabled, setSplitEnabled] = useState(() => {
@@ -516,6 +542,8 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
           height={height}
           isDesktop={isDesktop}
           themeVersion={themeVersion}
+          floating={floating}
+          onToggleFloating={onToggleFloating}
           showSplitButton={!splitEnabled}
           onSplit={() => setSplitEnabled(true)}
           cwd={local.localMode ? local.rootPath : null}
@@ -530,6 +558,8 @@ export function TerminalPanel({ visible, height, onHeightChange }: TerminalPanel
               height={height}
               isDesktop={isDesktop}
               themeVersion={themeVersion}
+              floating={floating}
+              onToggleFloating={onToggleFloating}
               showSplitButton={false}
               onSplit={() => {}}
               onClose={() => setSplitEnabled(false)}
