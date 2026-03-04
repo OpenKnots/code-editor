@@ -2326,14 +2326,16 @@ p { line-height: 1.6; }
 .prose-chat ul { list-style-type: disc; }
 .prose-chat ol { list-style-type: decimal; }
 .prose-chat li { margin: 0.15em 0; }
-.prose-chat h1, .prose-chat h2, .prose-chat h3 {
+.prose-chat h1, .prose-chat h2, .prose-chat h3, .prose-chat h4 {
   font-weight: 600;
-  margin: 0.6em 0 0.3em;
+  margin: 0.8em 0 0.35em;
   line-height: 1.3;
+  color: var(--text-primary);
 }
-.prose-chat h1 { font-size: 14px; }
-.prose-chat h2 { font-size: 13px; }
-.prose-chat h3 { font-size: 12px; }
+.prose-chat h1 { font-size: 15px; }
+.prose-chat h2 { font-size: 14px; }
+.prose-chat h3 { font-size: 13px; }
+.prose-chat h4 { font-size: 12px; }
 .prose-chat a {
   color: var(--brand);
   text-decoration: underline;
@@ -2360,6 +2362,32 @@ p { line-height: 1.6; }
   padding-left: 10px;
   margin: 0.4em 0;
   color: var(--text-secondary);
+}
+
+/* ─── Nested md-preview inside chat: inherit chat sizing, boost readability ── */
+.prose-chat .md-preview {
+  font-size: inherit;
+  color: inherit;
+}
+.prose-chat .md-preview h1 { font-size: 15px; }
+.prose-chat .md-preview h2 { font-size: 14px; }
+.prose-chat .md-preview h3 { font-size: 13px; }
+.prose-chat .md-preview h4 { font-size: 12px; }
+.prose-chat .md-preview h1,
+.prose-chat .md-preview h2,
+.prose-chat .md-preview h3,
+.prose-chat .md-preview h4 {
+  margin-top: 0.8em;
+  margin-bottom: 0.35em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.prose-chat .md-preview > *:first-child {
+  margin-top: 0;
+}
+.prose-chat .md-preview li {
+  margin: 0.25em 0;
+  color: var(--text-primary);
 }
 
 /* ─── Merge Editor: Keyframes ──────────────────────────────────────────── */
@@ -2756,6 +2784,48 @@ p { line-height: 1.6; }
 .prose-chat li:has(input[type="checkbox"]:checked) s {
   color: var(--color-additions, #4ade80);
   opacity: 0.6;
+}
+
+/* ─── create-markdown checklist items (rendered as div > input[checkbox] + span) ── */
+.prose-chat input[type="checkbox"],
+.md-preview input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: 3px;
+  background: transparent;
+  flex-shrink: 0;
+  cursor: default;
+  position: relative;
+}
+.prose-chat input[type="checkbox"]:checked,
+.md-preview input[type="checkbox"]:checked {
+  background: var(--color-additions, #22c55e);
+  border-color: var(--color-additions, #22c55e);
+}
+.prose-chat input[type="checkbox"]:checked::after,
+.md-preview input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3.5px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+/* Remove line-through from checked checklist item text */
+.prose-chat input[type="checkbox"]:checked + span,
+.md-preview input[type="checkbox"]:checked + span {
+  text-decoration: none !important;
+  color: var(--text-secondary);
+}
+.prose-chat input[type="checkbox"]:not(:checked) + span,
+.md-preview input[type="checkbox"]:not(:checked) + span {
+  text-decoration: none !important;
+  color: var(--text-primary);
 }
 
 /* ─── Caffeine ─────────────────────────────────────────────── */

@@ -1,27 +1,27 @@
-use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 
 pub struct TerminalState {
-    sessions: Mutex<HashMap<u32, TerminalSession>>,
+    sessions: Arc<Mutex<HashMap<u32, TerminalSession>>>,
     next_id: Mutex<u32>,
 }
 
 struct TerminalSession {
     writer: Box<dyn Write + Send>,
     master: Box<dyn MasterPty + Send>,
+    child: Box<dyn Child + Send + Sync>,
 }
 
-// Safety: TerminalSession fields are Send, Mutex provides Sync
 unsafe impl Sync for TerminalSession {}
 
 impl TerminalState {
     pub fn new() -> Self {
         Self {
-            sessions: Mutex::new(HashMap::new()),
+            sessions: Arc::new(Mutex::new(HashMap::new())),
             next_id: Mutex::new(1),
         }
     }
@@ -73,8 +73,8 @@ pub fn create_terminal(
     }
     cmd.env("TERM", "xterm-256color");
 
-    let _child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
-    drop(pair.slave); // Release slave side
+    let child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
+    drop(pair.slave);
 
     let reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
@@ -83,7 +83,7 @@ pub fn create_terminal(
     let id = *next_id;
     *next_id += 1;
 
-    // Spawn reader thread — streams PTY output to frontend
+    let sessions = Arc::clone(&state.sessions);
     let app_clone = app.clone();
     let output_event = format!("terminal-output-{}", id);
     let exit_event_name = format!("terminal-exit-{}", id);
@@ -100,12 +100,28 @@ pub fn create_terminal(
                 Err(_) => break,
             }
         }
-        let _ = app_clone.emit(&exit_event_name, TerminalExit { id, code: 0 });
+        let code = sessions
+            .lock()
+            .ok()
+            .and_then(|mut s| {
+                s.get_mut(&id).and_then(|session| {
+                    session.child.wait().ok().map(|status| status.exit_code() as i32)
+                })
+            })
+            .unwrap_or(0);
+
+        // Clean up the session
+        if let Ok(mut s) = sessions.lock() {
+            s.remove(&id);
+        }
+
+        let _ = app_clone.emit(&exit_event_name, TerminalExit { id, code });
     });
 
     state.sessions.lock().unwrap().insert(id, TerminalSession {
         writer: Box::new(writer),
         master: pair.master,
+        child,
     });
 
     log::info!("Created terminal session {}", id);

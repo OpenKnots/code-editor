@@ -12,7 +12,6 @@ const MAX_TERMINALS = 3
 interface TerminalTab {
   id: number
   label: string
-  alive: boolean
 }
 
 interface TerminalPanelProps {
@@ -141,6 +140,7 @@ function TerminalPane({
   const activeTabRef = useRef<number | null>(null)
   const tabsRef = useRef<TerminalTab[]>([])
   const onFileOpenRef = useRef(onFileOpen)
+  const exitUnlisteners = useRef<Map<number, () => void>>(new Map())
 
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   useEffect(() => { tabsRef.current = tabs }, [tabs])
@@ -162,6 +162,8 @@ function TerminalPane({
       for (const tab of tabsRef.current) {
         tauriInvoke('kill_terminal', { id: tab.id }).catch(() => {})
       }
+      for (const unsub of exitUnlisteners.current.values()) unsub()
+      exitUnlisteners.current.clear()
       if (xtermRef.current) {
         xtermRef.current.dispose()
         xtermRef.current = null
@@ -184,9 +186,29 @@ function TerminalPane({
         setTerminalError('Terminal is unavailable outside the desktop runtime.')
         return
       }
-      const tab: TerminalTab = { id, label: label ?? `Terminal ${id}`, alive: true }
+      const tab: TerminalTab = { id, label: label ?? `Terminal ${id}` }
       setTabs(prev => [...prev, tab])
       setActiveTab(id)
+
+      // Listen for this terminal's exit event so it auto-closes
+      const unlistenExit = await tauriListen<{ id: number; code: number }>(`terminal-exit-${id}`, (payload) => {
+        if (activeTabRef.current === payload.id) {
+          xtermRef.current?.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n')
+        }
+        setTimeout(() => {
+          exitUnlisteners.current.get(payload.id)?.()
+          exitUnlisteners.current.delete(payload.id)
+          setTabs(prev => {
+            const next = prev.filter(t => t.id !== payload.id)
+            if (activeTabRef.current === payload.id) {
+              setActiveTab(next.length > 0 ? next[next.length - 1].id : null)
+            }
+            return next
+          })
+        }, 800)
+      })
+      exitUnlisteners.current.set(id, unlistenExit)
+
       if (initialCommand) {
         setTimeout(async () => {
           await tauriInvoke('write_terminal', { id, data: initialCommand + '\n' })
@@ -285,19 +307,14 @@ function TerminalPane({
   useEffect(() => {
     if (activeTab == null || !xtermRef.current) return
     let unlisten: (() => void) | null = null
-    let unlistenExit: (() => void) | null = null
     ;(async () => {
       unlisten = await tauriListen<{ data: string }>(`terminal-output-${activeTab}`, (payload) => {
         xtermRef.current?.write(payload.data)
       })
-      unlistenExit = await tauriListen<{ id: number }>(`terminal-exit-${activeTab}`, (payload) => {
-        setTabs(prev => prev.map(t => t.id === payload.id ? { ...t, alive: false } : t))
-        xtermRef.current?.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n')
-      })
     })()
     xtermRef.current.clear()
     xtermRef.current.focus()
-    return () => { unlisten?.(); unlistenExit?.() }
+    return () => { unlisten?.() }
   }, [activeTab])
 
   // Reapply xterm theme when mode/theme changes
@@ -325,6 +342,8 @@ function TerminalPane({
   }, [visible, height, activeTab])
 
   const closeTab = useCallback(async (id: number) => {
+    exitUnlisteners.current.get(id)?.()
+    exitUnlisteners.current.delete(id)
     await tauriInvoke('kill_terminal', { id })
     setTabs(prev => {
       const next = prev.filter(t => t.id !== id)
@@ -336,6 +355,8 @@ function TerminalPane({
   const closeAllTabs = useCallback(async () => {
     manualCloseAll.current = true
     const current = tabsRef.current
+    for (const unsub of exitUnlisteners.current.values()) unsub()
+    exitUnlisteners.current.clear()
     await Promise.all(current.map(t => tauriInvoke('kill_terminal', { id: t.id }).catch(() => {})))
     setTabs([])
     setActiveTab(null)
@@ -360,7 +381,6 @@ function TerminalPane({
                 ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }
-              ${!tab.alive ? 'opacity-50' : ''}
             `}
           >
             <Icon

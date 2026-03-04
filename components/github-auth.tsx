@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import { useGitHubAuth } from '@/context/github-auth-context'
+import { copyToClipboard } from '@/lib/clipboard'
 
 /** Compact header indicator + auth dropdown (OAuth device flow + PAT fallback) */
 export function GitHubAuthBadge() {
@@ -161,7 +162,8 @@ export function GitHubAuthBadge() {
                         <div className="text-[10px] text-[var(--text-tertiary)] mb-2">Your code:</div>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(oauthStep.userCode).then(() => {
+                            copyToClipboard(oauthStep.userCode).then((ok) => {
+                              if (!ok) return
                               setCopied(true)
                               setTimeout(() => setCopied(false), 2000)
                             })

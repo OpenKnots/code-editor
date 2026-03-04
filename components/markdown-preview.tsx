@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import DOMPurify from 'dompurify'
 import { parse } from 'create-markdown'
 import { BlockRenderer } from 'create-markdown/react'
+import { copyToClipboard } from '@/lib/clipboard'
 interface MarkdownPreviewProps {
   content: string
   className?: string
@@ -175,9 +176,13 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ─── Syntax highlight code blocks with Monaco ─────────────
+  // IMPORTANT: Never reparent <pre> nodes — React owns the DOM tree.
+  // Only do in-place style/class changes and insert sibling elements.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
+
+    const cleanups: (() => void)[] = []
 
     el.querySelectorAll<HTMLPreElement>('pre').forEach(async (pre) => {
       if (pre.dataset.highlighted) return
@@ -186,35 +191,38 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       const code = pre.querySelector('code')
       if (!code) return
 
-      // Extract language from class="language-xxx"
       const langClass = Array.from(code.classList).find(c => c.startsWith('language-'))
       const lang = langClass?.replace('language-', '') || ''
       const rawText = code.textContent || ''
 
       if (!rawText.trim()) return
 
-      // Add header + copy button
-      const wrapper = document.createElement('div')
-      wrapper.className = 'code-block-wrapper group relative rounded-lg border border-[var(--border)] bg-[var(--bg)] overflow-hidden my-2'
+      // Style the <pre> in-place (no reparenting)
+      pre.className = 'overflow-x-auto p-3 text-[11px] leading-[1.6] font-mono m-0 rounded-b-lg border border-[var(--border)] bg-[var(--bg)]'
+      pre.style.marginTop = '0'
 
+      // Insert a header *before* the <pre> as a sibling (not wrapping)
       const header = document.createElement('div')
-      header.className = 'flex items-center justify-between h-7 px-3 bg-[var(--bg-secondary)] border-b border-[var(--border)]'
-      header.innerHTML = `<span class="text-[9px] font-mono text-[var(--text-disabled)] uppercase tracking-wider">${lang || 'code'}</span><button class="copy-btn flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors opacity-0 group-hover:opacity-100 cursor-pointer" title="Copy code">Copy</button>`
+      header.className = 'code-block-header flex items-center justify-between h-7 px-3 bg-[var(--bg-secondary)] border border-b-0 border-[var(--border)] rounded-t-lg my-2 mb-0'
+      header.innerHTML = `<span class="text-[9px] font-mono text-[var(--text-disabled)] uppercase tracking-wider">${lang || 'code'}</span><button class="copy-btn flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Copy code">Copy</button>`
 
-      // Copy handler
-      header.querySelector('.copy-btn')?.addEventListener('click', () => {
-        navigator.clipboard.writeText(rawText).then(() => {
+      const copyHandler = () => {
+        copyToClipboard(rawText).then((ok) => {
+          if (!ok) return
           const btn = header.querySelector('.copy-btn')
           if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500) }
         })
+      }
+      header.querySelector('.copy-btn')?.addEventListener('click', copyHandler)
+
+      pre.parentNode?.insertBefore(header, pre)
+
+      cleanups.push(() => {
+        header.querySelector('.copy-btn')?.removeEventListener('click', copyHandler)
+        header.remove()
       })
 
-      pre.className = 'overflow-x-auto p-3 text-[11px] leading-[1.6] font-mono m-0'
-      pre.parentNode?.insertBefore(wrapper, pre)
-      wrapper.appendChild(header)
-      wrapper.appendChild(pre)
-
-      // Monaco colorize
+      // Monaco colorize (in-place innerHTML swap, no node reparenting)
       try {
         const { default: loader } = await import('@monaco-editor/loader')
         const monaco = await loader.init()
@@ -223,6 +231,10 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
         code.innerHTML = html
       } catch {}
     })
+
+    return () => {
+      cleanups.forEach(fn => fn())
+    }
   }, [blocks])
 
   useEffect(() => {

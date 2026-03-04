@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Icon } from '@iconify/react'
+import { copyToClipboard } from '@/lib/clipboard'
 import { useTheme, THEME_PRESETS } from '@/context/theme-context'
 import {
   CORE_TOKENS,
@@ -164,14 +165,9 @@ export function ThemeStudio({ open, onClose }: ThemeStudioProps) {
       text = serializeJSON(themeId, coreLight, coreDark, appLight, appDark)
     }
 
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopyFeedback(format === 'css' ? 'CSS copied!' : 'JSON copied!')
-      setTimeout(() => setCopyFeedback(null), 2000)
-    } catch {
-      setCopyFeedback('Copy failed')
-      setTimeout(() => setCopyFeedback(null), 2000)
-    }
+    const ok = await copyToClipboard(text)
+    setCopyFeedback(ok ? (format === 'css' ? 'CSS copied!' : 'JSON copied!') : 'Copy failed')
+    setTimeout(() => setCopyFeedback(null), 2000)
   }, [themeId])
 
   if (!open) return null

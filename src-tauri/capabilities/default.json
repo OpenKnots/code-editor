@@ -47,6 +47,7 @@
     "allow-local-git-discard-staged",
     "allow-local-git-save",
     "allow-local-git-sync",
-    "allow-local-git-clean-branches"
+    "allow-local-git-clean-branches",
+    "clipboard-manager:default"
   ]
 }

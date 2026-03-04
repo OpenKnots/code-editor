@@ -17,6 +17,7 @@ import { parseEditProposals, type EditProposal } from '@/lib/edit-parser'
 import { showInlineDiff, type InlineDiffResult } from '@/lib/inline-diff'
 import { diffEngine } from '@/lib/streaming-diff'
 import { PlanView } from '@/components/plan-view'
+import { copyToClipboard } from '@/lib/clipboard'
 import type { PlanStep } from '@/components/plan-view'
 import { navigateToLine } from '@/lib/line-links'
 import {
@@ -173,6 +174,7 @@ export function AgentPanel() {
   const [contextTokens, setContextTokens] = useState(0)
   const inlineDiffRef = useRef<InlineDiffResult | null>(null)
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
+  const [confirmClear, setConfirmClear] = useState(false)
   const [sending, setSending] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [thinkingTrail, setThinkingTrail] = useState<string[]>([])
@@ -187,7 +189,10 @@ export function AgentPanel() {
   const sessionInitRef = useRef(false)
   const sentKeysRef = useRef(new Set<string>())
   const handledKeysRef = useRef(new Set<string>())
+  const sessionKeyRef = useRef(sessionKey)
   const [streamBuffer, setStreamBuffer] = useState('')
+
+  useEffect(() => { sessionKeyRef.current = sessionKey }, [sessionKey])
 
   // Build flat file list for @ mentions
   const allFilePaths = useMemo(() => {
@@ -284,9 +289,9 @@ export function AgentPanel() {
       // Ignore inline-completion traffic (separate session)
       if (idempotencyKey?.startsWith('completion-')) return
 
-      // Match by idempotency key or session key fallback
+      // Match by idempotency key or session key fallback (use ref for current session)
       const matchesIdem = !!(idempotencyKey && sentKeysRef.current.has(idempotencyKey))
-      const matchesSession = !idempotencyKey && eventSessionKey === sessionKey
+      const matchesSession = !idempotencyKey && eventSessionKey === sessionKeyRef.current
       if (typeof window !== 'undefined' && state) {
         console.debug('[knot-code] chat event:', { state, idempotencyKey, eventSessionKey, matchesIdem, matchesSession, sentKeys: [...sentKeysRef.current] })
       }
@@ -651,16 +656,34 @@ export function AgentPanel() {
     }
   }, [messages, chatId])
 
-  // Switch to a different chat session by id
+  // Switch to a different chat session by id — full state reset
   const switchToChat = useCallback((newId: string) => {
     if (newId === chatId) return
     try { localStorage.setItem('code-editor:chat:' + chatId, JSON.stringify(messages.slice(-50))) } catch {}
+
+    // Clear all in-flight tracking to prevent stale keys leaking across sessions
+    sentKeysRef.current.clear()
+    handledKeysRef.current.clear()
+
     setChatId(newId)
     try {
       const saved = localStorage.getItem('code-editor:chat:' + newId)
       setMessages(saved ? JSON.parse(saved) : [])
     } catch { setMessages([]) }
+
+    // Reset all transient state
     setStreamBuffer('')
+    setSending(false)
+    setIsStreaming(false)
+    setThinkingTrail([])
+    setInput('')
+    setContextAttachments([])
+    setImageAttachments([])
+    setPlanSteps([])
+    setActiveDiff(null)
+    setConfirmClear(false)
+    diffEngine.clear()
+
     sessionInitRef.current = false
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(`${SESSION_INIT_STORAGE_KEY}:${CODE_EDITOR_SESSION_KEY}:${newId.slice(0, 8)}:v${CODE_EDITOR_SYSTEM_PROMPT_VERSION}`)
@@ -870,7 +893,7 @@ export function AgentPanel() {
       const fullMessage = modePrefix + (context || '') + attachCtx + '\n\n' + text
       setContextAttachments([])
       setImageAttachments([])
-      const idemKey = `ce-${Date.now()}`
+      const idemKey = `ce-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
       sentKeysRef.current.add(idemKey)
 
       setIsStreaming(true)
@@ -1133,7 +1156,7 @@ export function AgentPanel() {
   }, [menuOpenId])
 
   const handleCopyMessage = useCallback((content: string) => {
-    navigator.clipboard.writeText(content).catch(() => {})
+    copyToClipboard(content)
     setMenuOpenId(null)
   }, [])
 
@@ -1186,16 +1209,16 @@ export function AgentPanel() {
     inputRef.current?.focus()
   }, [messages])
 
-  const [confirmClear, setConfirmClear] = useState(false)
   const handleClear = useCallback(() => {
     if (!confirmClear) {
       setConfirmClear(true)
       setTimeout(() => setConfirmClear(false), 3000)
       return
     }
-    setMessages([])
-    setConfirmClear(false)
-  }, [confirmClear])
+    // Start a brand-new chat session instead of just wiping messages
+    const newId = crypto.randomUUID()
+    switchToChat(newId)
+  }, [confirmClear, switchToChat])
 
   // ─── Diff overlay ─────────────────────────────────────────────
   if (activeDiff) {
