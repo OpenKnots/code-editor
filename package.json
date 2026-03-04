@@ -7,7 +7,7 @@
     "frontend:build": "next build",
     "desktop:dev": "PORT=3080 tauri dev",
     "desktop:check": "tsc --noEmit",
-    "desktop:build": "tauri build",
+    "desktop:build": "CI=true tauri build",
     "desktop:build:debug": "tauri build --debug",
     "desktop:release": "pnpm desktop:check && pnpm desktop:build",
     "desktop:doctor": "pkill -f \"next dev|tauri dev\" || true; rm -f .next/lock",
