@@ -16,15 +16,31 @@ import { getRecentFolders } from '@/context/local-context'
 import { getAgentConfig } from '@/lib/agent-session'
 
 const STATIC_SUGGESTIONS = [
-  { icon: 'lucide:sparkles', label: 'Edit this', prefix: 'Edit ', desc: 'Modify selected code' },
-  { icon: 'lucide:zap', label: 'Squash bug', prefix: 'Fix ', desc: 'Debug and fix issues' },
   {
-    icon: 'lucide:wand-2',
-    label: 'Test it',
-    prefix: 'Write tests for ',
-    desc: 'Generate test cases',
+    icon: 'lucide:rocket',
+    label: 'Scaffold a project',
+    prompt:
+      'Create a new project with a sensible folder structure, dependency file, and a basic README',
+    desc: 'Start from scratch',
   },
-  { icon: 'lucide:star', label: 'Review PR', prefix: 'Review ', desc: 'Analyze pull request' },
+  {
+    icon: 'lucide:layout-template',
+    label: 'Build a component',
+    prompt: 'Build a reusable, accessible UI component with props, types, and styling',
+    desc: 'React / HTML / Vue',
+  },
+  {
+    icon: 'lucide:server',
+    label: 'Design an API',
+    prompt: 'Design a REST API with route handlers, request validation, and error responses',
+    desc: 'Endpoints & schemas',
+  },
+  {
+    icon: 'lucide:database',
+    label: 'Set up a database',
+    prompt: 'Set up a database schema with tables, relationships, and migration files',
+    desc: 'SQL / ORM models',
+  },
 ]
 const TOKEN_REVEAL_TIMEOUT_MS = 15000
 
@@ -37,11 +53,16 @@ function getRecentConversations(): Array<{
   try {
     const saved = localStorage.getItem('code-editor:chat:main')
     if (!saved) return []
-    const messages = JSON.parse(saved) as Array<{
-      role: string
-      content: string
-      timestamp: number
-    }>
+    const messages = (
+      JSON.parse(saved) as Array<{
+        role: string
+        content: string
+        timestamp: number
+      }>
+    ).filter((m) => {
+      const c = m.content?.slice(0, 120) ?? ''
+      return !c.includes('You are KnotCode Agent') && !c.includes('KnotCode system prompt')
+    })
     if (!messages.length) return []
     const firstUser = messages.find((m) => m.role === 'user')
     if (!firstUser) return []
@@ -121,7 +142,7 @@ interface Props {
 
 export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onCloneRepo }: Props) {
   const [input, setInput] = useState('')
-  const [agentMode, setAgentMode] = useState<AgentMode>('agent')
+  const [agentMode, setAgentMode] = useState<AgentMode>('ask')
   const [isFocused, setIsFocused] = useState(false)
   const [showTokenInput, setShowTokenInput] = useState(false)
   const [tokenDraft, setTokenDraft] = useState('')
@@ -185,12 +206,16 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [input])
 
-  const handleSubmit = useCallback(() => {
+  const [isComposing, setIsComposing] = useState(false)
+
+  /** Centralized action: send message if text, or open empty chat */
+  const startOrSend = useCallback(() => {
     const t = input.trim()
-    if (!t) return
-    onSend(t, agentMode)
+    onSend(t || '', agentMode)
     setInput('')
   }, [input, agentMode, onSend])
+
+  const handleSubmit = startOrSend
 
   const handleSaveToken = useCallback(() => {
     const trimmed = tokenDraft.trim()
@@ -223,80 +248,106 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Ignore Enter during IME composition
+      if (isComposing) return
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        handleSubmit()
+        startOrSend()
       }
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        handleSubmit()
+        startOrSend()
       }
       if (e.key === 'Tab' && !input.trim()) {
         e.preventDefault()
         setAgentMode((m) => (m === 'ask' ? 'agent' : 'ask'))
       }
     },
-    [handleSubmit, input],
+    [startOrSend, input, isComposing],
   )
 
   const maskedToken = ghToken
     ? `${ghToken.slice(0, 4)}${'•'.repeat(Math.min(ghToken.length - 8, 24))}${ghToken.slice(-4)}`
     : ''
 
-  // Context-aware suggestions: use open files and local tree when a workspace is active
   const suggestions = useMemo(() => {
     if (!hasWorkspace) return STATIC_SUGGESTIONS
 
     const contextChips: typeof STATIC_SUGGESTIONS = []
+    const langLabel = primaryLanguage ?? 'this project'
 
-    // Suggest editing open files
     if (openFiles.length > 0) {
       const recent = openFiles[openFiles.length - 1]
       const name = recent.path.split('/').pop() || recent.path
       contextChips.push({
         icon: 'lucide:sparkles',
-        label: `Edit ${name}`,
-        prefix: `Edit ${recent.path} `,
-        desc: 'Modify this file',
+        label: `Refactor ${name}`,
+        prompt: `Refactor ${recent.path} — improve readability, reduce duplication, and simplify complex logic`,
+        desc: 'Clean up this file',
       })
     }
 
-    // Suggest explaining a notable file from the tree
     const ctxTreeFiles = local.localTree?.filter((e) => !e.is_dir) ?? []
-    const interesting = ctxTreeFiles.find(
+    const entryFile = ctxTreeFiles.find(
       (f) =>
-        /\.(ts|tsx|rs|py|go)$/.test(f.path) &&
-        !f.path.includes('node_modules') &&
-        !f.path.includes('.lock'),
+        /(^|\/)((index|main|app|server|lib)\.(ts|tsx|js|jsx|py|rs|go)|main\.rs|mod\.rs)$/.test(
+          f.path,
+        ) && !f.path.includes('node_modules'),
     )
-    if (interesting) {
-      const name = interesting.path.split('/').pop() || interesting.path
+    if (entryFile) {
+      const name = entryFile.path.split('/').pop() || entryFile.path
       contextChips.push({
-        icon: 'lucide:flame',
-        label: `Explain ${name}`,
-        prefix: `Explain ${interesting.path} `,
-        desc: 'Understand code flow',
+        icon: 'lucide:map',
+        label: `Walk through ${name}`,
+        prompt: `Explain the architecture of ${entryFile.path} — what it does, how data flows, and how it connects to the rest of the codebase`,
+        desc: 'Understand the entry point',
       })
     }
 
-    contextChips.push(
-      { icon: 'lucide:zap', label: 'Squash bug', prefix: 'Fix ', desc: 'Debug and fix issues' },
-      {
-        icon: 'lucide:wand-2',
-        label: 'Test it',
-        prefix: 'Write tests for ',
-        desc: 'Generate test cases',
-      },
-      { icon: 'lucide:star', label: 'Review PR', prefix: 'Review ', desc: 'Analyze pull request' },
-    )
+    if (contextChips.length < 4) {
+      contextChips.push({
+        icon: 'lucide:test-tubes',
+        label: `Add tests`,
+        prompt: `Write unit tests for the core modules in this ${langLabel} project, covering edge cases and error paths`,
+        desc: `Test coverage for ${langLabel}`,
+      })
+    }
+
+    if (contextChips.length < 4) {
+      const hasGit = !!branchName
+      if (hasGit) {
+        contextChips.push({
+          icon: 'lucide:git-pull-request',
+          label: `Review changes`,
+          prompt: `Review the uncommitted changes on the ${branchName} branch — flag potential bugs, suggest improvements, and check for missing edge cases`,
+          desc: `Diff review on ${branchName}`,
+        })
+      } else {
+        contextChips.push({
+          icon: 'lucide:search-code',
+          label: `Find issues`,
+          prompt: `Scan this ${langLabel} codebase for common bugs, anti-patterns, and potential runtime errors`,
+          desc: 'Static analysis pass',
+        })
+      }
+    }
+
+    if (contextChips.length < 4) {
+      contextChips.push({
+        icon: 'lucide:file-plus-2',
+        label: 'Generate docs',
+        prompt: `Generate clear documentation for the public API surface of this ${langLabel} project, including usage examples`,
+        desc: 'API docs & examples',
+      })
+    }
 
     return contextChips.slice(0, 4)
-  }, [hasWorkspace, openFiles, local.localTree])
+  }, [hasWorkspace, openFiles, local.localTree, primaryLanguage, branchName])
 
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-8 sm:py-10 pb-16 sm:pb-20 relative">
       <KnotBackground />
-      <div className="min-h-full w-full max-w-[700px] mx-auto flex flex-col justify-center relative z-[1]">
+      <div className="min-h-full w-full max-w-[884px] mx-auto flex flex-col justify-center relative z-[1]">
         {/* Logo + Heading */}
         <div className="flex flex-col items-center mb-3">
           <div
@@ -306,14 +357,20 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
           >
             <KnotLogo size={42} />
           </div>
-          <h1 className="text-center text-[22px] font-bold text-[var(--text-primary)] tracking-[-0.02em] leading-tight flex items-center gap-2 justify-center">
-            <span className="bg-gradient-to-r from-[var(--text-primary)] to-[var(--text-secondary)] bg-clip-text text-transparent">
-              KnotCode
+          <h1 className="text-center text-[clamp(36px,6vw,52px)] font-bold text-[var(--text-primary)] tracking-[-0.03em] leading-[1.1] pb-4">
+            <span
+              className="bg-gradient-to-r from-[var(--text-primary)] via-[var(--brand)] to-[var(--text-primary)] bg-clip-text text-transparent bg-[length:200%_100%]"
+              style={{ textShadow: '0 0 60px color-mix(in srgb, var(--brand) 20%, transparent)' }}
+            >
+              Knot Code
             </span>
           </h1>
-          <p className="mt-1.5 text-center text-[13px] text-[var(--text-secondary)] font-medium">
+          {/* <p className="mt-2 text-center text-[15px] text-[var(--text-secondary)] font-medium">
             {repoShort ? `What should we work on?` : `What do you want to build?`}
           </p>
+          <p className="mt-1 text-center text-[12px] text-[var(--text-disabled)] tracking-wide">
+            AI coding, without the bloat.
+          </p> */}
 
           {/* Workspace stats — single compact row */}
           <div className="mt-2 flex items-center justify-center gap-2.5 flex-wrap text-[11px] text-[var(--text-disabled)]">
@@ -397,12 +454,13 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
         {/* Composer card */}
         <div
           ref={cardRef}
-          className={`chat-input-card rounded-xl border bg-[color-mix(in_srgb,var(--bg-elevated)_92%,transparent)] overflow-hidden ${
+          onClick={() => inputRef.current?.focus()}
+          className={`chat-input-card rounded-xl border bg-[color-mix(in_srgb,var(--bg-elevated)_92%,transparent)] overflow-hidden transition-shadow duration-200 ${
             isFocused
               ? input.trim()
-                ? 'chat-input-card-typing border-[color-mix(in_srgb,var(--brand)_30%,var(--border))]'
-                : 'chat-input-card-focused border-[color-mix(in_srgb,var(--brand)_20%,var(--border))]'
-              : 'border-[var(--border)]'
+                ? 'chat-input-card-typing border-[color-mix(in_srgb,var(--brand)_40%,var(--border))] shadow-[0_0_20px_color-mix(in_srgb,var(--brand)_12%,transparent)]'
+                : 'chat-input-card-focused border-[color-mix(in_srgb,var(--brand)_25%,var(--border))] shadow-[0_0_16px_color-mix(in_srgb,var(--brand)_8%,transparent)]'
+              : 'border-[var(--border)] hover:border-[var(--text-disabled)]'
           }`}
         >
           <div className="px-4 pt-3 pb-0.5 flex items-center justify-between gap-2 text-[10px] text-[var(--text-disabled)]">
@@ -418,6 +476,8 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             placeholder={
               repoShort ? `Ask anything about ${repoShort}…` : 'Describe what you want to build…'
             }
@@ -439,17 +499,21 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
               </div>
 
               <button
-                onClick={handleSubmit}
-                disabled={!input.trim()}
-                aria-label="Send message"
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                onClick={startOrSend}
+                aria-label={input.trim() ? 'Send message' : 'Start chat'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer active:scale-95 ${
                   input.trim()
-                    ? 'bg-[var(--text-primary)] text-[var(--bg)] shadow-sm hover:opacity-90 active:scale-95'
-                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] cursor-not-allowed'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-sm shadow-[color-mix(in_srgb,var(--brand)_25%,transparent)] hover:opacity-90'
+                    : 'bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_15%,transparent)]'
                 }`}
               >
-                <Icon icon="lucide:arrow-up" width={14} height={14} />
+                <span>{input.trim() ? 'Send' : 'Start'}</span>
+                <kbd className="text-[9px] opacity-60">↵</kbd>
               </button>
+            </div>
+            {/* Keyboard hint */}
+            <div className="flex justify-center mt-1 text-[9px] text-[var(--text-disabled)] opacity-60">
+              Enter to {input.trim() ? 'send' : 'start'} · Shift+Enter for newline
             </div>
           </div>
         </div>
@@ -461,10 +525,9 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
               <button
                 key={a.label}
                 onClick={() => {
-                  setInput(a.prefix)
-                  inputRef.current?.focus()
+                  onSend(a.prompt, agentMode)
                 }}
-                aria-label={`${a.label}: ${a.prefix}`}
+                aria-label={a.prompt}
                 className="quick-action-card chip-enter flex items-center gap-2 px-3 py-2.5 rounded-lg text-[12px] font-medium bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)] hover:text-[var(--text-primary)] cursor-pointer"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >

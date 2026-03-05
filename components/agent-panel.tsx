@@ -175,7 +175,14 @@ export function AgentPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem('code-editor:chat:main')
-      return saved ? JSON.parse(saved) : []
+      if (!saved) return []
+      const parsed = JSON.parse(saved) as ChatMessage[]
+      return parsed.filter((m) => {
+        const c = m.content?.slice(0, 120) ?? ''
+        if (c.includes('You are KnotCode Agent') || c.includes('KnotCode system prompt'))
+          return false
+        return true
+      })
     } catch {
       return []
     }
@@ -203,7 +210,7 @@ export function AgentPanel() {
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const [modelMenuPos, setModelMenuPos] = useState<{ left: number; bottom: number } | null>(null)
   const modelBtnRef = useRef<HTMLButtonElement>(null)
-  const [agentMode, setAgentMode] = useState<AgentMode>('agent')
+  const [agentMode, setAgentMode] = useState<AgentMode>('ask')
   const [planSteps, setPlanSteps] = useState<PlanStep[]>([])
   const [contextTokens, setContextTokens] = useState(0)
   const inlineDiffRef = useRef<InlineDiffResult | null>(null)

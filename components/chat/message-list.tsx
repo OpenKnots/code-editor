@@ -38,6 +38,18 @@ function parsePlanSteps(text: string): PlanStep[] {
   return steps
 }
 
+const SYSTEM_PROMPT_SIGNATURES = [
+  'You are KnotCode Agent',
+  'KnotCode system prompt',
+  '[KnotCode system prompt]',
+]
+
+function isSystemPromptMessage(msg: { role: string; content: string }): boolean {
+  if (msg.role !== 'system' && msg.role !== 'assistant') return false
+  const c = msg.content.slice(0, 120)
+  return SYSTEM_PROMPT_SIGNATURES.some((sig) => c.includes(sig))
+}
+
 /** Estimate token count from content length */
 function estimateTokens(content: string): number {
   return Math.ceil(content.length / 4)
@@ -98,6 +110,11 @@ export function MessageList({
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [showSystemMessages, setShowSystemMessages] = useState(false)
 
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => !isSystemPromptMessage(m)),
+    [messages],
+  )
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -153,7 +170,7 @@ export function MessageList({
           )
         }}
       >
-        {messages.map((msg) => {
+        {visibleMessages.map((msg) => {
           const t = msg.type ?? 'text'
           const isUser = msg.role === 'user'
           const isSystem = msg.role === 'system'
@@ -513,7 +530,7 @@ export function MessageList({
         )}
         {/* Hidden system messages toggle */}
         {(() => {
-          const hiddenCount = messages.filter(
+          const hiddenCount = visibleMessages.filter(
             (m) => m.role === 'system' && (m.type ?? 'text') !== 'error',
           ).length
           if (hiddenCount === 0) return null

@@ -44,12 +44,6 @@ function buildLobePaths(): string[] {
 
 const LOBE_PATHS = buildLobePaths()
 
-const FLOATERS = [
-  { size: 340, x: '-6%', y: '-10%', delay: '0s', dur: '50s' },
-  { size: 280, x: '72%', y: '55%', delay: '-20s', dur: '58s' },
-  { size: 220, x: '35%', y: '82%', delay: '-35s', dur: '44s' },
-] as const
-
 function KnotPaths({ strokeWidth = 10 }: { strokeWidth?: number }) {
   return (
     <g
@@ -88,39 +82,6 @@ export function KnotBackground() {
         </defs>
         <rect width="100%" height="100%" fill={`url(#kp${pid})`} />
       </svg>
-
-      {/* Layer 2: floating blurred knot silhouettes */}
-      {FLOATERS.map((f, i) => (
-        <div
-          key={i}
-          className="knot-bg-float"
-          style={{
-            width: f.size,
-            height: f.size,
-            left: f.x,
-            top: f.y,
-            animationDelay: f.delay,
-            animationDuration: f.dur,
-          }}
-        >
-          <svg viewBox="0 0 512 512" fill="none" width="100%" height="100%">
-            <g
-              style={{ stroke: 'var(--mode-accent, var(--brand))' }}
-              strokeWidth={24}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            >
-              {LOBE_PATHS.map((d, j) => (
-                <path key={j} d={d} />
-              ))}
-            </g>
-          </svg>
-        </div>
-      ))}
-
-      {/* Layer 3: mode-accent glow */}
-      <div className="knot-bg-glow" />
     </div>
   )
 }
