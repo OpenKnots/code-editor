@@ -51,7 +51,7 @@ jobs:
         run: cargo install tauri-cli --version "^2"
 
       - name: Build Tauri (Linux)
-        run: cargo tauri build --bundles appimage,deb
+        run: cargo-tauri build --bundles appimage,deb
         env:
           CI: true
 
@@ -98,7 +98,7 @@ jobs:
         run: cargo install tauri-cli --version "^2"
 
       - name: Build Tauri (Windows)
-        run: cargo tauri build --bundles msi,nsis
+        run: cargo-tauri build --bundles msi,nsis
         env:
           CI: 'true'
 
