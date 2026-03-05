@@ -974,14 +974,14 @@ export function CodeEditor() {
           <span className="text-[10px] text-[var(--text-secondary)] mr-1">Review changes</span>
           <button
             onClick={() => inlineDiffRef.current?.accept()}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-[var(--color-additions)] text-white hover:opacity-90 transition-opacity cursor-pointer"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-[var(--color-additions)] text-[var(--on-additions)] hover:opacity-90 transition-opacity cursor-pointer"
           >
             <Icon icon="lucide:check" width={11} height={11} />
             Accept
           </button>
           <button
             onClick={() => inlineDiffRef.current?.reject()}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-[var(--color-deletions)] text-white hover:opacity-90 transition-opacity cursor-pointer"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-[var(--color-deletions)] text-[var(--on-deletions)] hover:opacity-90 transition-opacity cursor-pointer"
           >
             <Icon icon="lucide:x" width={11} height={11} />
             Reject

@@ -7,13 +7,6 @@ import { useTheme } from '@/context/theme-context'
 import { useLocal } from '@/context/local-context'
 import '@xterm/xterm/css/xterm.css'
 
-const MAX_TERMINALS = 3
-
-interface TerminalTab {
-  id: number
-  label: string
-}
-
 interface TerminalPanelProps {
   visible: boolean
   height: number
@@ -110,9 +103,6 @@ interface TerminalPaneProps {
   themeVersion: number
   floating?: boolean
   onToggleFloating?: () => void
-  showSplitButton: boolean
-  onSplit: () => void
-  onClose?: () => void
   cwd?: string | null
   onFileOpen?: (path: string, line?: number, col?: number) => void
 }
@@ -124,26 +114,20 @@ function TerminalPane({
   themeVersion,
   floating,
   onToggleFloating,
-  showSplitButton,
-  onSplit,
-  onClose,
   cwd,
   onFileOpen,
 }: TerminalPaneProps) {
-  const [tabs, setTabs] = useState<TerminalTab[]>([])
-  const [activeTab, setActiveTab] = useState<number | null>(null)
+  const [terminalId, setTerminalId] = useState<number | null>(null)
   const [terminalError, setTerminalError] = useState<string | null>(null)
   const manualCloseAll = useRef(false)
   const termRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<any>(null)
   const fitRef = useRef<any>(null)
-  const activeTabRef = useRef<number | null>(null)
-  const tabsRef = useRef<TerminalTab[]>([])
+  const terminalIdRef = useRef<number | null>(null)
   const onFileOpenRef = useRef(onFileOpen)
-  const exitUnlisteners = useRef<Map<number, () => void>>(new Map())
+  const exitUnlistenRef = useRef<null | (() => void)>(null)
 
-  useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
-  useEffect(() => { tabsRef.current = tabs }, [tabs])
+  useEffect(() => { terminalIdRef.current = terminalId }, [terminalId])
   useEffect(() => { onFileOpenRef.current = onFileOpen }, [onFileOpen])
 
   // Keyboard-first: allow global shortcuts to focus the active terminal.
@@ -156,14 +140,14 @@ function TerminalPane({
     return () => window.removeEventListener('focus-terminal', handler)
   }, [visible])
 
-  // Kill all PTY sessions and dispose xterm on unmount
+  // Kill PTY session and dispose xterm on unmount
   useEffect(() => {
     return () => {
-      for (const tab of tabsRef.current) {
-        tauriInvoke('kill_terminal', { id: tab.id }).catch(() => {})
+      if (terminalIdRef.current != null) {
+        tauriInvoke('kill_terminal', { id: terminalIdRef.current }).catch(() => {})
       }
-      for (const unsub of exitUnlisteners.current.values()) unsub()
-      exitUnlisteners.current.clear()
+      exitUnlistenRef.current?.()
+      exitUnlistenRef.current = null
       if (xtermRef.current) {
         xtermRef.current.dispose()
         xtermRef.current = null
@@ -171,13 +155,17 @@ function TerminalPane({
     }
   }, [])
 
-  const createTerminal = useCallback(async (label?: string, initialCommand?: string) => {
+  const createTerminal = useCallback(async (initialCommand?: string) => {
     if (!isDesktop) return
-    // Enforce max terminal limit
-    if (tabsRef.current.length >= MAX_TERMINALS) {
-      setTerminalError(`Maximum of ${MAX_TERMINALS} terminals allowed. Close one first.`)
+    // Single-terminal mode: focus existing session instead of creating more
+    if (terminalIdRef.current != null) {
+      try { xtermRef.current?.focus?.() } catch {}
+      if (initialCommand) {
+        await tauriInvoke('write_terminal', { id: terminalIdRef.current, data: initialCommand + '\n' }).catch(() => {})
+      }
       return
     }
+
     manualCloseAll.current = false
     try {
       setTerminalError(null)
@@ -186,28 +174,19 @@ function TerminalPane({
         setTerminalError('Terminal is unavailable outside the desktop runtime.')
         return
       }
-      const tab: TerminalTab = { id, label: label ?? `Terminal ${id}` }
-      setTabs(prev => [...prev, tab])
-      setActiveTab(id)
+      setTerminalId(id)
 
-      // Listen for this terminal's exit event so it auto-closes
-      const unlistenExit = await tauriListen<{ id: number; code: number }>(`terminal-exit-${id}`, (payload) => {
-        if (activeTabRef.current === payload.id) {
+      // Listen for terminal exit so it auto-clears
+      exitUnlistenRef.current?.()
+      exitUnlistenRef.current = await tauriListen<{ id: number; code: number }>(`terminal-exit-${id}`, (payload) => {
+        if (terminalIdRef.current === payload.id) {
           xtermRef.current?.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n')
+          setTimeout(() => {
+            setTerminalId(null)
+            terminalIdRef.current = null
+          }, 800)
         }
-        setTimeout(() => {
-          exitUnlisteners.current.get(payload.id)?.()
-          exitUnlisteners.current.delete(payload.id)
-          setTabs(prev => {
-            const next = prev.filter(t => t.id !== payload.id)
-            if (activeTabRef.current === payload.id) {
-              setActiveTab(next.length > 0 ? next[next.length - 1].id : null)
-            }
-            return next
-          })
-        }, 800)
       })
-      exitUnlisteners.current.set(id, unlistenExit)
 
       if (initialCommand) {
         setTimeout(async () => {
@@ -250,8 +229,8 @@ function TerminalPane({
       xtermRef.current = term
       fitRef.current = fit
       term.onData(async (data: string) => {
-        if (activeTabRef.current != null) {
-          await tauriInvoke('write_terminal', { id: activeTabRef.current, data })
+        if (terminalIdRef.current != null) {
+          await tauriInvoke('write_terminal', { id: terminalIdRef.current, data })
         }
       })
 
@@ -287,35 +266,35 @@ function TerminalPane({
 
   // Auto-create first terminal when pane becomes ready (skip if user closed all)
   useEffect(() => {
-    if (!visible || !isDesktop || tabs.length > 0 || manualCloseAll.current) return
+    if (!visible || !isDesktop || terminalId != null || manualCloseAll.current) return
     void createTerminal()
-  }, [visible, isDesktop, tabs.length, createTerminal])
+  }, [visible, isDesktop, terminalId, createTerminal])
 
   // Listen for script run requests from the preview panel
   useEffect(() => {
     const handler = (e: Event) => {
-      const { name, cwd: scriptCwd } = (e as CustomEvent).detail ?? {}
+      const { name } = (e as CustomEvent).detail ?? {}
       if (!name || !isDesktop) return
       const cmd = `pnpm run ${name}`
-      void createTerminal(name, cmd)
+      void createTerminal(cmd)
     }
     window.addEventListener('run-script-in-terminal', handler)
     return () => window.removeEventListener('run-script-in-terminal', handler)
   }, [isDesktop, createTerminal])
 
-  // Subscribe to PTY output for the active tab
+  // Subscribe to PTY output for the single terminal
   useEffect(() => {
-    if (activeTab == null || !xtermRef.current) return
+    if (terminalId == null || !xtermRef.current) return
     let unlisten: (() => void) | null = null
     ;(async () => {
-      unlisten = await tauriListen<{ data: string }>(`terminal-output-${activeTab}`, (payload) => {
+      unlisten = await tauriListen<{ data: string }>(`terminal-output-${terminalId}`, (payload) => {
         xtermRef.current?.write(payload.data)
       })
     })()
     xtermRef.current.clear()
     xtermRef.current.focus()
     return () => { unlisten?.() }
-  }, [activeTab])
+  }, [terminalId])
 
   // Reapply xterm theme when mode/theme changes
   useEffect(() => {
@@ -330,106 +309,52 @@ function TerminalPane({
     if (!visible || !fitRef.current) return
     const fit = () => {
       fitRef.current?.fit()
-      if (activeTab != null && xtermRef.current) {
+      if (terminalId != null && xtermRef.current) {
         const { cols, rows } = xtermRef.current
-        tauriInvoke('resize_terminal', { id: activeTab, cols, rows })
+        tauriInvoke('resize_terminal', { id: terminalId, cols, rows })
       }
     }
     fit()
     const obs = new ResizeObserver(fit)
     if (termRef.current) obs.observe(termRef.current)
     return () => obs.disconnect()
-  }, [visible, height, activeTab])
+  }, [visible, height, terminalId])
 
-  const closeTab = useCallback(async (id: number) => {
-    exitUnlisteners.current.get(id)?.()
-    exitUnlisteners.current.delete(id)
-    await tauriInvoke('kill_terminal', { id })
-    setTabs(prev => {
-      const next = prev.filter(t => t.id !== id)
-      if (activeTab === id) setActiveTab(next.length > 0 ? next[next.length - 1].id : null)
-      return next
-    })
-  }, [activeTab])
-
-  const closeAllTabs = useCallback(async () => {
+  const resetTerminal = useCallback(async () => {
     manualCloseAll.current = true
-    const current = tabsRef.current
-    for (const unsub of exitUnlisteners.current.values()) unsub()
-    exitUnlisteners.current.clear()
-    await Promise.all(current.map(t => tauriInvoke('kill_terminal', { id: t.id }).catch(() => {})))
-    setTabs([])
-    setActiveTab(null)
+    if (terminalIdRef.current != null) {
+      await tauriInvoke('kill_terminal', { id: terminalIdRef.current }).catch(() => {})
+    }
+    exitUnlistenRef.current?.()
+    exitUnlistenRef.current = null
+    setTerminalId(null)
+    terminalIdRef.current = null
     xtermRef.current?.clear()
   }, [])
 
   return (
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-      {/* Tab bar */}
-      <div className="flex items-center h-9 bg-[var(--bg-secondary)] border-b border-[var(--border)] px-2 gap-1 shrink-0 overflow-x-auto">
+      {/* Header (single-terminal mode) */}
+      <div className="flex items-center h-9 bg-[var(--bg-secondary)] border-b border-[var(--border)] px-2 gap-1 shrink-0">
         <span className="text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-wider mr-2 shrink-0">
           Terminal
         </span>
 
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`
-              flex items-center gap-1.5 px-2.5 py-1 rounded text-[12px] transition-colors shrink-0
-              ${activeTab === tab.id
-                ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }
-            `}
-          >
-            <Icon
-              icon={tab.label === 'Gateway Engine' ? 'lucide:cpu' : 'lucide:terminal'}
-              width={12}
-              height={12}
-              className={tab.label === 'Gateway Engine' ? 'text-[var(--brand)]' : ''}
-            />
-            <span>{tab.label}</span>
-            <span
-              onClick={(e) => { e.stopPropagation(); closeTab(tab.id) }}
-              className="ml-1 hover:text-[var(--text-primary)] cursor-pointer"
-            >
-              <Icon icon="lucide:x" width={12} height={12} />
-            </span>
-          </button>
-        ))}
-
-        {isDesktop && (
-          <>
-            <button
-              onClick={() => createTerminal()}
-              disabled={tabs.length >= MAX_TERMINALS}
-              className="ml-1 p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
-              title={tabs.length >= MAX_TERMINALS ? `Max ${MAX_TERMINALS} terminals` : "New Terminal"}
-            >
-              <Icon icon="lucide:plus" width={14} height={14} />
-            </button>
-            <button
-              onClick={() => createTerminal('Gateway Engine', 'openclaw logs')}
-              className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--brand)] transition-colors shrink-0"
-              title="Open Gateway Engine logs"
-            >
-              <Icon icon="lucide:cpu" width={13} height={13} />
-            </button>
-          </>
-        )}
-
-        {tabs.length > 0 && (
-          <button
-            onClick={closeAllTabs}
-            className="ml-1 p-1 rounded hover:bg-[color-mix(in_srgb,var(--color-deletions)_15%,transparent)] text-[var(--text-secondary)] hover:text-[var(--color-deletions)] transition-colors shrink-0"
-            title="Close all terminals"
-          >
-            <Icon icon="lucide:trash-2" width={13} height={13} />
-          </button>
-        )}
+        <div className="text-[11px] text-[var(--text-tertiary)]">
+          Single session
+        </div>
 
         <div className="flex-1" />
+
+        {terminalId != null && (
+          <button
+            onClick={async () => { await resetTerminal(); manualCloseAll.current = false; void createTerminal() }}
+            className="ml-1 p-1 rounded hover:bg-[color-mix(in_srgb,var(--color-deletions)_15%,transparent)] text-[var(--text-secondary)] hover:text-[var(--color-deletions)] transition-colors shrink-0"
+            title="Restart terminal"
+          >
+            <Icon icon="lucide:rotate-ccw" width={13} height={13} />
+          </button>
+        )}
 
         {onToggleFloating && (
           <button
@@ -438,26 +363,6 @@ function TerminalPane({
             title={floating ? 'Dock terminal' : 'Float terminal'}
           >
             <Icon icon={floating ? 'lucide:pin' : 'lucide:app-window'} width={13} height={13} />
-          </button>
-        )}
-
-        {showSplitButton && (
-          <button
-            onClick={onSplit}
-            className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
-            title="Split terminal"
-          >
-            <Icon icon="lucide:panel-right" width={13} height={13} />
-          </button>
-        )}
-
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
-            title="Close pane"
-          >
-            <Icon icon="lucide:x" width={13} height={13} />
           </button>
         )}
 
@@ -483,7 +388,7 @@ function TerminalPane({
               <Icon icon="lucide:terminal" width={32} height={32} className="mx-auto opacity-40" />
               <p>Terminal available in the desktop app</p>
               <p className="text-[12px] text-[var(--text-tertiary)]">
-                Run <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">pnpm tauri:dev</code> for native terminal
+                Run <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">pnpm desktop:dev</code> for native terminal
               </p>
             </div>
           </div>
@@ -498,18 +403,12 @@ function TerminalPane({
 export function TerminalPanel({ visible, height, onHeightChange, floating, onToggleFloating }: TerminalPanelProps) {
   const { version: themeVersion } = useTheme()
   const local = useLocal()
-  const [splitEnabled, setSplitEnabled] = useState(() => {
-    try { return localStorage.getItem('code-editor:terminal-split') === 'true' } catch { return false }
-  })
   const [isDesktop, setIsDesktop] = useState(false)
   const resizing = useRef(false)
   const startY = useRef(0)
   const startH = useRef(0)
 
   useEffect(() => { setIsDesktop(isTauri()) }, [])
-  useEffect(() => {
-    try { localStorage.setItem('code-editor:terminal-split', String(splitEnabled)) } catch {}
-  }, [splitEnabled])
 
   const handleFileOpen = useCallback((path: string, line?: number) => {
     window.dispatchEvent(new CustomEvent('file-select', { detail: { path } }))
@@ -564,30 +463,9 @@ export function TerminalPanel({ visible, height, onHeightChange, floating, onTog
           themeVersion={themeVersion}
           floating={floating}
           onToggleFloating={onToggleFloating}
-          showSplitButton={!splitEnabled}
-          onSplit={() => setSplitEnabled(true)}
           cwd={local.localMode ? local.rootPath : null}
           onFileOpen={handleFileOpen}
         />
-
-        {splitEnabled && (
-          <>
-            <div className="w-px bg-[var(--border)] shrink-0" />
-            <TerminalPane
-              visible={visible}
-              height={height}
-              isDesktop={isDesktop}
-              themeVersion={themeVersion}
-              floating={floating}
-              onToggleFloating={onToggleFloating}
-              showSplitButton={false}
-              onSplit={() => {}}
-              onClose={() => setSplitEnabled(false)}
-              cwd={local.localMode ? local.rootPath : null}
-              onFileOpen={handleFileOpen}
-            />
-          </>
-        )}
       </div>
     </div>
   )

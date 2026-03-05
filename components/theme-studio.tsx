@@ -231,7 +231,7 @@ export function ThemeStudio({ open, onClose }: ThemeStudioProps) {
                 value={importText}
                 onChange={e => { setImportText(e.target.value); setImportError(null); setImportSuccess(false) }}
                 placeholder={`:root {\n  --background: ...;\n  --foreground: ...;\n}\n.dark {\n  --background: ...;\n  --foreground: ...;\n}`}
-                className="w-full h-40 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] resize-none outline-none focus:border-[var(--brand)] transition-colors"
+                className="w-full h-40 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] resize-none outline-none focus:border-[var(--border-focus)] transition-colors"
               />
 
               {importError && (
@@ -252,7 +252,7 @@ export function ThemeStudio({ open, onClose }: ThemeStudioProps) {
                 <button
                   onClick={handleImport}
                   disabled={!importText.trim()}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90"
                 >
                   <Icon icon="lucide:play" width={12} height={12} />
                   Preview
@@ -275,7 +275,7 @@ export function ThemeStudio({ open, onClose }: ThemeStudioProps) {
                       value={themeName}
                       onChange={e => setThemeName(e.target.value)}
                       placeholder="Theme name"
-                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)] transition-colors"
+                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-focus)] transition-colors"
                     />
                     <button
                       onClick={handleSaveCustom}

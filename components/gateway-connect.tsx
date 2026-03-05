@@ -92,7 +92,7 @@ export function GatewayConnectBanner() {
                   onChange={e => setUrl(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
                   placeholder="ws://openclaw.local:18789"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
                   disabled={isConnecting}
                 />
               </div>
@@ -103,7 +103,7 @@ export function GatewayConnectBanner() {
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
                   placeholder="Password"
-                  className="w-full px-2.5 py-1.5 pr-7 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                  className="w-full px-2.5 py-1.5 pr-7 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
                   disabled={isConnecting}
                 />
                 <button
@@ -117,7 +117,7 @@ export function GatewayConnectBanner() {
               <button
                 onClick={handleConnect}
                 disabled={!url.trim() || isConnecting}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: 'var(--brand)',
                   color: 'var(--brand-contrast, #fff)',
@@ -270,7 +270,7 @@ export function GatewayConnectPopover({
                 onChange={e => setUrl(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
                 placeholder="ws://openclaw.local:18789"
-                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
                 disabled={isConnecting}
               />
               <div className="relative">
@@ -280,7 +280,7 @@ export function GatewayConnectPopover({
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
                   placeholder="Password (optional)"
-                  className="w-full px-2.5 py-1.5 pr-7 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                  className="w-full px-2.5 py-1.5 pr-7 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
                   disabled={isConnecting}
                 />
                 <button
@@ -294,7 +294,7 @@ export function GatewayConnectPopover({
               <button
                 onClick={handleConnect}
                 disabled={!url.trim() || isConnecting}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: 'var(--brand)',
                   color: 'var(--brand-contrast, #fff)',

@@ -642,7 +642,7 @@ function SingleDeviceZoomBar({
             const next = [...ZOOM_PRESETS].reverse().find(p => p < zoom - 0.01)
             setZoom(next ?? Math.max(zoom - 0.1, ZOOM_MIN))
           }}
-          className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={zoom <= ZOOM_MIN}
           title="Zoom out (⌘−)"
         >
@@ -678,7 +678,7 @@ function SingleDeviceZoomBar({
             const next = ZOOM_PRESETS.find(p => p > zoom + 0.01)
             setZoom(next ?? Math.min(zoom + 0.1, ZOOM_MAX))
           }}
-          className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={zoom >= ZOOM_MAX}
           title="Zoom in (⌘+)"
         >

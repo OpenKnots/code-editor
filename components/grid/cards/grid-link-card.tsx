@@ -25,7 +25,7 @@ export function GridLinkCard({ card }: Props) {
       <select
         value={card.targetGridId || ''}
         onChange={e => updateCard(card.id, { targetGridId: e.target.value || undefined })}
-        className="text-[12px] bg-[var(--bg)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg px-2 py-1.5 outline-none focus:border-[var(--brand)] cursor-pointer"
+        className="text-[12px] bg-[var(--bg)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg px-2 py-1.5 outline-none focus:border-[var(--border-focus)] cursor-pointer"
       >
         <option value="">Select a grid...</option>
         {grids.map(g => (

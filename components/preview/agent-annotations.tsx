@@ -142,9 +142,9 @@ export function AgentAnnotationOverlay({ iframeRef }: { iframeRef: React.RefObje
 
             {/* Label badge */}
             <div className={`absolute -top-5 left-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-medium whitespace-nowrap ${
-              ann.type === 'added' ? 'bg-[var(--color-additions)] text-white' :
-              ann.type === 'removed' ? 'bg-[var(--color-deletions)] text-white' :
-              'bg-[var(--color-ai)] text-white'
+              ann.type === 'added' ? 'bg-[var(--color-additions)] text-[var(--on-additions)]' :
+              ann.type === 'removed' ? 'bg-[var(--color-deletions)] text-[var(--on-deletions)]' :
+              'bg-[var(--color-ai)] text-[var(--brand-contrast)]'
             } shadow-sm`}>
               <Icon icon={ann.type === 'added' ? 'lucide:plus' : ann.type === 'removed' ? 'lucide:minus' : 'lucide:pencil'} width={8} height={8} />
               {ann.label}

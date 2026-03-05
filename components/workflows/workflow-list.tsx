@@ -68,7 +68,7 @@ export function WorkflowList() {
                   onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowCreate(false) }}
                   placeholder="Workflow name…"
                   autoFocus
-                  className="w-full px-3 py-2 text-[13px] rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
+                  className="w-full px-3 py-2 text-[13px] rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
                 />
                 <input
                   type="text"
@@ -81,7 +81,7 @@ export function WorkflowList() {
                   <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] cursor-pointer">
                     Cancel
                   </button>
-                  <button onClick={handleCreate} disabled={!newName.trim()} className="px-4 py-1.5 rounded-lg text-[11px] font-semibold bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 disabled:opacity-40 cursor-pointer">
+                  <button onClick={handleCreate} disabled={!newName.trim()} className="px-4 py-1.5 rounded-lg text-[11px] font-semibold bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 disabled:opacity-50 cursor-pointer">
                     Create Workflow
                   </button>
                 </div>

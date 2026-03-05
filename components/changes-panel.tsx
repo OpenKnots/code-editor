@@ -167,7 +167,7 @@ export function ChangesPanel({ open, onClose, onCommit }: ChangesPanelProps) {
               value={commitMsg}
               onChange={e => setCommitMsg(e.target.value)}
               placeholder="Commit message..."
-              className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)] transition-colors"
+              className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-focus)] transition-colors"
               onKeyDown={e => {
                 if (e.key === 'Enter' && commitMsg.trim()) {
                   onCommit(commitMsg.trim())
@@ -177,7 +177,7 @@ export function ChangesPanel({ open, onClose, onCommit }: ChangesPanelProps) {
             <button
               onClick={() => commitMsg.trim() && onCommit(commitMsg.trim())}
               disabled={!commitMsg.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: 'var(--brand)',
                 color: 'var(--brand-contrast, #fff)',

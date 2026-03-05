@@ -109,6 +109,7 @@ export const PluginSlotRenderer = memo(function PluginSlotRenderer({ slot }: { s
     'spotify-status-bar': 'spotify-player',
     'spotify-settings': 'spotify-player',
     'youtube-status-bar': 'youtube-player',
+    'youtube-settings': 'youtube-player',
   }
 
   return (

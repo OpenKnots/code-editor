@@ -106,7 +106,7 @@ export function OnboardingTour({
             <button
               onClick={() => setIdx(v => Math.max(0, v - 1))}
               disabled={idx === 0}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Back
             </button>

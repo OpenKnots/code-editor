@@ -656,7 +656,7 @@ export function GitView() {
                     <button
                       onClick={handleCreateBranch}
                       disabled={!newBranchName.trim() || creatingBranch}
-                      className="h-[26px] px-2.5 text-[10px] font-medium rounded-[var(--radius-sm)] bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)] disabled:opacity-40 cursor-pointer transition-colors"
+                      className="h-[26px] px-2.5 text-[10px] font-medium rounded-[var(--radius-sm)] bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)] disabled:opacity-50 cursor-pointer transition-colors"
                     >
                       {creatingBranch ? '...' : 'Create'}
                     </button>
@@ -721,7 +721,7 @@ export function GitView() {
                   <button
                     onClick={handleStage}
                     disabled={staging}
-                    className="flex items-center gap-1 px-1.5 h-[20px] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-40 text-[9px] font-medium"
+                    className="flex items-center gap-1 px-1.5 h-[20px] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-50 text-[9px] font-medium"
                     title="Stage selected files"
                   >
                     <Icon icon="lucide:plus-circle" width={10} height={10} />
@@ -732,7 +732,7 @@ export function GitView() {
                   <button
                     onClick={handleUnstage}
                     disabled={unstaging}
-                    className="flex items-center gap-1 px-1.5 h-[20px] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-40 text-[9px] font-medium"
+                    className="flex items-center gap-1 px-1.5 h-[20px] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-50 text-[9px] font-medium"
                     title="Unstage selected files"
                   >
                     <Icon icon="lucide:minus-circle" width={10} height={10} />
@@ -854,7 +854,7 @@ export function GitView() {
                       <>
                         <div className="flex items-center h-[24px] px-3 bg-[var(--bg-subtle)] border-b border-[var(--border)]">
                           <span className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Staged Changes</span>
-                          <span className="ml-1.5 px-1 min-w-[14px] text-center rounded-full bg-[var(--color-additions)] text-white text-[8px] font-bold leading-[14px]">{stagedEntries.length}</span>
+                          <span className="ml-1.5 px-1 min-w-[14px] text-center rounded-full bg-[var(--color-additions)] text-[var(--on-additions)] text-[8px] font-bold leading-[14px]">{stagedEntries.length}</span>
                           <div className="ml-auto flex items-center gap-0.5">
                             <button
                               onClick={() => {
@@ -869,7 +869,7 @@ export function GitView() {
                             {discardConfirm === 'staged' ? (
                               <>
                                 <span className="text-[9px] text-[var(--color-deletions)] mr-1">Discard all staged?</span>
-                                <button onClick={handleDiscardStaged} disabled={discarding} className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[var(--color-deletions)] text-white hover:opacity-90 cursor-pointer disabled:opacity-40">{discarding ? '...' : 'Yes'}</button>
+                                <button onClick={handleDiscardStaged} disabled={discarding} className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[var(--color-deletions)] text-[var(--on-deletions)] hover:opacity-90 cursor-pointer disabled:opacity-50">{discarding ? '...' : 'Yes'}</button>
                                 <button onClick={() => setDiscardConfirm(null)} className="px-1.5 py-0.5 rounded text-[9px] text-[var(--text-tertiary)] hover:bg-[var(--bg-elevated)] cursor-pointer">No</button>
                               </>
                             ) : (
@@ -902,7 +902,7 @@ export function GitView() {
                               {discardConfirm === 'changes' ? (
                                 <>
                                   <span className="text-[9px] text-[var(--color-deletions)] mr-1">Discard all changes?</span>
-                                  <button onClick={handleDiscardChanges} disabled={discarding} className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[var(--color-deletions)] text-white hover:opacity-90 cursor-pointer disabled:opacity-40">{discarding ? '...' : 'Yes'}</button>
+                                  <button onClick={handleDiscardChanges} disabled={discarding} className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[var(--color-deletions)] text-[var(--on-deletions)] hover:opacity-90 cursor-pointer disabled:opacity-50">{discarding ? '...' : 'Yes'}</button>
                                   <button onClick={() => setDiscardConfirm(null)} className="px-1.5 py-0.5 rounded text-[9px] text-[var(--text-tertiary)] hover:bg-[var(--bg-elevated)] cursor-pointer">No</button>
                                 </>
                               ) : (
@@ -996,7 +996,7 @@ export function GitView() {
                     <button
                       onClick={handleUndoCommit}
                       disabled={undoingCommit}
-                      className="h-[24px] px-2 text-[10px] font-medium rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-deletions)_12%,transparent)] text-[var(--color-deletions)] hover:bg-[color-mix(in_srgb,var(--color-deletions)_20%,transparent)] cursor-pointer transition-colors disabled:opacity-40"
+                      className="h-[24px] px-2 text-[10px] font-medium rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-deletions)_12%,transparent)] text-[var(--color-deletions)] hover:bg-[color-mix(in_srgb,var(--color-deletions)_20%,transparent)] cursor-pointer transition-colors disabled:opacity-50"
                     >
                       {undoingCommit ? 'Undoing...' : 'Confirm'}
                     </button>
@@ -1082,7 +1082,7 @@ export function GitView() {
                           }
                         }}
                         disabled={!commitMsg.trim() || gqStatus === 'saving'}
-                        className="flex-1 flex items-center justify-center gap-1 h-[24px] rounded-[var(--radius-sm)] text-[9px] font-semibold bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] text-[var(--color-additions)] hover:bg-[color-mix(in_srgb,var(--color-additions)_18%,transparent)] cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="flex-1 flex items-center justify-center gap-1 h-[24px] rounded-[var(--radius-sm)] text-[9px] font-semibold bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] text-[var(--color-additions)] hover:bg-[color-mix(in_srgb,var(--color-additions)_18%,transparent)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="git add -A && commit && push"
                       >
                         <Icon icon="lucide:save" width={10} height={10} />
@@ -1103,7 +1103,7 @@ export function GitView() {
                           }
                         }}
                         disabled={gqStatus === 'syncing'}
-                        className="flex-1 flex items-center justify-center gap-1 h-[24px] rounded-[var(--radius-sm)] text-[9px] font-semibold bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_18%,transparent)] cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="flex-1 flex items-center justify-center gap-1 h-[24px] rounded-[var(--radius-sm)] text-[9px] font-semibold bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_18%,transparent)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="git pull --rebase && push"
                       >
                         <Icon icon="lucide:refresh-cw" width={10} height={10} />
@@ -1124,7 +1124,7 @@ export function GitView() {
                           }
                         }}
                         disabled={gqStatus === 'cleaning'}
-                        className="flex-1 flex items-center justify-center gap-1 h-[24px] rounded-[var(--radius-sm)] text-[9px] font-semibold bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="flex-1 flex items-center justify-center gap-1 h-[24px] rounded-[var(--radius-sm)] text-[9px] font-semibold bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Delete merged branches"
                       >
                         <Icon icon="lucide:scissors" width={10} height={10} />

@@ -130,7 +130,7 @@ export function WorkflowCanvas() {
                 Stop
               </button>
             ) : (
-              <button onClick={() => runWorkflow(workflowId)} disabled={!isConnected} className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 disabled:opacity-40 cursor-pointer">
+              <button onClick={() => runWorkflow(workflowId)} disabled={!isConnected} className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 disabled:opacity-50 cursor-pointer">
                 <Icon icon="lucide:play" width={10} height={10} />
                 Run
               </button>
@@ -252,8 +252,8 @@ export function WorkflowCanvas() {
                   {isWaiting && (
                     <foreignObject x="8" y="52" width="132" height="28">
                       <div className="flex gap-1">
-                        <button onClick={(e) => { e.stopPropagation(); approveHumanNode(node.id) }} className="flex-1 px-2 py-0.5 rounded text-[9px] font-medium bg-[var(--success)] text-white hover:opacity-90 cursor-pointer">✓ Approve</button>
-                        <button onClick={(e) => { e.stopPropagation(); rejectHumanNode(node.id) }} className="flex-1 px-2 py-0.5 rounded text-[9px] font-medium bg-[var(--error)] text-white hover:opacity-90 cursor-pointer">✗ Reject</button>
+                        <button onClick={(e) => { e.stopPropagation(); approveHumanNode(node.id) }} className="flex-1 px-2 py-0.5 rounded text-[9px] font-medium bg-[var(--success)] text-[var(--brand-contrast)] hover:opacity-90 cursor-pointer">✓ Approve</button>
+                        <button onClick={(e) => { e.stopPropagation(); rejectHumanNode(node.id) }} className="flex-1 px-2 py-0.5 rounded text-[9px] font-medium bg-[var(--error)] text-[var(--brand-contrast)] hover:opacity-90 cursor-pointer">✗ Reject</button>
                       </div>
                     </foreignObject>
                   )}

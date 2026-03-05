@@ -318,7 +318,7 @@ export function GitPanel({ open, onClose }: Props) {
                         <button
                           onClick={handleCreateBranch}
                           disabled={!newBranchName.trim() || creatingBranch}
-                          className="px-2 py-1 text-[9px] font-medium rounded bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 disabled:opacity-40 cursor-pointer"
+                          className="px-2 py-1 text-[9px] font-medium rounded bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 disabled:opacity-50 cursor-pointer"
                         >
                           {creatingBranch ? '...' : 'Create'}
                         </button>
@@ -368,7 +368,7 @@ export function GitPanel({ open, onClose }: Props) {
                       value={filterText}
                       onChange={e => setFilterText(e.target.value)}
                       placeholder="Filter files..."
-                      className="w-full pl-7 pr-2 py-1 text-[10px] rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))]"
+                      className="w-full pl-7 pr-2 py-1 text-[10px] rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
                     />
                   </div>
                 </div>
@@ -437,7 +437,7 @@ export function GitPanel({ open, onClose }: Props) {
                   value={commitMsg}
                   onChange={e => setCommitMsg(e.target.value)}
                   placeholder="Commit message"
-                  className="w-full px-2.5 py-1.5 text-[11px] rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))]"
+                  className="w-full px-2.5 py-1.5 text-[11px] rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && commitMsg.trim()) handleCommit() }}
                 />
                 <textarea
@@ -445,7 +445,7 @@ export function GitPanel({ open, onClose }: Props) {
                   onChange={e => setCommitDesc(e.target.value)}
                   placeholder="Description (optional)"
                   rows={2}
-                  className="w-full px-2.5 py-1.5 text-[10px] rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] resize-none"
+                  className="w-full px-2.5 py-1.5 text-[10px] rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] resize-none"
                 />
                 <button
                   onClick={handleCommit}

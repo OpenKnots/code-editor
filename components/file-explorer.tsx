@@ -87,7 +87,7 @@ function DeleteConfirmDialog({ path, isDir, onConfirm, onCancel }: {
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-white bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-[var(--on-deletions)] bg-[var(--color-deletions)] hover:opacity-90 transition-colors cursor-pointer"
           >
             Delete
           </button>
@@ -539,7 +539,7 @@ export function FileExplorer() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             ref={searchRef}
-            className="w-full pl-7 pr-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)]"
+            className="w-full pl-7 pr-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-focus)]"
           />
         </div>
       </div>

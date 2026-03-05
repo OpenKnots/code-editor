@@ -91,6 +91,9 @@ export function YouTubePlayer() {
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory)
   const [error, setError] = useState<string | null>(null)
   const [showInput, setShowInput] = useState(false)
+  const [ratio, setRatio] = useState<'16 / 9' | '4 / 3' | '1 / 1'>(() => {
+    try { return (localStorage.getItem('knot:youtube-ratio') as '16 / 9' | '4 / 3' | '1 / 1') || '16 / 9' } catch { return '16 / 9' }
+  })
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -101,6 +104,36 @@ export function YouTubePlayer() {
       try { localStorage.removeItem(STORAGE_KEY) } catch {}
       window.dispatchEvent(new CustomEvent('youtube-state-changed', { detail: null }))
     }
+  }, [current])
+
+  useEffect(() => {
+    try { localStorage.setItem('knot:youtube-ratio', ratio) } catch {}
+  }, [ratio])
+
+  const popoutPiP = useCallback(async () => {
+    if (!current) return
+    const embedUrl = buildEmbedUrl(current)
+    const dpp = (window as any).documentPictureInPicture
+    if (dpp?.requestWindow) {
+      try {
+        const pipWin = await dpp.requestWindow({ width: 420, height: 236 })
+        pipWin.document.body.style.margin = '0'
+        pipWin.document.body.style.background = '#000'
+        const iframe = pipWin.document.createElement('iframe')
+        iframe.src = embedUrl
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+        iframe.allowFullscreen = true
+        iframe.style.width = '100%'
+        iframe.style.height = '100%'
+        iframe.style.border = '0'
+        pipWin.document.body.appendChild(iframe)
+        return
+      } catch {
+        // fallback to popup below
+      }
+    }
+
+    window.open(embedUrl, 'youtube-pip', 'popup=yes,width=420,height=236')
   }, [current])
 
   const loadPlaylist = useCallback((value?: string) => {
@@ -170,13 +203,32 @@ export function YouTubePlayer() {
         <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] ml-1.5">YouTube</span>
         <div className="flex-1" />
         {current && (
-          <button
-            onClick={() => { setShowInput(v => !v); setTimeout(() => inputRef.current?.focus(), 100) }}
-            className={`p-0.5 rounded cursor-pointer ${showInput ? 'text-[#FF0000]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`}
-            title="Change playlist"
-          >
-            <Icon icon="lucide:replace" width={11} height={11} />
-          </button>
+          <>
+            <select
+              value={ratio}
+              onChange={(e) => setRatio(e.target.value as '16 / 9' | '4 / 3' | '1 / 1')}
+              className="h-5 rounded border border-[var(--border)] bg-[var(--bg)] px-1 text-[8px] text-[var(--text-secondary)] outline-none mr-1"
+              title="Video ratio"
+            >
+              <option value="16 / 9">16:9</option>
+              <option value="4 / 3">4:3</option>
+              <option value="1 / 1">1:1</option>
+            </select>
+            <button
+              onClick={popoutPiP}
+              className="p-0.5 rounded cursor-pointer text-[var(--text-disabled)] hover:text-[var(--text-secondary)]"
+              title="Pop out to PiP"
+            >
+              <Icon icon="lucide:picture-in-picture-2" width={11} height={11} />
+            </button>
+            <button
+              onClick={() => { setShowInput(v => !v); setTimeout(() => inputRef.current?.focus(), 100) }}
+              className={`p-0.5 rounded cursor-pointer ${showInput ? 'text-[#FF0000]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`}
+              title="Change playlist"
+            >
+              <Icon icon="lucide:replace" width={11} height={11} />
+            </button>
+          </>
         )}
       </div>
 
@@ -272,16 +324,17 @@ export function YouTubePlayer() {
       {/* Embedded player */}
       <div className="flex-1 flex flex-col min-h-0">
         {current ? (
-          <div className="flex-1 flex flex-col min-h-0">
-            <iframe
-              src={buildEmbedUrl(current)}
-              className="flex-1 w-full border-0"
-              style={{ minHeight: 200 }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              loading="lazy"
-              title={`YouTube ${current.label}`}
-            />
+          <div className="flex-1 min-h-0 p-2">
+            <div className="w-full h-full rounded-md overflow-hidden bg-black/80" style={{ aspectRatio: ratio }}>
+              <iframe
+                src={buildEmbedUrl(current)}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                title={`YouTube ${current.label}`}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2.5 py-8 px-3">

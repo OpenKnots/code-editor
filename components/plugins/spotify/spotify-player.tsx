@@ -229,9 +229,29 @@ export function SpotifyPlayer() {
         <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-disabled)] ml-1.5">Music</span>
         <div className="flex-1" />
         {authenticated && (
-          <button onClick={() => setShowSearch(v => !v)} className={`p-0.5 rounded cursor-pointer ${showSearch ? 'text-[#1DB954]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`} title="Search">
-            <Icon icon="lucide:search" width={11} height={11} />
-          </button>
+          <>
+            <button
+              onClick={() => {
+                const currentTrackId = playerState?.track_window.current_track?.id
+                const url = currentTrackId ? `https://open.spotify.com/track/${currentTrackId}` : 'https://open.spotify.com/'
+                const dpp = (window as any).documentPictureInPicture
+                if (dpp?.requestWindow) {
+                  dpp.requestWindow({ width: 380, height: 120 }).then((pipWin: Window) => {
+                    pipWin.location.href = url
+                  }).catch(() => window.open(url, 'spotify-pip', 'popup=yes,width=420,height=140'))
+                } else {
+                  window.open(url, 'spotify-pip', 'popup=yes,width=420,height=140')
+                }
+              }}
+              className="p-0.5 rounded cursor-pointer text-[var(--text-disabled)] hover:text-[var(--text-secondary)]"
+              title="Pop out to PiP"
+            >
+              <Icon icon="lucide:picture-in-picture-2" width={11} height={11} />
+            </button>
+            <button onClick={() => setShowSearch(v => !v)} className={`p-0.5 rounded cursor-pointer ${showSearch ? 'text-[#1DB954]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'}`} title="Search">
+              <Icon icon="lucide:search" width={11} height={11} />
+            </button>
+          </>
         )}
       </div>
 
@@ -240,7 +260,7 @@ export function SpotifyPlayer() {
         <div className="flex flex-col items-center justify-center gap-2.5 py-6 px-3">
           <Icon icon="simple-icons:spotify" width={20} height={20} className="text-[var(--text-disabled)]" />
           <p className="text-[10px] text-[var(--text-tertiary)] text-center">Connect Spotify to play music while you code</p>
-          <button onClick={handleLogin} disabled={loggingIn} className="h-7 px-3 rounded-md text-[10px] font-medium bg-[#1DB954] text-white hover:bg-[#1ed760] disabled:opacity-50 cursor-pointer">
+          <button onClick={handleLogin} disabled={loggingIn} className="h-7 px-3 rounded-md text-[10px] font-semibold bg-[#1a9e48] text-white hover:bg-[#1DB954] disabled:opacity-50 cursor-pointer">
             {loggingIn ? 'Connecting…' : 'Connect'}
           </button>
           {error && <p className="text-[9px] text-[var(--error)] text-center">{error}</p>}

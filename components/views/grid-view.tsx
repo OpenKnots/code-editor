@@ -193,7 +193,7 @@ export function GridView() {
                   value={newItemTitle}
                   onChange={e => setNewItemTitle(e.target.value)}
                   placeholder="Title..."
-                  className="w-full px-2 py-1 rounded-md text-[11px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand)] placeholder:text-[var(--text-disabled)]"
+                  className="w-full px-2 py-1 rounded-md text-[11px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] placeholder:text-[var(--text-disabled)]"
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleAddSavedItem()
                     if (e.key === 'Escape') handleCancelAdd()
@@ -203,7 +203,7 @@ export function GridView() {
                   value={newItemContent}
                   onChange={e => setNewItemContent(e.target.value)}
                   placeholder={addingItem === 'link' ? 'https://...' : 'Content...'}
-                  className="w-full px-2 py-1 rounded-md text-[11px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand)] placeholder:text-[var(--text-disabled)]"
+                  className="w-full px-2 py-1 rounded-md text-[11px] bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] placeholder:text-[var(--text-disabled)]"
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleAddSavedItem()
                     if (e.key === 'Escape') handleCancelAdd()
@@ -213,7 +213,7 @@ export function GridView() {
                   <button
                     onClick={handleAddSavedItem}
                     disabled={!newItemTitle.trim()}
-                    className="flex-1 py-1 rounded-md text-[10px] font-medium bg-[var(--brand)] text-[var(--brand-contrast)] hover:brightness-110 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex-1 py-1 rounded-md text-[10px] font-medium bg-[var(--brand)] text-[var(--brand-contrast)] hover:brightness-110 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Save
                   </button>

@@ -89,7 +89,7 @@ export function SpotifySettings() {
           <button
             onClick={handleLogin}
             disabled={loggingIn}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-[#1DB954] text-white hover:bg-[#1ed760] transition-colors cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-[#1a9e48] text-white hover:bg-[#1DB954] transition-colors cursor-pointer disabled:opacity-50"
           >
             {loggingIn ? (
               <Icon icon="lucide:loader-2" width={11} height={11} className="animate-spin" />

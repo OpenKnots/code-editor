@@ -120,7 +120,7 @@ export function BranchPicker() {
               value={filter}
               onChange={e => setFilter(e.target.value)}
               placeholder="Filter branches..."
-              className="w-full px-2.5 py-1.5 text-[11px] rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-colors"
+              className="w-full px-2.5 py-1.5 text-[11px] rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
               onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}
             />
           </div>

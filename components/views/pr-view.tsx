@@ -601,7 +601,7 @@ export function PrView() {
             <button key={f} onClick={() => setFilter(f)} className={`flex items-center gap-1.5 h-[24px] px-2.5 text-[11px] font-medium rounded-[var(--radius-sm)] transition-colors cursor-pointer ${filter === f ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'}`}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
               {f === 'open' && openCount > 0 && (
-                <span className="px-1 min-w-[16px] text-center rounded-full bg-[var(--color-additions)] text-white text-[9px] font-bold leading-[16px]">{openCount}</span>
+                <span className="px-1 min-w-[16px] text-center rounded-full bg-[var(--color-additions)] text-[var(--on-additions)] text-[9px] font-bold leading-[16px]">{openCount}</span>
               )}
             </button>
           ))}
@@ -929,11 +929,11 @@ function ActionBar({ pr, merging, mergeMethod, showMergeMenu, mergeMenuRef, merg
       {pr.state === 'open' && !pr.merged ? (
         <>
           <div className="relative flex items-center" ref={mergeMenuRef}>
-            <button onClick={onMerge} disabled={merging} className={`flex items-center gap-1.5 h-[28px] px-3 rounded-l-[var(--radius-sm)] text-[11px] font-semibold transition-all cursor-pointer ${merging ? 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed' : 'bg-[var(--color-additions)] text-white hover:opacity-90'}`}>
+            <button onClick={onMerge} disabled={merging} className={`flex items-center gap-1.5 h-[28px] px-3 rounded-l-[var(--radius-sm)] text-[11px] font-semibold transition-all cursor-pointer ${merging ? 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed' : 'bg-[var(--color-additions)] text-[var(--on-additions)] hover:opacity-90'}`}>
               {merging ? <Icon icon="lucide:loader" width={12} height={12} className="animate-spin" /> : <Icon icon="lucide:git-merge" width={12} height={12} />}
               {merging ? 'Merging...' : mergeMethodLabel[mergeMethod].split(' ')[0]}
             </button>
-            <button onClick={onToggleMergeMenu} className="flex items-center justify-center w-[28px] h-[28px] rounded-r-[var(--radius-sm)] bg-[var(--color-additions)] text-white border-l border-white/20 hover:opacity-90 cursor-pointer transition-colors">
+            <button onClick={onToggleMergeMenu} className="flex items-center justify-center w-[28px] h-[28px] rounded-r-[var(--radius-sm)] bg-[var(--color-additions)] text-[var(--on-additions)] border-l border-[var(--on-additions)]/20 hover:opacity-90 cursor-pointer transition-colors">
               <Icon icon="lucide:chevron-down" width={10} height={10} />
             </button>
             {showMergeMenu && (
@@ -1042,7 +1042,7 @@ function WorkflowTab({
           <button
             onClick={() => onOpenFindings(findings.counts.BLOCKER > 0)}
             disabled={findings.all.length === 0}
-            className={`h-[24px] px-2.5 rounded-[var(--radius-sm)] text-[10px] font-medium cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+            className={`h-[24px] px-2.5 rounded-[var(--radius-sm)] text-[10px] font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               findings.counts.BLOCKER > 0
                 ? 'bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] text-[var(--color-deletions)] hover:bg-[color-mix(in_srgb,var(--color-deletions)_18%,transparent)]'
                 : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'

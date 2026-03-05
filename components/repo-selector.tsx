@@ -199,7 +199,7 @@ export function RepoSelector() {
             }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             placeholder="organization"
-            className="w-28 px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)] font-mono"
+            className="w-28 px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-focus)] font-mono"
             autoFocus
           />
           <span className="text-[11px] text-[var(--text-tertiary)] font-mono">/</span>
@@ -216,7 +216,7 @@ export function RepoSelector() {
               onFocus={() => setRepoDropdown(true)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="repository"
-              className="w-36 px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--brand)] font-mono"
+              className="w-36 px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--border-focus)] font-mono"
             />
             {repoDropdown && ownerInput.trim() && (
               <div className="absolute left-0 top-full mt-1 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl z-50 py-1">
@@ -279,7 +279,7 @@ export function RepoSelector() {
             type="button"
             onClick={handleEditBranchClick}
             disabled={!ownerInput.trim() || !repoInput.trim()}
-            className="flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[11px] font-mono transition-colors cursor-pointer hover:border-[var(--brand)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--text-secondary)]"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[11px] font-mono transition-colors cursor-pointer hover:border-[var(--brand)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text-secondary)]"
             title="Select branch"
           >
             <Icon icon="lucide:git-branch" width={11} height={11} className="text-[var(--text-tertiary)]" />
@@ -295,7 +295,7 @@ export function RepoSelector() {
                   value={branchSearch}
                   onChange={e => setBranchSearch(e.target.value)}
                   placeholder="Filter branches…"
-                  className="w-full px-2 py-1 rounded bg-[var(--bg)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] font-mono"
+                  className="w-full px-2 py-1 rounded bg-[var(--bg)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] font-mono"
                   autoFocus
                 />
               </div>
@@ -385,7 +385,7 @@ export function RepoSelector() {
                 value={branchSearch}
                 onChange={e => setBranchSearch(e.target.value)}
                 placeholder="Filter branches…"
-                className="w-full px-2 py-1 rounded bg-[var(--bg)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] font-mono"
+                className="w-full px-2 py-1 rounded bg-[var(--bg)] border border-[var(--border)] text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] font-mono"
                 autoFocus
               />
             </div>

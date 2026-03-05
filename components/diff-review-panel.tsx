@@ -161,7 +161,7 @@ export function DiffReviewPanel({ visible, onClose, onAcceptAll, onRejectAll, on
             <>
               <button
                 onClick={onAcceptAll}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-medium bg-[var(--color-additions)] text-white hover:opacity-90 transition-opacity cursor-pointer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-medium bg-[var(--color-additions)] text-[var(--on-additions)] hover:opacity-90 transition-opacity cursor-pointer"
               >
                 <Icon icon="lucide:check-check" width={10} height={10} />
                 Accept All

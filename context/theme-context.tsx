@@ -27,12 +27,22 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: 'prettypink', label: 'PrettyPink', color: '#F5A9B8', group: 'core' },
 ]
 
+export const RADIUS_PRESETS = [
+  { id: 'sharp', label: 'Sharp', value: 0 },
+  { id: 'subtle', label: 'Subtle', value: 4 },
+  { id: 'default', label: 'Default', value: 8 },
+  { id: 'round', label: 'Round', value: 14 },
+  { id: 'pill', label: 'Pill', value: 20 },
+] as const
+
 interface ThemeContextValue {
   themeId: ThemeId
   mode: ThemeMode
   resolvedMode: ResolvedMode
   setThemeId: (id: ThemeId) => void
   setMode: (mode: ThemeMode) => void
+  borderRadius: number
+  setBorderRadius: (r: number) => void
   version: number
   bumpVersion: () => void
 }
@@ -41,6 +51,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 const STORAGE_THEME = 'code-editor:theme'
 const STORAGE_MODE = 'code-editor:mode'
+const STORAGE_RADIUS = 'code-editor:border-radius'
 
 function getSystemPreference(): ResolvedMode {
   if (typeof window === 'undefined') return 'dark'
@@ -61,10 +72,18 @@ function applyToDOM(themeId: string, resolved: ResolvedMode) {
   }
 }
 
+function applyRadiusToDOM(base: number) {
+  const el = document.documentElement
+  el.style.setProperty('--radius-sm', `${Math.max(0, base - 2)}px`)
+  el.style.setProperty('--radius-md', `${base}px`)
+  el.style.setProperty('--radius-lg', `${Math.round(base * 1.5)}px`)
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState<ThemeId>('obsidian')
   const [mode, setModeState] = useState<ThemeMode>('dark')
   const [resolvedMode, setResolvedMode] = useState<ResolvedMode>('dark')
+  const [borderRadius, setBorderRadiusState] = useState(8)
   const [version, setVersion] = useState(0)
 
   const bumpVersion = useCallback(() => setVersion(v => v + 1), [])
@@ -73,13 +92,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       const savedTheme = localStorage.getItem(STORAGE_THEME)
       const savedMode = localStorage.getItem(STORAGE_MODE) as ThemeMode | null
+      const savedRadius = localStorage.getItem(STORAGE_RADIUS)
       const tid = savedTheme || 'obsidian'
       const md = savedMode || 'dark'
       const rm = resolveMode(md)
+      const rad = savedRadius !== null ? Number(savedRadius) : 8
       setThemeIdState(tid)
       setModeState(md)
       setResolvedMode(rm)
+      setBorderRadiusState(rad)
       applyToDOM(tid, rm)
+      applyRadiusToDOM(rad)
     } catch {}
   }, [])
 
@@ -112,9 +135,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setVersion(v => v + 1)
   }, [themeId])
 
+  const setBorderRadius = useCallback((r: number) => {
+    setBorderRadiusState(r)
+    try { localStorage.setItem(STORAGE_RADIUS, String(r)) } catch {}
+    applyRadiusToDOM(r)
+    setVersion(v => v + 1)
+  }, [])
+
   const value = useMemo<ThemeContextValue>(() => ({
-    themeId, mode, resolvedMode, setThemeId, setMode, version, bumpVersion,
-  }), [themeId, mode, resolvedMode, setThemeId, setMode, version, bumpVersion])
+    themeId, mode, resolvedMode, setThemeId, setMode, borderRadius, setBorderRadius, version, bumpVersion,
+  }), [themeId, mode, resolvedMode, setThemeId, setMode, borderRadius, setBorderRadius, version, bumpVersion])
 
   return (
     <ThemeContext.Provider value={value}>

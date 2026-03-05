@@ -83,7 +83,7 @@ function AgentConnectPrompt() {
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
           placeholder="ws://openclaw.local:18789"
-          className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+          className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
           disabled={isConnecting}
         />
         <div className="relative">
@@ -93,7 +93,7 @@ function AgentConnectPrompt() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleConnect() }}
             placeholder="Password (optional)"
-            className="w-full px-3 py-2.5 pr-9 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+            className="w-full px-3 py-2.5 pr-9 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
             disabled={isConnecting}
           />
           <button
@@ -107,7 +107,7 @@ function AgentConnectPrompt() {
         <button
           onClick={handleConnect}
           disabled={!url.trim() || isConnecting}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             backgroundColor: 'var(--brand)',
             color: 'var(--brand-contrast, #fff)',

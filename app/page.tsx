@@ -10,6 +10,7 @@ import { useEditor, detectFileKind, getMimeType } from '@/context/editor-context
 import { useLocal } from '@/context/local-context'
 import { useView, type ViewId } from '@/context/view-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
+import { useAppMode } from '@/context/app-mode-context'
 import { WorkspaceSidebar } from '@/components/workspace-sidebar'
 import { FloatingPanel } from '@/components/floating-panel'
 import { isTauri } from '@/lib/tauri'
@@ -22,6 +23,7 @@ import { BranchPicker } from '@/components/branch-picker'
 import { FolderIndicator } from '@/components/source-switcher'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { OnboardingTour, isOnboardingComplete } from '@/components/onboarding-tour'
+import type { AppMode } from '@/lib/mode-registry'
 
 // View components — lazy loaded
 const EditorView = dynamic(() => import('@/components/views/editor-view').then(m => ({ default: m.EditorView })), { ssr: false })
@@ -53,7 +55,6 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   settings: { icon: 'lucide:settings', label: 'Settings' },
 }
 
-const VISIBLE_VIEWS: ViewId[] = ['editor', 'preview', 'git', 'prs']
 
 const TERMINAL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
 
@@ -135,7 +136,7 @@ const PLUGIN_META: Record<string, { label: string; icon: string; color: string }
 function SidebarPluginSlot() {
   const { slots, isPluginEnabled, togglePlugin } = usePlugins()
   const layout = useLayout()
-  const hiddenByLayout = !layout.isVisible('plugins') || layout.isAtMost('lte1200')
+  const hiddenByLayout = !layout.isVisible('plugins')
   const pluginsResize = usePanelResize('plugins')
   const pluginsWidth = layout.getSize('plugins')
   const entries = slots.sidebar
@@ -303,7 +304,9 @@ export default function EditorLayout() {
   const { files, activeFile, openFile, setActiveFile, markClean, updateFileContent } = useEditor()
   const { localMode, readFile: localReadFile, readFileBase64: localReadFileBase64, writeFile: localWriteFile, rootPath: localRootPath, gitInfo, openFolder: localOpenFolder, setRootPath: localSetRootPath, commitFiles: localCommitFiles } = local
   const { activeView, setView, direction } = useView()
+  const { mode, spec: modeSpec, setMode } = useAppMode()
   const layout = useLayout()
+  const visibleViews = modeSpec.visibleViews
   const isMobile = layout.isAtMost('lte768')
   const sidebarCollapsed = !layout.isVisible('sidebar')
   const terminalVisible = layout.isVisible('terminal')
@@ -364,7 +367,7 @@ export default function EditorLayout() {
 
   // ─── Sliding tab indicator measurement ─────────────────
   useLayoutEffect(() => {
-    const idx = VISIBLE_VIEWS.indexOf(activeView)
+    const idx = visibleViews.indexOf(activeView)
     const tab = tabRefs.current[idx]
     const container = tabContainerRef.current
     if (tab && container) {
@@ -372,7 +375,7 @@ export default function EditorLayout() {
       const tRect = tab.getBoundingClientRect()
       setIndicatorStyle({ left: tRect.left - cRect.left, width: tRect.width })
     }
-  }, [activeView, sidebarCollapsed])
+  }, [activeView, sidebarCollapsed, visibleViews])
 
   // ─── Connection state transitions ─────────────────────
   useEffect(() => {
@@ -428,19 +431,20 @@ export default function EditorLayout() {
         setQuickOpenVisible(false); setGlobalSearchVisible(false)
         setCommandPaletteVisible(false); setShortcutsVisible(false)
       }
-      // ⌘1-6 — View switching
-      if (meta && e.key >= '1' && e.key <= '6') {
+      // ⌘1..N — View switching (mode-aware)
+      if (meta && e.key >= '1' && e.key <= String(visibleViews.length)) {
         e.preventDefault()
-        const views: ViewId[] = ['editor', 'preview', 'grid', 'git', 'prs', 'settings']
-        const target = views[parseInt(e.key) - 1]
-        setView(target)
-        setFlashedTab(target)
-        setTimeout(() => setFlashedTab(null), 400)
+        const target = visibleViews[parseInt(e.key) - 1]
+        if (target) {
+          setView(target)
+          setFlashedTab(target)
+          setTimeout(() => setFlashedTab(null), 400)
+        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setView])
+  }, [setView, visibleViews, layout])
 
   // ─── Event listeners ───────────────────────────────────
   useEffect(() => {
@@ -667,6 +671,7 @@ export default function EditorLayout() {
       )}
 
       {/* Workspace Sidebar */}
+      {mode !== 'tui' && (
       <WorkspaceSidebar
         activeId={activeChatId ?? ''}
         onSelect={(id) => { setActiveChatId(id); (window as any).__pendingSwitchChat = id; setView('editor'); layout.show('chat'); setTimeout(() => window.dispatchEvent(new CustomEvent('switch-chat', { detail: { id } })), 80) }}
@@ -676,6 +681,7 @@ export default function EditorLayout() {
         onToggle={() => layout.toggle('sidebar')}
         repoName={repo?.fullName || localRootPath?.split('/').pop()}
       />
+      )}
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl overflow-hidden border border-[var(--border)]">
@@ -683,7 +689,7 @@ export default function EditorLayout() {
         <div data-tauri-drag-region className={`flex items-center h-12 bg-[var(--bg-elevated)] shrink-0 px-3 gap-1.5 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}>
           {/* Folder-style tab strip */}
           <div ref={tabContainerRef} className="folder-tab-strip tauri-no-drag">
-            {VISIBLE_VIEWS.map((v, i) => {
+            {visibleViews.map((v, i) => {
               const isActive = activeView === v
               return (
                 <motion.button
@@ -720,24 +726,16 @@ export default function EditorLayout() {
 
           <div className="flex-1 tauri-drag-region" data-tauri-drag-region />
 
-          {/* Editor layout controls */}
-          <button
-            onClick={() => {
-              if (activeView !== 'editor') setView('editor')
-              layout.toggle('tree')
-            }}
-            className="tauri-no-drag p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
-            title="Files (⌘B)"
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as AppMode)}
+            className="tauri-no-drag h-8 rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 text-[12px] text-[var(--text-secondary)] outline-none"
+            title="UI Mode"
           >
-            <Icon icon="lucide:folder" width={18} height={18} />
-          </button>
-          <button
-            onClick={() => layout.toggle('terminal')}
-            className="tauri-no-drag p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
-            title="Terminal (⌘J)"
-          >
-            <Icon icon="lucide:terminal" width={18} height={18} />
-          </button>
+            <option value="classic">Classic</option>
+            <option value="chat">Chat</option>
+            <option value="tui">TUI</option>
+          </select>
 
           {/* Settings */}
           <button onClick={() => setSettingsVisible(true)} className="tauri-no-drag p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors" title="Settings">

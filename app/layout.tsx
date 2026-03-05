@@ -12,6 +12,7 @@ import { PreviewProvider } from '@/context/preview-context'
 import { WorkflowProvider } from '@/context/workflow-context'
 import { GridProvider } from '@/context/grid-context'
 import { LayoutProvider } from '@/context/layout-context'
+import { AppModeProvider } from '@/context/app-mode-context'
 
 export const metadata: Metadata = {
   title: 'Knot Code',
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <LocalProvider>
                       <ViewProvider>
                         <LayoutProvider>
+                        <AppModeProvider>
                         <WorkflowProvider>
                         <GridProvider>
                         <PreviewProvider>
@@ -43,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         </PreviewProvider>
                         </GridProvider>
                         </WorkflowProvider>
+                        </AppModeProvider>
                         </LayoutProvider>
                       </ViewProvider>
                     </LocalProvider>

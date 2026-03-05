@@ -225,7 +225,7 @@ export function GitHubAuthBadge() {
                           value={input}
                           onChange={e => setInput(e.target.value)}
                           placeholder="ghp_xxxx or github_pat_xxxx"
-                          className="w-full pl-3 pr-8 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                          className="w-full pl-3 pr-8 py-1.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)] transition-colors"
                           onKeyDown={e => {
                             if (e.key === 'Enter' && input.trim()) {
                               setManualToken(input.trim())
@@ -253,7 +253,7 @@ export function GitHubAuthBadge() {
                           }
                         }}
                         disabled={!input.trim()}
-                        className="w-full py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
                           backgroundColor: 'var(--brand)',
                           color: 'var(--brand-contrast, #fff)',

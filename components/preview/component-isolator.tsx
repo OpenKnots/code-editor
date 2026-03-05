@@ -47,7 +47,7 @@ function PropField({ name, value, onChange }: { name: string; value: string; onC
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="flex-1 min-w-0 px-2 py-1 rounded-md text-[11px] font-mono bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand)] placeholder:text-[var(--text-disabled)]"
+        className="flex-1 min-w-0 px-2 py-1 rounded-md text-[11px] font-mono bg-[var(--bg)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] placeholder:text-[var(--text-disabled)]"
         placeholder="value"
         spellCheck={false}
       />
@@ -537,13 +537,13 @@ export function ComponentIsolator() {
                 onChange={e => setNewPropName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addProp()}
                 placeholder="propName"
-                className="flex-1 min-w-0 px-2 py-1 rounded-md text-[10px] font-mono bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand)] placeholder:text-[var(--text-disabled)]"
+                className="flex-1 min-w-0 px-2 py-1 rounded-md text-[10px] font-mono bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] placeholder:text-[var(--text-disabled)]"
                 spellCheck={false}
               />
               <button
                 onClick={addProp}
                 disabled={!newPropName.trim()}
-                className="p-1 rounded-md bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1 rounded-md bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Icon icon="lucide:plus" width={11} height={11} />
               </button>

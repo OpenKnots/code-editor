@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Icon } from '@iconify/react'
-import { useTheme, THEME_PRESETS, type ThemeMode } from '@/context/theme-context'
+import { useTheme, THEME_PRESETS, RADIUS_PRESETS, type ThemeMode } from '@/context/theme-context'
 import dynamic from 'next/dynamic'
 const ThemeStudio = dynamic(() => import('@/components/theme-studio').then(m => m.ThemeStudio), { ssr: false })
 
@@ -13,7 +13,7 @@ const MODES: { id: ThemeMode; icon: string; label: string }[] = [
 ]
 
 export function ThemeSwitcher() {
-  const { themeId, mode, setThemeId, setMode } = useTheme()
+  const { themeId, mode, setThemeId, setMode, borderRadius, setBorderRadius } = useTheme()
   const [open, setOpen] = useState(false)
   const [studioOpen, setStudioOpen] = useState(false)
   const [previewId, setPreviewId] = useState<string | null>(null)
@@ -114,6 +114,40 @@ export function ThemeSwitcher() {
               })}
             </div>
           ))}
+
+          <div className="h-px bg-[var(--border)] mx-2 my-1" />
+
+          {/* Radius control */}
+          <div className="px-2.5 pt-1.5 pb-0.5">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Radius</span>
+          </div>
+          <div className="flex items-center gap-1.5 mx-2.5 mb-1">
+            <input
+              type="range"
+              min={0}
+              max={24}
+              step={1}
+              value={borderRadius}
+              onChange={e => setBorderRadius(Number(e.target.value))}
+              className="flex-1 h-1 appearance-none rounded-full bg-[var(--bg-subtle)] accent-[var(--brand)] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:cursor-pointer"
+            />
+            <span className="text-[9px] font-mono text-[var(--text-tertiary)] w-6 text-right tabular-nums">{borderRadius}px</span>
+          </div>
+          <div className="flex gap-0.5 mx-2.5 mb-1.5">
+            {RADIUS_PRESETS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setBorderRadius(p.value)}
+                className={`flex-1 py-1 rounded text-[8px] font-medium transition-all cursor-pointer ${
+                  borderRadius === p.value
+                    ? 'bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--brand)]'
+                    : 'text-[var(--text-disabled)] hover:text-[var(--text-tertiary)]'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
           <div className="h-px bg-[var(--border)] mx-2 my-1" />
 

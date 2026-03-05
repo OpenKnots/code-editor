@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Icon } from '@iconify/react'
-import { useTheme, THEME_PRESETS } from '@/context/theme-context'
+import { useTheme, THEME_PRESETS, RADIUS_PRESETS } from '@/context/theme-context'
 import { usePlugins } from '@/context/plugin-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
 
@@ -14,7 +14,7 @@ interface Props {
 type SettingsTab = 'general' | 'editor' | 'agent' | 'keybindings' | 'plugins'
 
 export function SettingsPanel({ open, onClose }: Props) {
-  const { themeId, setThemeId, mode, setMode } = useTheme()
+  const { themeId, setThemeId, mode, setMode, borderRadius, setBorderRadius } = useTheme()
   const { slots } = usePlugins()
   const { token: ghToken, source: ghSource, authenticated: ghAuthenticated, setManualToken: setGhToken, clearToken: clearGhToken, oauthAvailable, oauthStep, startOAuth, cancelOAuth, loading: ghLoading } = useGitHubAuth()
   const [ghTokenDraft, setGhTokenDraft] = useState('')
@@ -145,6 +145,43 @@ export function SettingsPanel({ open, onClose }: Props) {
                       {m === 'dark' ? 'Dark' : 'Light'}
                     </button>
                   ))}
+                </div>
+              </Section>
+
+              {/* Border Radius */}
+              <Section title="Border Radius">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0}
+                      max={24}
+                      step={1}
+                      value={borderRadius}
+                      onChange={e => setBorderRadius(Number(e.target.value))}
+                      className="flex-1 h-1 appearance-none rounded-full bg-[var(--bg-tertiary)] accent-[var(--brand)] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
+                    />
+                    <span className="text-[10px] font-mono text-[var(--text-tertiary)] w-8 text-right tabular-nums">{borderRadius}px</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {RADIUS_PRESETS.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => setBorderRadius(p.value)}
+                        className={`flex-1 flex flex-col items-center gap-1 py-1.5 rounded-lg text-[9px] font-medium transition-all cursor-pointer border ${
+                          borderRadius === p.value
+                            ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]'
+                            : 'border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        <div
+                          className="w-5 h-5 border-2 border-current"
+                          style={{ borderRadius: `${Math.min(p.value, 10)}px` }}
+                        />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </Section>
 

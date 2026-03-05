@@ -182,12 +182,12 @@ export function AiCard({ card }: Props) {
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
             placeholder={status === 'connected' ? 'Type a message...' : 'Connect gateway to chat'}
             disabled={status !== 'connected'}
-            className="flex-1 text-[12px] bg-[var(--bg)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 outline-none focus:border-[var(--brand)] placeholder:text-[var(--text-disabled)] disabled:opacity-50 transition-colors"
+            className="flex-1 text-[12px] bg-[var(--bg)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 outline-none focus:border-[var(--border-focus)] placeholder:text-[var(--text-disabled)] disabled:opacity-50 transition-colors"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || streaming || status !== 'connected'}
-            className="p-1.5 rounded-lg bg-[var(--brand)] text-[var(--brand-contrast)] disabled:opacity-30 hover:brightness-110 transition-all cursor-pointer disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg bg-[var(--brand)] text-[var(--brand-contrast)] disabled:opacity-50 hover:brightness-110 transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             <Icon icon={streaming ? 'lucide:loader-2' : 'lucide:arrow-up'} width={14} height={14} className={streaming ? 'animate-spin' : ''} />
           </button>
