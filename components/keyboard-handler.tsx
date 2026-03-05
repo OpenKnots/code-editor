@@ -65,8 +65,12 @@ export function useKeyboardShortcuts({
       // ⌘L — Open side chat panel and focus input
       if (meta && e.key === 'l' && !e.shiftKey) {
         e.preventDefault()
-        if (activeViewRef.current !== 'editor') setView('editor')
-        emit('open-side-chat')
+        if (mode === 'chat') {
+          if (activeViewRef.current !== 'chat') setView('chat')
+        } else {
+          if (activeViewRef.current !== 'editor') setView('editor')
+          emit('open-side-chat')
+        }
         requestAnimationFrame(() => emit('focus-agent-input'))
       }
       // ⌘⌥1-4 — Focus key regions (explorer/editor/chat/terminal)
@@ -111,6 +115,7 @@ export function useKeyboardShortcuts({
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [
+    mode,
     setView,
     visibleViews,
     layout,

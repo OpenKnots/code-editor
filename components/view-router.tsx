@@ -22,8 +22,13 @@ const PreviewPanel = dynamic(
   () => import('@/components/preview/preview-panel').then((m) => ({ default: m.PreviewPanel })),
   { ssr: false },
 )
+const AgentPanel = dynamic(
+  () => import('@/components/agent-panel').then((m) => ({ default: m.AgentPanel })),
+  { ssr: false },
+)
 
 const VIEW_ICONS: Record<string, { label: string }> = {
+  chat: { label: 'Chat' },
   editor: { label: 'Editor' },
   preview: { label: 'Preview' },
   git: { label: 'Git' },
@@ -66,6 +71,7 @@ export function ViewRouter() {
             key={activeView}
             fallbackLabel={`${VIEW_ICONS[activeView]?.label ?? activeView} failed to render`}
           >
+            {activeView === 'chat' && <AgentPanel />}
             {activeView === 'editor' && <EditorView />}
             {activeView === 'preview' && <PreviewPanel />}
             {activeView === 'git' && <GitView />}

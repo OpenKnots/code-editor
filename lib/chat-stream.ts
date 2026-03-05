@@ -33,9 +33,21 @@ interface StreamCallbacks {
   getFile: (path: string) => { content: string } | undefined
 }
 
-function extractText(message: Record<string, unknown> | undefined): string {
+function debugLog(message: string, meta?: Record<string, unknown>) {
+  if (typeof window === 'undefined') return
+  if (meta) {
+    console.debug('[knot-chat]', message, meta)
+  } else {
+    console.debug('[knot-chat]', message)
+  }
+}
+
+function extractText(message: unknown): string {
   if (!message) return ''
-  const content = message.content as string | Array<Record<string, unknown>> | undefined
+  if (typeof message === 'string') return message
+  if (typeof message !== 'object') return ''
+  const msg = message as Record<string, unknown>
+  const content = msg.content as string | Array<Record<string, unknown>> | undefined
   if (typeof content === 'string') return content
   if (Array.isArray(content)) {
     return content
@@ -43,6 +55,18 @@ function extractText(message: Record<string, unknown> | undefined): string {
       .map((b) => (b.text as string) || '')
       .join('')
   }
+  if (typeof msg.text === 'string') return msg.text
+  if (typeof msg.output_text === 'string') return msg.output_text
+  return ''
+}
+
+function extractEventText(payload: Record<string, unknown>): string {
+  const fromMessage = extractText(payload.message)
+  if (fromMessage) return fromMessage
+  if (typeof payload.reply === 'string') return payload.reply
+  if (typeof payload.text === 'string') return payload.text
+  if (typeof payload.content === 'string') return payload.content
+  if (typeof payload.delta === 'string') return payload.delta
   return ''
 }
 
@@ -53,16 +77,29 @@ export function handleChatEvent(
 ): void {
   const p = payload as Record<string, unknown>
   const eventState = p.state as string | undefined
-  const idempotencyKey = p.idempotencyKey as string | undefined
-  const eventSessionKey = p.sessionKey as string | undefined
+  const idempotencyKey = (p.idempotencyKey ?? p.idempotency_key ?? p.idemKey) as string | undefined
+  const eventSessionKey = (p.sessionKey ??
+    p.session_key ??
+    (typeof p.session === 'object' && p.session !== null
+      ? (p.session as Record<string, unknown>).key
+      : undefined)) as string | undefined
 
   // Ignore inline-completion traffic
   if (idempotencyKey?.startsWith('completion-')) return
 
   // Match by idempotency key or session key fallback
   const matchesIdem = !!(idempotencyKey && state.sentKeys.has(idempotencyKey))
-  const matchesSession = !idempotencyKey && eventSessionKey === state.sessionKey && state.isSending
-  if (!matchesIdem && !matchesSession) return
+  const matchesSession = !idempotencyKey && eventSessionKey === state.sessionKey
+  if (!matchesIdem && (!matchesSession || !state.isSending)) {
+    debugLog('Ignoring unrelated chat event', {
+      eventState,
+      idempotencyKey,
+      eventSessionKey,
+      sessionKey: state.sessionKey,
+      isSending: state.isSending,
+    })
+    return
+  }
 
   // Tool use events → thinking trail
   if (eventState === 'tool_use' || eventState === 'tool_start') {
@@ -93,11 +130,21 @@ export function handleChatEvent(
   }
 
   if (eventState === 'delta') {
-    const message = p.message as Record<string, unknown> | undefined
-    const text = extractText(message)
+    const text = extractEventText(p)
     if (text) {
-      callbacks.setStreamBuffer(text)
+      callbacks.setStreamBuffer((prev) => {
+        if (!prev) return text
+        // Some gateways stream cumulative buffers; others stream chunks.
+        if (text.startsWith(prev)) return text
+        if (prev.endsWith(text)) return prev
+        return prev + text
+      })
       callbacks.setIsStreaming(true)
+      debugLog('Streaming delta received', {
+        length: text.length,
+        idempotencyKey,
+        eventSessionKey,
+      })
       // Extract thinking trail from streamed content
       const trailPatterns = [
         {
@@ -129,8 +176,12 @@ export function handleChatEvent(
     }
   } else if (eventState === 'final') {
     callbacks.setThinkingTrail([])
-    const message = p.message as Record<string, unknown> | undefined
-    const finalText = extractText(message)
+    const finalText = extractEventText(p)
+    debugLog('Final chat event received', {
+      length: finalText.length,
+      idempotencyKey,
+      eventSessionKey,
+    })
 
     if (idempotencyKey) {
       state.sentKeys.delete(idempotencyKey)
@@ -173,6 +224,11 @@ export function handleChatEvent(
           },
         ])
         emit('agent-reply')
+      } else {
+        debugLog('Final chat event had no assistant text', {
+          idempotencyKey,
+          hadBuffer: Boolean(prev),
+        })
       }
       return ''
     })
@@ -181,6 +237,11 @@ export function handleChatEvent(
   } else if (eventState === 'error') {
     callbacks.setThinkingTrail([])
     const errorMsg = (p.errorMessage as string) || 'Unknown error'
+    debugLog('Chat stream error event', {
+      idempotencyKey,
+      eventSessionKey,
+      error: errorMsg,
+    })
     if (idempotencyKey) state.sentKeys.delete(idempotencyKey)
     callbacks.setStreamBuffer('')
     callbacks.setMessages((msgs) => [
@@ -197,6 +258,10 @@ export function handleChatEvent(
     callbacks.setSending(false)
   } else if (eventState === 'aborted') {
     callbacks.setThinkingTrail([])
+    debugLog('Chat stream aborted event', {
+      idempotencyKey,
+      eventSessionKey,
+    })
     if (idempotencyKey) state.sentKeys.delete(idempotencyKey)
     callbacks.setStreamBuffer((prev) => {
       if (prev) {

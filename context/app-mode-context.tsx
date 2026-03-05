@@ -1,6 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState, useCallback, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react'
 import { useLayout, type PanelId } from '@/context/layout-context'
 import { useView } from '@/context/view-context'
 import { APP_MODES, MODE_REGISTRY, type AppMode, type ModeSpec } from '@/lib/mode-registry'
@@ -17,10 +26,15 @@ const STORAGE_KEY = 'ce:app-mode'
 const AppModeContext = createContext<AppModeContextValue | null>(null)
 
 export function AppModeProvider({ children }: { children: ReactNode }) {
-  const layout = useLayout()
+  const { dispatch, setEditorCollapsed } = useLayout()
   const { activeView, setView } = useView()
+  const activeViewRef = useRef(activeView)
 
   const [mode, setModeState] = useState<AppMode>('classic')
+
+  useEffect(() => {
+    activeViewRef.current = activeView
+  }, [activeView])
 
   // Hydrate from localStorage after mount to avoid SSR mismatch
   useEffect(() => {
@@ -32,7 +46,9 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback((next: AppMode) => {
     setModeState(next)
-    try { localStorage.setItem(STORAGE_KEY, next) } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next)
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -41,29 +57,34 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     // Apply mode panel defaults
     for (const [panel, visible] of Object.entries(spec.panelDefaults)) {
       if (visible === undefined) continue
-      layout.dispatch({ type: 'SET_VISIBLE', panel: panel as PanelId, visible })
+      dispatch({ type: 'SET_VISIBLE', panel: panel as PanelId, visible })
     }
 
     // Ensure active view is valid in this mode
-    if (!spec.visibleViews.includes(activeView)) {
+    if (!spec.visibleViews.includes(activeViewRef.current)) {
       setView(spec.defaultView)
     }
 
-    // Auto-expand editor in classic mode
-    if (spec.autoExpandEditor) {
-      layout.setEditorCollapsed(false)
+    // Chat mode is a full-size chat-first experience.
+    if (mode === 'chat') {
+      setEditorCollapsed(true)
+    } else {
+      setEditorCollapsed(false)
     }
 
     // Apply mode accent as CSS variable
     document.documentElement.style.setProperty('--mode-accent', spec.accent)
-  }, [mode, layout, activeView, setView])
+  }, [mode, dispatch, setEditorCollapsed, setView])
 
-  const value = useMemo<AppModeContextValue>(() => ({
-    mode,
-    spec: MODE_REGISTRY[mode],
-    setMode,
-    availableModes: APP_MODES,
-  }), [mode, setMode])
+  const value = useMemo<AppModeContextValue>(
+    () => ({
+      mode,
+      spec: MODE_REGISTRY[mode],
+      setMode,
+      availableModes: APP_MODES,
+    }),
+    [mode, setMode],
+  )
 
   return <AppModeContext.Provider value={value}>{children}</AppModeContext.Provider>
 }

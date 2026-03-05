@@ -74,6 +74,7 @@ const PluginSlotRenderer = dynamic(
 )
 
 const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
+  chat: { icon: 'lucide:message-square', label: 'Chat' },
   editor: { icon: 'lucide:code-2', label: 'Editor' },
   preview: { icon: 'lucide:eye', label: 'Preview' },
   diff: { icon: 'lucide:git-compare', label: 'Diff' },
@@ -384,7 +385,7 @@ export default function EditorLayout() {
       )}
 
       {/* Workspace Sidebar */}
-      {mode !== 'tui' && (
+      {mode !== 'tui' && (mode !== 'chat' || layout.isVisible('sidebar')) && (
         <WorkspaceSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => layout.toggle('sidebar')}

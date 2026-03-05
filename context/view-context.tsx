@@ -1,10 +1,19 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from 'react'
 
 export type ViewId = 'chat' | 'editor' | 'preview' | 'diff' | 'git' | 'settings'
 
-const VIEW_ORDER: ViewId[] = ['editor', 'preview', 'git', 'settings']
+const VIEW_ORDER: ViewId[] = ['chat', 'editor', 'preview', 'git', 'settings']
 
 interface ViewState {
   activeView: ViewId
@@ -23,7 +32,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
 
   const setView = useCallback((view: ViewId) => {
-    setActiveView(prev => {
+    setActiveView((prev) => {
       setPreviousView(prev)
       const prevIdx = VIEW_ORDER.indexOf(prev)
       const nextIdx = VIEW_ORDER.indexOf(view)
@@ -62,15 +71,18 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('file-select', handler)
   }, [setView])
 
-  const value = useMemo<ViewState>(() => ({
-    activeView, previousView, setView, goBack, direction,
-  }), [activeView, previousView, setView, goBack, direction])
-
-  return (
-    <ViewContext.Provider value={value}>
-      {children}
-    </ViewContext.Provider>
+  const value = useMemo<ViewState>(
+    () => ({
+      activeView,
+      previousView,
+      setView,
+      goBack,
+      direction,
+    }),
+    [activeView, previousView, setView, goBack, direction],
   )
+
+  return <ViewContext.Provider value={value}>{children}</ViewContext.Provider>
 }
 
 export function useView() {
