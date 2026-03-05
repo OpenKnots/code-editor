@@ -10,6 +10,7 @@ import { useAppMode } from '@/context/app-mode-context'
 import { PluginSlotRenderer } from '@/context/plugin-context'
 import { BranchPicker } from '@/components/branch-picker'
 import { FolderIndicator } from '@/components/source-switcher'
+import { formatShortcut } from '@/lib/platform'
 
 // ─── Activity Pulse Ring ─────────────────────────────
 function ActivityPulseRing({ status, agentActive }: { status: string; agentActive: boolean }) {
@@ -124,7 +125,7 @@ export function StatusBar({ agentActive }: StatusBarProps) {
               ? 'text-[var(--brand)]'
               : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
           }`}
-          title={`${terminalVisible ? 'Hide' : 'Show'} Terminal (⌘J)`}
+          title={`${terminalVisible ? 'Hide' : 'Show'} Terminal (${formatShortcut('meta+J')})`}
         >
           <Icon icon="lucide:terminal" width={13} height={13} />
         </button>

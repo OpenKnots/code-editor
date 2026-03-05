@@ -14,6 +14,7 @@ import { useAppMode } from '@/context/app-mode-context'
 import { WorkspaceSidebar } from '@/components/workspace-sidebar'
 import { FloatingPanel } from '@/components/floating-panel'
 import { isTauri } from '@/lib/tauri'
+import { formatShortcut } from '@/lib/platform'
 import {
   fetchFileContentsByName as fetchFileContents,
   commitFilesByName as commitFiles,
@@ -459,7 +460,7 @@ export default function EditorLayout() {
                         '--color': isActive ? 'var(--text-primary)' : 'var(--text-disabled)',
                       } as React.CSSProperties
                     }
-                    title={`${VIEW_ICONS[v].label} (\u2318${i + 1})`}
+                    title={`${VIEW_ICONS[v].label} (${formatShortcut(`meta+${i + 1}`)})`}
                     whileTap={{ scale: 0.95 }}
                     layout
                   >
@@ -536,7 +537,7 @@ export default function EditorLayout() {
                     ? 'bg-[var(--bg)] text-[var(--text-primary)] shadow-[0_2px_6px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.08)_inset]'
                     : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] hover:scale-105'
                 }`}
-                title={`${m.label} mode (⌘⇧${['classic', 'chat', 'tui'].indexOf(m.id) + 1})`}
+                title={`${m.label} mode (${formatShortcut(`meta+shift+${['classic', 'chat', 'tui'].indexOf(m.id) + 1}`)})`}
               >
                 <Icon icon={m.icon} width={15} height={15} />
               </button>

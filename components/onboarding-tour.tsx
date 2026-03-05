@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '@iconify/react'
+import { formatShortcut } from '@/lib/platform'
 
 export const ONBOARDING_KEY = 'ce:onboarding:v1'
 
@@ -29,12 +30,12 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
       },
       {
         title: 'Keyboard-first navigation',
-        body: 'Use ⌘P to open files, ⌘⇧P for the command palette, and ⌘⌥1–4 to jump focus (Files / Editor / Chat / Terminal).',
+        body: `Use ${formatShortcut('meta+P')} to open files, ${formatShortcut('meta+shift+P')} for the command palette, and ${formatShortcut('meta+alt+1')}–4 to jump focus (Files / Editor / Chat / Terminal).`,
         icon: 'lucide:keyboard',
       },
       {
         title: 'Panels & layout',
-        body: 'Toggle Explorer with ⌘B, Chat with ⌘I, Terminal with ⌘J (or ⌘`). On smaller screens, panels open as drawers to avoid clipping.',
+        body: `Toggle Explorer with ${formatShortcut('meta+B')}, Chat with ${formatShortcut('meta+I')}, Terminal with ${formatShortcut('meta+J')} (or ${formatShortcut('meta+`')}). On smaller screens, panels open as drawers to avoid clipping.`,
         icon: 'lucide:layout-panel-left',
       },
       {

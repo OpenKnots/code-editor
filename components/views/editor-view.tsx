@@ -14,6 +14,7 @@ import { FloatingPanel } from '@/components/floating-panel'
 import { KnotLogo } from '@/components/knot-logo'
 import { KnotBackground } from '@/components/knot-background'
 import { isTauri } from '@/lib/tauri'
+import { formatShortcut } from '@/lib/platform'
 import { emit } from '@/lib/events'
 
 const FileExplorer = dynamic(
@@ -32,15 +33,15 @@ const AgentPanel = dynamic(
 const PANEL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
 
 const QUICK_ACTIONS = [
-  { icon: 'lucide:file-search', label: 'File', shortcut: '\u2318P', event: 'quick-open' },
-  { icon: 'lucide:folder', label: 'Browse', shortcut: '\u2318B', event: 'toggle-tree' },
+  { icon: 'lucide:file-search', label: 'File', combo: 'meta+P', event: 'quick-open' },
+  { icon: 'lucide:folder', label: 'Browse', combo: 'meta+B', event: 'toggle-tree' },
   {
     icon: 'lucide:message-square',
     label: 'Chat',
-    shortcut: '\u2318L',
+    combo: 'meta+L',
     event: 'open-side-chat',
   },
-  { icon: 'lucide:terminal', label: 'Terminal', shortcut: '\u2318J', event: 'toggle-terminal' },
+  { icon: 'lucide:terminal', label: 'Terminal', combo: 'meta+J', event: 'toggle-terminal' },
 ]
 
 export function EditorView() {
@@ -150,7 +151,7 @@ export function EditorView() {
           <button
             onClick={() => layout.setEditorCollapsed(false)}
             className="mt-3 p-2.5 rounded-xl hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-            title="Expand editor (⌘E)"
+            title={`Expand editor (${formatShortcut('meta+E')})`}
           >
             <Icon icon="lucide:code-2" width={20} height={20} />
           </button>
@@ -160,7 +161,7 @@ export function EditorView() {
               layout.show('tree')
             }}
             className="mt-1.5 p-2.5 rounded-xl hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-            title="Open explorer (⌘B)"
+            title={`Open explorer (${formatShortcut('meta+B')})`}
           >
             <Icon icon="lucide:folder" width={18} height={18} />
           </button>
@@ -196,7 +197,7 @@ export function EditorView() {
                     <button
                       onClick={() => layout.hide('tree')}
                       className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer"
-                      title="Hide (⌘B)"
+                      title={`Hide (${formatShortcut('meta+B')})`}
                     >
                       <Icon icon="lucide:panel-left-close" width={15} height={15} />
                     </button>
@@ -227,7 +228,7 @@ export function EditorView() {
               <button
                 onClick={() => layout.show('tree')}
                 className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-5 h-12 flex items-center justify-center bg-[var(--bg-elevated)] border border-l-0 border-[var(--border)] rounded-r-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer"
-                title="Show explorer (⌘B)"
+                title={`Show explorer (${formatShortcut('meta+B')})`}
               >
                 <Icon icon="lucide:chevron-right" width={14} height={14} />
               </button>
@@ -328,7 +329,7 @@ export function EditorView() {
                             {item.label}
                           </span>
                           <kbd className="text-[10px] px-2 py-1 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text-disabled)] shrink-0 font-mono group-hover:border-[var(--text-disabled)] transition-colors duration-200">
-                            {item.shortcut}
+                            {formatShortcut(item.combo)}
                           </kbd>
                         </motion.button>
                       ),
@@ -350,7 +351,7 @@ export function EditorView() {
                     />
                     Press{' '}
                     <kbd className="mx-0.5 px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)] text-[10px] font-mono">
-                      ⌘P
+                      {formatShortcut('meta+P')}
                     </kbd>{' '}
                     to quickly find any file
                   </motion.p>
@@ -372,7 +373,7 @@ export function EditorView() {
               <button
                 onClick={() => layout.toggle('chat')}
                 className={`relative h-7 px-3 rounded-lg text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors ${chatVisible ? 'bg-[color-mix(in_srgb,var(--brand)_14%,transparent)] text-[var(--brand)]' : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]'}`}
-                title="Chat (⌘I)"
+                title={`Chat (${formatShortcut('meta+I')})`}
               >
                 <Icon icon="lucide:message-square" width={14} height={14} />
                 {!isNarrow && <span>Agent</span>}
@@ -428,7 +429,7 @@ export function EditorView() {
                 <button
                   onClick={() => layout.hide('chat')}
                   className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer"
-                  title="Hide (⌘I)"
+                  title={`Hide (${formatShortcut('meta+I')})`}
                 >
                   <Icon icon="lucide:panel-right-close" width={14} height={14} />
                 </button>

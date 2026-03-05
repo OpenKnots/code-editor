@@ -14,6 +14,7 @@ import { useEditor } from '@/context/editor-context'
 import { useView } from '@/context/view-context'
 import { useLocal } from '@/context/local-context'
 import { isTauri, tauriInvoke } from '@/lib/tauri'
+import { formatShortcut } from '@/lib/platform'
 import { emit } from '@/lib/events'
 
 /* ── Script metadata ─────────────────────────────────────────── */
@@ -705,7 +706,7 @@ function SingleDeviceZoomBar({
         <button
           onClick={fitToScreen}
           className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
-          title="Fit to screen (⌘1)"
+          title={`Fit to screen (${formatShortcut('meta+1')})`}
         >
           <Icon icon="lucide:scan" width={12} height={12} />
         </button>
@@ -717,7 +718,7 @@ function SingleDeviceZoomBar({
           }}
           className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={zoom <= ZOOM_MIN}
-          title="Zoom out (⌘−)"
+          title={`Zoom out (${formatShortcut('meta+-')})`}
         >
           <Icon icon="lucide:minus" width={12} height={12} />
         </button>
@@ -753,7 +754,7 @@ function SingleDeviceZoomBar({
           }}
           className="p-0.5 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={zoom >= ZOOM_MAX}
-          title="Zoom in (⌘+)"
+          title={`Zoom in (${formatShortcut('meta+=')})`}
         >
           <Icon icon="lucide:plus" width={12} height={12} />
         </button>
@@ -814,7 +815,7 @@ function SingleDeviceZoomBar({
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
                 >
                   <Icon icon="lucide:scan" width={10} height={10} />
-                  Fit to screen (⌘1)
+                  Fit to screen ({formatShortcut('meta+1')})
                 </button>
               </div>
             </>

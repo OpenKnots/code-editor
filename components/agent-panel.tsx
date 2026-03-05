@@ -26,6 +26,7 @@ import { MessageList } from '@/components/chat/message-list'
 import { ChatInputBar } from '@/components/chat/chat-input-bar'
 import { emit, on } from '@/lib/events'
 import { copyToClipboard } from '@/lib/clipboard'
+import { formatShortcut } from '@/lib/platform'
 import type { PlanStep } from '@/components/plan-view'
 import { navigateToLine } from '@/lib/line-links'
 import { useChatAppearance, FONT_OPTIONS } from '@/context/chat-appearance-context'
@@ -1290,7 +1291,7 @@ export function AgentPanel() {
         id: crypto.randomUUID(),
         role: 'user',
         type: 'text',
-        content: `⌘K: ${instruction}`,
+        content: `${formatShortcut('meta+K')}: ${instruction}`,
         timestamp: Date.now(),
       })
 
@@ -1649,7 +1650,7 @@ export function AgentPanel() {
               <button
                 onClick={decreaseFontSize}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                title="Decrease text size (⌘-)"
+                title={`Decrease text size (${formatShortcut('meta+-')})`}
               >
                 <Icon icon="lucide:minus" width={12} height={12} />
               </button>
@@ -1659,7 +1660,7 @@ export function AgentPanel() {
               <button
                 onClick={increaseFontSize}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                title="Increase text size (⌘+)"
+                title={`Increase text size (${formatShortcut('meta+=')})`}
               >
                 <Icon icon="lucide:plus" width={12} height={12} />
               </button>
