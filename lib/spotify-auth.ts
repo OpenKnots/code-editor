@@ -75,14 +75,17 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 function getRedirectUri(): string {
+  // Spotify requires http://127.0.0.1 for loopback redirects (rejects http://localhost)
+  // Always use 127.0.0.1 with the current port for Tauri/local builds
   const origin = window.location.origin
-  // In production Tauri, app is served via localhost plugin on http://localhost:3080
-  // Use the actual origin so the redirect URI matches what Spotify redirects back to
-  if (origin.startsWith('tauri://')) {
-    // Fallback if localhost plugin isn't active (shouldn't happen)
-    return 'http://localhost:3080/'
+  if (
+    origin.startsWith('tauri://') ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1')
+  ) {
+    const port = window.location.port || '3080'
+    return `http://127.0.0.1:${port}/`
   }
-  // Use origin directly — works for localhost:3080 (Tauri prod), localhost:3000 (dev), or deployed URL
   return origin + '/'
 }
 
