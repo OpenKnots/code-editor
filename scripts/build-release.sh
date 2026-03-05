@@ -6,8 +6,7 @@
 # Usage:
 #   ./scripts/build-release.sh web              # Production build (web)
 #   ./scripts/build-release.sh web --serve      # Build + serve locally
-#   ./scripts/build-release.sh desktop          # Production build (macOS DMG)
-#   ./scripts/build-release.sh desktop --universal  # Universal binary (arm64 + x64)
+#   ./scripts/build-release.sh desktop          # Production build (macOS aarch64 DMG)
 #   ./scripts/build-release.sh release 1.0.0    # Version bump + tag
 #   ./scripts/build-release.sh release 1.0.0 --push  # Bump + tag + push (triggers CI)
 #   ./scripts/build-release.sh verify           # Pre-release verification
@@ -175,6 +174,10 @@ build_web() {
 build_desktop() {
   echo -e "\n${BOLD}🖥  Knot Code v${VERSION} — Desktop Production Build${NC}\n"
 
+  if echo "$@" | grep -q "\-\-universal"; then
+    err "--universal is no longer supported. DMG builds are aarch64-only."
+  fi
+
   # Check Rust
   if ! command -v rustc &>/dev/null; then
     err "Rust not found. Install from https://rustup.rs"
@@ -187,20 +190,12 @@ build_desktop() {
   log "Cleaning previous build…"
   rm -rf .next out
 
-  UNIVERSAL=""
-  if echo "$@" | grep -q "\-\-universal"; then
-    UNIVERSAL="--target universal-apple-darwin"
-    log "Building universal binary (arm64 + x86_64)…"
-
-    # Ensure both targets are installed
-    rustup target add aarch64-apple-darwin x86_64-apple-darwin 2>/dev/null || true
-  else
-    log "Building native binary…"
-  fi
+  log "Building aarch64 binary…"
+  rustup target add aarch64-apple-darwin 2>/dev/null || true
 
   echo -e "  ${DIM}This may take a few minutes on first build (Rust compilation)${NC}\n"
 
-  pnpm tauri build $UNIVERSAL
+  pnpm tauri build --target aarch64-apple-darwin
 
   # Find the DMG
   echo ""
@@ -269,7 +264,7 @@ case "$TARGET" in
     echo -e "\n${BOLD}Knot Code — Build & Release${NC}\n"
     echo "  Usage:"
     echo "    ./scripts/build-release.sh web [--serve]           Build for web"
-    echo "    ./scripts/build-release.sh desktop [--universal]   Build macOS DMG"
+    echo "    ./scripts/build-release.sh desktop                 Build macOS aarch64 DMG"
     echo "    ./scripts/build-release.sh release <ver> [--push]  Version + tag + release"
     echo "    ./scripts/build-release.sh verify                  Pre-release checks"
     echo ""

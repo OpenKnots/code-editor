@@ -14,6 +14,10 @@ const GitView = dynamic(
   () => import('@/components/views/git-view').then((m) => ({ default: m.GitView })),
   { ssr: false },
 )
+const SkillsView = dynamic(
+  () => import('@/components/views/skills-view').then((m) => ({ default: m.SkillsView })),
+  { ssr: false },
+)
 const SettingsPanel = dynamic(
   () => import('@/components/settings-panel').then((m) => ({ default: m.SettingsPanel })),
   { ssr: false },
@@ -32,6 +36,7 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   editor: { label: 'Editor' },
   preview: { label: 'Preview' },
   git: { label: 'Git' },
+  skills: { label: 'Skills' },
   settings: { label: 'Settings' },
 }
 
@@ -75,6 +80,7 @@ export function ViewRouter() {
             {activeView === 'editor' && <EditorView />}
             {activeView === 'preview' && <PreviewPanel />}
             {activeView === 'git' && <GitView />}
+            {activeView === 'skills' && <SkillsView />}
             {activeView === 'settings' && (
               <div className="flex-1 flex items-center justify-center">
                 <SettingsPanel open={true} onClose={() => setView('editor')} />

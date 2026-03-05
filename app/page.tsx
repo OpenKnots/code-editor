@@ -89,6 +89,7 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   preview: { icon: 'lucide:eye', label: 'Preview' },
   diff: { icon: 'lucide:git-compare', label: 'Diff' },
   git: { icon: 'lucide:git-branch', label: 'Git' },
+  skills: { icon: 'lucide:sparkles', label: 'Skills' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
 }
 
@@ -143,7 +144,7 @@ export default function EditorLayout() {
   const [shortcutsVisible, setShortcutsVisible] = useState(false)
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [settingsTab, setSettingsTab] = useState<
-    'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | undefined
+    'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | 'skills' | undefined
   >(undefined)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
@@ -792,6 +793,9 @@ export default function EditorLayout() {
               break
             case 'view-settings':
               setView('settings')
+              break
+            case 'view-skills':
+              setView('skills')
               break
             case 'find-files':
               setQuickOpenVisible(true)

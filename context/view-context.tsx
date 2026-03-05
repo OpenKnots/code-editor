@@ -11,9 +11,9 @@ import {
   type ReactNode,
 } from 'react'
 
-export type ViewId = 'chat' | 'editor' | 'preview' | 'diff' | 'git' | 'settings'
+export type ViewId = 'chat' | 'editor' | 'preview' | 'diff' | 'git' | 'skills' | 'settings'
 
-const VIEW_ORDER: ViewId[] = ['chat', 'editor', 'preview', 'git', 'settings']
+const VIEW_ORDER: ViewId[] = ['chat', 'editor', 'preview', 'git', 'skills', 'settings']
 
 interface ViewState {
   activeView: ViewId
@@ -27,7 +27,7 @@ interface ViewState {
 const ViewContext = createContext<ViewState | null>(null)
 
 export function ViewProvider({ children }: { children: ReactNode }) {
-  const [activeView, setActiveView] = useState<ViewId>('editor')
+  const [activeView, setActiveView] = useState<ViewId>('chat')
   const [previousView, setPreviousView] = useState<ViewId | null>(null)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
 

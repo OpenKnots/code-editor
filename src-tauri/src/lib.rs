@@ -177,6 +177,16 @@ pub fn run() {
                     .ok(); // Don't panic if vibrancy fails
             }
 
+            // ── Navigate to localhost server ────────────────────
+            // The localhost plugin serves embedded assets via HTTP on LOCALHOST_PORT.
+            // We navigate the webview there so the origin is http://localhost:PORT
+            // instead of tauri://localhost — required for YouTube embeds and Spotify PKCE.
+            {
+                let window = app.get_webview_window("main").unwrap();
+                let url = format!("http://localhost:{}", LOCALHOST_PORT);
+                let _ = window.navigate(url.parse().unwrap());
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

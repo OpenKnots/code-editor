@@ -15,9 +15,8 @@
 #      → https://appleid.apple.com → Sign-In and Security → App-Specific Passwords
 #
 # Usage:
-#   ./scripts/sign-and-deploy.sh                 # Build, sign, notarize
-#   ./scripts/sign-and-deploy.sh --universal     # Universal binary (arm64 + x86_64)
-#   ./scripts/sign-and-deploy.sh --skip-build    # Sign an existing build
+#   ./scripts/sign-and-deploy.sh                 # Build, sign, notarize (aarch64)
+#   ./scripts/sign-and-deploy.sh --skip-build    # Sign an existing aarch64 build
 #   ./scripts/sign-and-deploy.sh --help          # Show this help
 #
 # Environment (set in .env.signing or export before running):
@@ -53,7 +52,6 @@ show_help() {
   echo "    ./scripts/sign-and-deploy.sh [options]"
   echo ""
   echo "  Options:"
-  echo "    --universal     Build universal binary (arm64 + x86_64)"
   echo "    --skip-build    Skip the Tauri build step (sign existing build)"
   echo "    --skip-notarize Skip notarization (just sign)"
   echo "    --help          Show this help message"
@@ -68,13 +66,12 @@ show_help() {
 }
 
 # ── Parse args ──────────────────────────────────────────────────
-UNIVERSAL=""
 SKIP_BUILD=false
 SKIP_NOTARIZE=false
 
 for arg in "$@"; do
   case "$arg" in
-    --universal)      UNIVERSAL="--target universal-apple-darwin" ;;
+    --universal)      err "--universal is no longer supported. DMG builds are aarch64-only." ;;
     --skip-build)     SKIP_BUILD=true ;;
     --skip-notarize)  SKIP_NOTARIZE=true ;;
     --help|-h)        show_help ;;
@@ -149,18 +146,14 @@ VERSION=$(node -e "console.log(require('./package.json').version)")
 if [ "$SKIP_BUILD" = false ]; then
   step "2/5  Building KnotCode v${VERSION}"
 
-  if [ -n "$UNIVERSAL" ]; then
-    log "Building universal binary (arm64 + x86_64)…"
-    rustup target add aarch64-apple-darwin x86_64-apple-darwin 2>/dev/null || true
-  else
-    log "Building native binary…"
-  fi
+  log "Building aarch64 binary…"
+  rustup target add aarch64-apple-darwin 2>/dev/null || true
 
   APPLE_SIGNING_IDENTITY="$APPLE_SIGNING_IDENTITY" \
   APPLE_ID="$APPLE_ID" \
   APPLE_TEAM_ID="$APPLE_TEAM_ID" \
   APPLE_APP_SPECIFIC_PASSWORD="$APPLE_APP_SPECIFIC_PASSWORD" \
-    pnpm tauri build $UNIVERSAL
+    pnpm tauri build --target aarch64-apple-darwin
 
   ok "Tauri build complete"
 else
@@ -170,11 +163,7 @@ fi
 # ── Locate artefacts ────────────────────────────────────────────
 step "3/5  Locating build artefacts"
 
-if [ -n "$UNIVERSAL" ]; then
-  TARGET_DIR="src-tauri/target/universal-apple-darwin/release/bundle"
-else
-  TARGET_DIR="src-tauri/target/release/bundle"
-fi
+TARGET_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
 
 APP_PATH=$(find "$TARGET_DIR" -name "*.app" -type d 2>/dev/null | head -1)
 [ -z "$APP_PATH" ] && err "Could not find .app bundle in $TARGET_DIR"

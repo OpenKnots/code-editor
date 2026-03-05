@@ -33,6 +33,12 @@ gq clean                    # delete local branches already merged into main/mas
 - Write meaningful commit messages — not just "update"
 - If there are merge conflicts during `gq sync`, resolve them before continuing
 
+### Agent Workflow Guardrails
+
+- Skill-first policy is required: run `/skill <query>` before creating a new skill.
+- New skill creation is blocked by default unless a recent skill probe exists.
+- Explicit override token for audited bypass only: `--allow-new-skill`.
+
 ## Code Conventions
 
 - All colors use CSS theme variables (`var(--brand)`, `var(--brand-contrast)`, etc.) — never hardcode `text-white` on brand elements

@@ -7,6 +7,7 @@ import { useTheme, THEME_PRESETS } from '@/context/theme-context'
 import { usePlugins } from '@/context/plugin-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
 import { AgentBuilder, AgentSummary } from '@/components/agent-builder'
+import { SkillsInterface } from '@/components/skills/skills-interface'
 import { type AgentConfig, getAgentConfig, clearAgentConfig } from '@/lib/agent-session'
 import { isTauri, tauriReadFileBase64 } from '@/lib/tauri'
 
@@ -16,7 +17,7 @@ interface Props {
   initialTab?: SettingsTab
 }
 
-type SettingsTab = 'general' | 'editor' | 'agent' | 'keybindings' | 'plugins'
+type SettingsTab = 'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | 'skills'
 const TOKEN_REVEAL_TIMEOUT_MS = 15000
 
 export function SettingsPanel({ open, onClose, initialTab }: Props) {
@@ -146,6 +147,7 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
     { id: 'agent', label: 'Agent', icon: 'lucide:bot' },
     { id: 'keybindings', label: 'Keys', icon: 'lucide:keyboard' },
     { id: 'plugins', label: 'Plugins', icon: 'lucide:puzzle' },
+    { id: 'skills', label: 'Skills', icon: 'lucide:sparkles' },
   ]
 
   const shortcuts = [
@@ -169,7 +171,7 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-[580px] max-h-[75vh] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className={`relative w-full max-h-[75vh] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col ${tab === 'skills' ? 'max-w-[980px]' : 'max-w-[580px]'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -667,6 +669,8 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
               )}
             </>
           )}
+
+          {tab === 'skills' && <SkillsInterface variant="settings" />}
         </div>
       </div>
     </div>

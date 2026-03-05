@@ -1,2 +1,3 @@
 pnpm secrets:scan
+pnpm policy:skill-first:ci
 pnpm check

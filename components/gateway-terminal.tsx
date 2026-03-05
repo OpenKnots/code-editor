@@ -18,6 +18,20 @@ import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useTheme } from '@/context/theme-context'
 import { MarkdownPreview } from '@/components/markdown-preview'
+import {
+  SKILL_FIRST_OVERRIDE_TOKEN,
+  buildSkillFirstBlockMessage,
+  evaluateSkillFirstPolicy,
+  updateSkillProbeFromMessage,
+} from '@/lib/skill-first-policy'
+import { getSkillBySlug, SKILLS_CATALOG } from '@/lib/skills/catalog'
+import { buildSkillUseEnvelope } from '@/lib/skills/provider-adapter'
+import {
+  buildCatalogSummary,
+  buildExecutionPlan,
+  buildSkillCommandHelp,
+  parseSkillSlashCommand,
+} from '@/lib/skills/workflow'
 
 // ─── Command registry ────────────────────────────────────
 
@@ -53,7 +67,12 @@ const COMMANDS: CommandDef[] = [
     description: 'List/stop/log subagent runs',
     category: 'management',
   },
-  { name: 'skill', aliases: [], description: 'Run a skill by name', category: 'tools' },
+  {
+    name: 'skill',
+    aliases: [],
+    description: 'Find, install, update, or use skills',
+    category: 'tools',
+  },
   { name: 'restart', aliases: [], description: 'Restart OpenClaw', category: 'tools' },
   { name: 'bash', aliases: [], description: 'Run shell commands', category: 'tools' },
 ]
@@ -508,6 +527,45 @@ export function GatewayTerminal() {
     setEntries((prev) => [...prev, { id: uid(), type, text, timestamp: Date.now() }])
   }, [])
 
+  const sendChatMessage = useCallback(
+    async (message: string) => {
+      setSending(true)
+      try {
+        const resp = (await sendRequest('chat.send', {
+          sessionKey: 'main',
+          message,
+          idempotencyKey: `gw-term-${Date.now()}`,
+        })) as Record<string, unknown> | undefined
+
+        const status = resp?.status as string | undefined
+        if (status === 'ok') {
+          const reply = extractEventText(resp)
+          if (reply && !isNoReply(reply)) {
+            addEntry('response', reply)
+            setSending(false)
+          } else if (isNoReply(reply)) {
+            setSending(false)
+          }
+        }
+        setTimeout(
+          () =>
+            setSending((prev) => {
+              if (prev) {
+                addEntry('system', '⏱ Response timed out')
+                return false
+              }
+              return prev
+            }),
+          60000,
+        )
+      } catch (e) {
+        addEntry('error', e instanceof Error ? e.message : 'Send failed')
+        setSending(false)
+      }
+    },
+    [addEntry, sendRequest],
+  )
+
   const handleSubmit = useCallback(async () => {
     const trimmed = input.trim()
     if (!trimmed || sending) return
@@ -543,42 +601,62 @@ export function GatewayTerminal() {
       return
     }
 
-    // Chat send (slash command or plain text)
-    setSending(true)
-    try {
-      const resp = (await sendRequest('chat.send', {
-        sessionKey: 'main',
-        message: trimmed,
-        idempotencyKey: `gw-term-${Date.now()}`,
-      })) as Record<string, unknown> | undefined
-
-      const status = resp?.status as string | undefined
-      if (status === 'ok') {
-        const reply = extractEventText(resp)
-        if (reply && !isNoReply(reply)) {
-          addEntry('response', reply)
-          setSending(false)
-        } else if (isNoReply(reply)) {
-          setSending(false)
-        }
+    const parsedSkillCommand = parseSkillSlashCommand(trimmed)
+    if (parsedSkillCommand) {
+      if (parsedSkillCommand.kind === 'help') {
+        addEntry('response', buildSkillCommandHelp())
+        return
       }
-      // started/in_flight → wait for chat event
-      setTimeout(
-        () =>
-          setSending((prev) => {
-            if (prev) {
-              addEntry('system', '⏱ Response timed out')
-              return false
-            }
-            return prev
-          }),
-        60000,
-      )
-    } catch (e) {
-      addEntry('error', e instanceof Error ? e.message : 'Send failed')
-      setSending(false)
+
+      if (parsedSkillCommand.kind === 'list') {
+        addEntry('response', buildCatalogSummary(SKILLS_CATALOG))
+        return
+      }
+
+      if (parsedSkillCommand.kind === 'use') {
+        const skill = parsedSkillCommand.skillSlug
+          ? getSkillBySlug(parsedSkillCommand.skillSlug)
+          : undefined
+        if (!skill) {
+          addEntry('error', `Unknown skill: ${parsedSkillCommand.skillSlug ?? 'unknown'}`)
+          return
+        }
+        const request = parsedSkillCommand.request?.trim() || skill.starterPrompt
+        const envelope = buildSkillUseEnvelope({
+          skill,
+          request,
+          modelName: 'gateway',
+        })
+        await sendChatMessage(envelope.prompt)
+        return
+      }
+
+      const plan = buildExecutionPlan(parsedSkillCommand, { preferTerminal: false })
+      if (!plan?.message) {
+        addEntry('error', 'Could not build a skill workflow for that command.')
+        return
+      }
+      await sendChatMessage(plan.message)
+      return
     }
-  }, [input, sending, sendRequest, cmdHistory, saveHistory, addEntry])
+
+    // Chat send (slash command or plain text)
+    updateSkillProbeFromMessage('main', trimmed)
+    const policy = evaluateSkillFirstPolicy({
+      sessionKey: 'main',
+      message: trimmed,
+      mode: 'hard_with_override',
+    })
+    if (policy.blocked) {
+      addEntry('error', buildSkillFirstBlockMessage(policy))
+      return
+    }
+    if (policy.overrideUsed) {
+      addEntry('system', `Skill-first override accepted via ${SKILL_FIRST_OVERRIDE_TOKEN}.`)
+    }
+
+    await sendChatMessage(trimmed)
+  }, [input, sending, sendRequest, cmdHistory, saveHistory, addEntry, sendChatMessage])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {

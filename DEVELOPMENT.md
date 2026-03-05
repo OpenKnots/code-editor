@@ -134,11 +134,8 @@ npx serve out
 ### Desktop (macOS DMG)
 
 ```bash
-# Native architecture
+# Apple Silicon (aarch64) DMG
 ./scripts/build-release.sh desktop
-
-# Universal binary (arm64 + Intel)
-./scripts/build-release.sh desktop --universal
 ```
 
 The DMG is output to `src-tauri/target/.../bundle/dmg/`.
@@ -187,7 +184,7 @@ This:
 
 The `release.yml` workflow:
 
-1. Builds a universal macOS DMG (arm64 + x86_64)
+1. Builds an aarch64 macOS DMG (Apple Silicon)
 2. Code-signs with Apple Developer certificate (if secrets are configured)
 3. Notarizes with Apple (if secrets are configured)
 4. Creates a **draft** GitHub Release with the DMG attached

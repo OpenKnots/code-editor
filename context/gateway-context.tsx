@@ -26,6 +26,11 @@ import {
   loadDeviceToken,
   storeDeviceToken,
 } from '@/lib/device-auth'
+import {
+  buildSkillFirstBlockMessage,
+  evaluateSkillFirstPolicy,
+  updateSkillProbeFromMessage,
+} from '@/lib/skill-first-policy'
 
 // ─── Connection state machine ────────────────────────────────────────────────
 export type ConnectionStatus =
@@ -92,7 +97,10 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       wsRef.current.onclose = null
       wsRef.current.onerror = null
       wsRef.current.onmessage = null
-      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+      if (
+        wsRef.current.readyState === WebSocket.OPEN ||
+        wsRef.current.readyState === WebSocket.CONNECTING
+      ) {
         wsRef.current.close()
       }
       wsRef.current = null
@@ -175,7 +183,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                     signedAt,
                     ...(nonce ? { nonce } : {}),
                   },
-                  existingToken ?? undefined
+                  existingToken ?? undefined,
                 )
 
                 ws.send(JSON.stringify(connectReq))
@@ -202,7 +210,9 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
           const cbs = listenersRef.current.get(evt.event)
           if (cbs) {
             for (const cb of cbs) {
-              try { cb(evt.payload) } catch {}
+              try {
+                cb(evt.payload)
+              } catch {}
             }
           }
           return
@@ -224,10 +234,13 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
             snap.protocol = payload.protocol as number
             setSnapshot(snap)
 
-            const authInfo = payload.auth as { deviceToken?: string; role?: string; scopes?: string[] } | undefined
-            const scopes = authInfo?.scopes
-              ?? (Array.isArray(payload.scopes) ? (payload.scopes as string[]) : [])
-              ?? (Array.isArray(payload.grantedScopes) ? (payload.grantedScopes as string[]) : [])
+            const authInfo = payload.auth as
+              | { deviceToken?: string; role?: string; scopes?: string[] }
+              | undefined
+            const scopes =
+              authInfo?.scopes ??
+              (Array.isArray(payload.scopes) ? (payload.scopes as string[]) : []) ??
+              (Array.isArray(payload.grantedScopes) ? (payload.grantedScopes as string[]) : [])
             setGrantedScopes(scopes)
 
             if (authInfo?.deviceToken && deviceIdentityRef.current) {
@@ -235,7 +248,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                 deviceIdentityRef.current.deviceId,
                 authInfo.role ?? 'operator',
                 authInfo.deviceToken,
-                authInfo.scopes ?? []
+                authInfo.scopes ?? [],
               )
             }
 
@@ -261,13 +274,13 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
               pendingRef.current.delete(res.id)
               pending.reject(
                 new Error(
-                  (res.error as { message?: string } | undefined)?.message ?? 'Request failed'
-                )
+                  (res.error as { message?: string } | undefined)?.message ?? 'Request failed',
+                ),
               )
             }
             if (!connectedRef.current) {
               setError(
-                (res.error as { message?: string } | undefined)?.message ?? 'Authentication failed'
+                (res.error as { message?: string } | undefined)?.message ?? 'Authentication failed',
               )
               setStatus('error')
             }
@@ -327,7 +340,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
         }
       }
     },
-    [cleanup]
+    [cleanup],
   )
 
   // Public connect
@@ -339,7 +352,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       connectedRef.current = false
       doConnect(url, password)
     },
-    [doConnect]
+    [doConnect],
   )
 
   // Public disconnect
@@ -388,6 +401,25 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
           reject(new Error('Not connected'))
           return
         }
+
+        if (method === 'chat.send' && typeof params?.message === 'string') {
+          const sessionKey =
+            (typeof params.sessionKey === 'string' && params.sessionKey) ||
+            (typeof params.session_key === 'string' && params.session_key) ||
+            'main'
+          const message = params.message
+          updateSkillProbeFromMessage(sessionKey, message)
+          const policy = evaluateSkillFirstPolicy({
+            sessionKey,
+            message,
+            mode: 'hard_with_override',
+          })
+          if (policy.blocked) {
+            reject(new Error(buildSkillFirstBlockMessage(policy)))
+            return
+          }
+        }
+
         const req = makeRequest(method, params)
         const timer = setTimeout(() => {
           pendingRef.current.delete(req.id)
@@ -397,22 +429,19 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
         wsRef.current.send(JSON.stringify(req))
       })
     },
-    []
+    [],
   )
 
   // Subscribe to events
-  const onEvent = useCallback(
-    (event: string, cb: EventCallback): (() => void) => {
-      if (!listenersRef.current.has(event)) {
-        listenersRef.current.set(event, new Set())
-      }
-      listenersRef.current.get(event)!.add(cb)
-      return () => {
-        listenersRef.current.get(event)?.delete(cb)
-      }
-    },
-    []
-  )
+  const onEvent = useCallback((event: string, cb: EventCallback): (() => void) => {
+    if (!listenersRef.current.has(event)) {
+      listenersRef.current.set(event, new Set())
+    }
+    listenersRef.current.get(event)!.add(cb)
+    return () => {
+      listenersRef.current.get(event)?.delete(cb)
+    }
+  }, [])
 
   // Auto-connect on mount: stored creds → Tauri gateway config → nothing
   useEffect(() => {
@@ -434,7 +463,10 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       // 2. On desktop (Tauri), read gateway config directly from ~/.openclaw/openclaw.json
       if (isTauri()) {
         try {
-          const config = await tauriInvoke<{ url: string; password: string }>('engine_gateway_config', {})
+          const config = await tauriInvoke<{ url: string; password: string }>(
+            'engine_gateway_config',
+            {},
+          )
           if (cancelled || !config) return
 
           // Verify the gateway is actually running before connecting
@@ -459,7 +491,9 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return
       try {
         const localUrl = 'ws://localhost:18789'
-        const probe = await fetch('http://localhost:18789/health', { signal: AbortSignal.timeout(2000) }).catch(() => null)
+        const probe = await fetch('http://localhost:18789/health', {
+          signal: AbortSignal.timeout(2000),
+        }).catch(() => null)
         if (cancelled) return
         if (probe && probe.ok) {
           credentialsRef.current = { url: localUrl, password: '' }
@@ -473,20 +507,41 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       }
     })()
 
-    return () => { cancelled = true; cleanup() }
+    return () => {
+      cancelled = true
+      cleanup()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const value = useMemo<GatewayContextValue>(() => ({
-    status, snapshot, error, connect, disconnect, reconnect,
-    sendRequest, onEvent, gatewayUrl, grantedScopes,
-  }), [status, snapshot, error, connect, disconnect, reconnect, sendRequest, onEvent, gatewayUrl, grantedScopes])
-
-  return (
-    <GatewayContext.Provider value={value}>
-      {children}
-    </GatewayContext.Provider>
+  const value = useMemo<GatewayContextValue>(
+    () => ({
+      status,
+      snapshot,
+      error,
+      connect,
+      disconnect,
+      reconnect,
+      sendRequest,
+      onEvent,
+      gatewayUrl,
+      grantedScopes,
+    }),
+    [
+      status,
+      snapshot,
+      error,
+      connect,
+      disconnect,
+      reconnect,
+      sendRequest,
+      onEvent,
+      gatewayUrl,
+      grantedScopes,
+    ],
   )
+
+  return <GatewayContext.Provider value={value}>{children}</GatewayContext.Provider>
 }
 
 export function useGateway() {

@@ -101,6 +101,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the technical architecture,
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md)       | Technical architecture and component map    |
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md)         | Development workflow and conventions        |
 | [DESKTOP.md](docs/DESKTOP.md)                 | Tauri desktop build details                 |
+| [IOS.md](docs/IOS.md)                         | iOS application scope and rollout plan      |
 | [AGENT.md](docs/AGENT.md)                     | AI agent integration                        |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes                     |
 | [SECURITY.md](SECURITY.md)                    | Security policy and vulnerability reporting |

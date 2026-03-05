@@ -52,6 +52,8 @@ export interface AppEvents {
 
   // Terminal
   'toggle-terminal': void
+  'show-terminal': void
+  'run-command-in-terminal': { command: string }
 
   // Editor settings
   'editor-settings-changed': {

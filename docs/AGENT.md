@@ -50,9 +50,11 @@ The agent is initialized with a comprehensive system prompt (`lib/agent-session.
 3. **Match existing style** — read context before writing
 4. **TypeScript strict** — no `any` without justification
 5. **Security by default** — sanitize, validate, escape
-6. **Be direct** — no filler, no hedging
-7. **Be actionable** — every response ends with a next step
-8. **Flag risks** — security/performance/breaking implications upfront
+6. **Skill-first policy** — before creating a new skill, run `/skill <query>` to try existing skills first
+7. **Audited override only** — use `--allow-new-skill` explicitly when a new skill is required now
+8. **Be direct** — no filler, no hedging
+9. **Be actionable** — every response ends with a next step
+10. **Flag risks** — security/performance/breaking implications upfront
 
 ## Context Injection
 

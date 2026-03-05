@@ -25,7 +25,7 @@ jobs:
         run: GOBIN="$RUNNER_TEMP/bin" go install github.com/zricethezav/gitleaks/v8@latest
 
       - name: Secret scan (full history + baseline)
-        run: "$RUNNER_TEMP/bin/gitleaks" git --log-opts="--all" --redact --baseline-path .gitleaks.baseline.json --exit-code 1 .
+        run: $RUNNER_TEMP/bin/gitleaks git --log-opts="--all" --redact --baseline-path .gitleaks.baseline.json --exit-code 1 .
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -40,6 +40,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Skill-first preflight
+        run: pnpm policy:skill-first:ci
 
       - name: Lint
         run: pnpm lint
