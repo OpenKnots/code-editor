@@ -91,4 +91,4 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the technical architecture,
 
 ## License
 
-Private — OpenKnots organization.
+Private — OpenKnot organization.

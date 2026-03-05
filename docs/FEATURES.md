@@ -90,7 +90,7 @@
 
 - [x] **macOS native** — Tauri v2 with system WebKit
 - [x] **~10MB binary** — no bundled Chromium
-- [x] **Custom icons** — OpenKnots logo at all sizes
+- [x] **Custom icons** — OpenKnot logo at all sizes
 - [x] **macOS titlebar overlay** — native feel
 - [x] **Dev mode** — `pnpm tauri:dev` with hot reload
 - [x] **Production build** — `pnpm tauri:build` → .app + .dmg
