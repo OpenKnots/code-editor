@@ -86,9 +86,9 @@ Output location:
 ```
 src-tauri/target/release/bundle/
 ├── macos/
-│   └── Knot Code.app      # macOS application bundle
+│   └── KnotCode.app      # macOS application bundle
 └── dmg/
-    └── Code Editor_0.1.0_aarch64.dmg  # Installer
+    └── KnotCode_0.1.0_aarch64.dmg  # Installer
 ```
 
 ## Configuration

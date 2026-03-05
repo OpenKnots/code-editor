@@ -29,6 +29,6 @@ This policy covers:
 ## Security Design
 
 - **No server-side secrets**: KnotCode is a static app. OAuth flows use public client IDs only (device flow / PKCE).
-- **Gateway communication**: All AI requests route through the user's own OpenClaw gateway. No data is sent to OpenKnots servers.
+- **Gateway communication**: All AI requests route through the user's own OpenClaw gateway. No data is sent to OpenKnot servers.
 - **Local mode**: Desktop (Tauri) file access is scoped to the user-selected project directory.
 - **No telemetry**: KnotCode does not collect usage data or analytics.

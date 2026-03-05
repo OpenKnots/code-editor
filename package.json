@@ -84,7 +84,7 @@
   },
   "description": "AI-native code editor powered by OpenClaw. Browser + desktop (Tauri).",
   "license": "Apache-2.0",
-  "author": "OpenKnots Contributors",
+  "author": "OpenKnot Contributors",
   "repository": {
     "type": "git",
     "url": "https://github.com/OpenKnots/code-editor.git"

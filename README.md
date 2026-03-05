@@ -133,4 +133,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome.
 
 ## License
 
-[Apache License 2.0](LICENSE) — Copyright 2025-2026 OpenKnots Contributors
+[Apache License 2.0](LICENSE) — Copyright 2025-2026 OpenKnot Contributors

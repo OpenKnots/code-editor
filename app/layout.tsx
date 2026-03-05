@@ -19,7 +19,7 @@ import { AppSkeleton } from '@/components/app-skeleton'
 
 export const metadata: Metadata = {
   title: 'KnotCode',
-  description: 'AI-powered code editor by OpenKnots',
+  description: 'AI-powered code editor by OpenKnot',
   icons: {
     icon: '/favicon.png',
     apple: '/apple-touch-icon.png',
