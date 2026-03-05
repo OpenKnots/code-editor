@@ -12,8 +12,23 @@ const LOCALHOST_PORT: u16 = 3080;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut ctx = tauri::generate_context!();
+
+    // Rewrite the frontend URL so Tauri treats localhost as the app origin.
+    // This enables IPC on the HTTP origin (needed for YouTube embeds + Spotify PKCE)
+    // while keeping assets embedded in the binary via the localhost plugin.
+    let localhost_url: url::Url = format!("http://127.0.0.1:{}", LOCALHOST_PORT)
+        .parse()
+        .unwrap();
+    ctx.config_mut().build.frontend_dist =
+        Some(tauri::utils::config::FrontendDist::Url(localhost_url));
+
     tauri::Builder::default()
-        .plugin(tauri_plugin_localhost::Builder::new(LOCALHOST_PORT).build())
+        .plugin(
+            tauri_plugin_localhost::Builder::new(LOCALHOST_PORT)
+                .host("127.0.0.1")
+                .build(),
+        )
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -177,16 +192,6 @@ pub fn run() {
                     .ok(); // Don't panic if vibrancy fails
             }
 
-            // ── Navigate to localhost server ────────────────────
-            // The localhost plugin serves embedded assets via HTTP on LOCALHOST_PORT.
-            // We navigate the webview there so the origin is http://localhost:PORT
-            // instead of tauri://localhost — required for YouTube embeds and Spotify PKCE.
-            {
-                let window = app.get_webview_window("main").unwrap();
-                let url = format!("http://localhost:{}", LOCALHOST_PORT);
-                let _ = window.navigate(url.parse().unwrap());
-            }
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -230,6 +235,6 @@ pub fn run() {
             local_fs::local_secret_get,
             local_fs::local_secret_delete,
         ])
-        .run(tauri::generate_context!())
+        .run(ctx)
         .expect("error while running tauri application");
 }
