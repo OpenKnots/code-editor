@@ -17,21 +17,21 @@ A lightweight, AI-native code editor powered by [OpenClaw](https://github.com/op
 
 ## How It Compares
 
-|                          |       **Knot Code**       |      **Cursor**       |  **Windsurf**   | **VS Code + Copilot** |
-| ------------------------ | :-----------------------: | :-------------------: | :-------------: | :-------------------: |
-| **App Size**             |        **8.4 MB**         |        ~500 MB        |     ~450 MB     | ~400 MB + extensions  |
-| **RAM (idle)**           |        **~80 MB**         |      500 MB–2 GB      |  400 MB–1.5 GB  |      300 MB–1 GB      |
-| **RAM (AI active)**      |        **~120 MB**        |       1–10+ GB        |     1–4 GB      |      500 MB–2 GB      |
-| **Startup**              |          **<1s**          |         3–8s          |      3–6s       |         2–5s          |
-| **Electron?**            | ❌ Tauri (native WebKit)  |      ✅ Electron      |   ✅ Electron   |      ✅ Electron      |
-| **AI Backend**           |     Your own gateway      |     Cursor cloud      | Windsurf cloud  |     GitHub cloud      |
-| **Data Privacy**         |      **100% local**       |    Sent to Cursor     | Sent to Codeium |    Sent to GitHub     |
-| **BYO Model**            | ✅ Any model via OpenClaw | ❌ Cursor models only |   ❌ Limited    |    ❌ Copilot only    |
-| **Custom System Prompt** |  ✅ Agent Builder wizard  |          ❌           |       ❌        |          ❌           |
-| **Themes**               |        7 built-in         |           3           | VS Code themes  |    VS Code themes     |
-| **Offline AI**           | ✅ Local models supported |          ❌           |       ❌        |          ❌           |
-| **Subscription**         |     **Free forever**      |        $20/mo         |     $15/mo      |        $10/mo         |
-| **Open Source**          |       ✅ Apache 2.0       |    ❌ Proprietary     | ❌ Proprietary  |       Partially       |
+|                          |       **Knot Code**       |   **Cursor**   |  **Windsurf**   | **VS Code + Copilot** | **Competitor Avg** |
+| ------------------------ | :-----------------------: | :------------: | :-------------: | :-------------------: | :----------------: |
+| **App Size**             |        **7.8 MB**         |    ~500 MB     |     ~450 MB     |     ~400 MB + ext     |    **~450 MB**     |
+| **RAM (idle)**           |        **~80 MB**         |  500 MB–2 GB   |  400 MB–1.5 GB  |      300 MB–1 GB      |    **~750 MB**     |
+| **RAM (AI active)**      |        **~120 MB**        |    1–10+ GB    |     1–4 GB      |      500 MB–2 GB      |    **~2.5 GB**     |
+| **Startup**              |          **<1s**          |      3–8s      |      3–6s       |         2–5s          |      **~4s**       |
+| **Electron?**            | ❌ Tauri (native WebKit)  |  ✅ Electron   |   ✅ Electron   |      ✅ Electron      |  **3/3 Electron**  |
+| **AI Backend**           |     Your own gateway      |  Cursor cloud  | Windsurf cloud  |     GitHub cloud      |   **All cloud**    |
+| **Data Privacy**         |      **100% local**       | Sent to Cursor | Sent to Codeium |    Sent to GitHub     |   **All cloud**    |
+| **BYO Model**            | ✅ Any model via OpenClaw | ❌ Cursor only |   ❌ Limited    |    ❌ Copilot only    |      **0/3**       |
+| **Custom System Prompt** |  ✅ Agent Builder wizard  |       ❌       |       ❌        |          ❌           |      **0/3**       |
+| **Themes**               |        7 built-in         |       3        | VS Code themes  |    VS Code themes     |         —          |
+| **Offline AI**           | ✅ Local models supported |       ❌       |       ❌        |          ❌           |      **0/3**       |
+| **Subscription**         |     **Free forever**      |     $20/mo     |     $15/mo      |        $10/mo         |    **~$15/mo**     |
+| **Open Source**          |       ✅ Apache 2.0       | ❌ Proprietary | ❌ Proprietary  |       Partially       |     **0.5/3**      |
 
 > **Why so light?** Knot Code uses Tauri (Rust + native WebKit) instead of Electron. No bundled Chromium. No background processes phoning home. The AI runs through your own [OpenClaw](https://github.com/openclaw/openclaw) gateway — your keys, your models, your data stays on your machine.
 
