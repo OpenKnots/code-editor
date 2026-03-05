@@ -2,11 +2,47 @@
 
 import { useId, useMemo } from 'react'
 
-const VERTICAL_LOOP =
-  'M176 132 C224 80,288 80,336 132 C368 168,368 344,336 380 C288 432,224 432,176 380 C144 344,144 168,176 132Z'
+const CX = 256
+const CY = 256
+const ANGLES = [0, 60, 120, 180, 240, 300]
 
-const HORIZONTAL_LOOP =
-  'M132 176 C80 224,80 288,132 336 C168 368,344 368,380 336 C432 288,432 224,380 176 C344 144,168 144,132 176Z'
+function buildLobePaths(): string[] {
+  const lobes: string[] = []
+  const startR = 42
+  const tipR = 155
+  const bulge = 80
+
+  for (const deg of ANGLES) {
+    const rad = (deg * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    const perp = rad + Math.PI / 2
+    const px = Math.cos(perp)
+    const py = Math.sin(perp)
+
+    const sx = CX + startR * cos
+    const sy = CY + startR * sin
+    const tx = CX + tipR * cos
+    const ty = CY + tipR * sin
+
+    const cp1x = CX + (startR + 50) * cos + bulge * px
+    const cp1y = CY + (startR + 50) * sin + bulge * py
+    const cp2x = CX + (tipR - 20) * cos + bulge * 0.7 * px
+    const cp2y = CY + (tipR - 20) * sin + bulge * 0.7 * py
+    const cp3x = CX + (tipR - 20) * cos - bulge * 0.7 * px
+    const cp3y = CY + (tipR - 20) * sin - bulge * 0.7 * py
+    const cp4x = CX + (startR + 50) * cos - bulge * px
+    const cp4y = CY + (startR + 50) * sin - bulge * py
+
+    const f = (n: number) => n.toFixed(1)
+    lobes.push(
+      `M${f(sx)},${f(sy)} C${f(cp1x)},${f(cp1y)} ${f(cp2x)},${f(cp2y)} ${f(tx)},${f(ty)} C${f(cp3x)},${f(cp3y)} ${f(cp4x)},${f(cp4y)} ${f(sx)},${f(sy)}Z`,
+    )
+  }
+  return lobes
+}
+
+const LOBE_PATHS = buildLobePaths()
 
 const FLOATERS = [
   { size: 340, x: '-6%', y: '-10%', delay: '0s', dur: '50s' },
@@ -14,7 +50,7 @@ const FLOATERS = [
   { size: 220, x: '35%', y: '82%', delay: '-35s', dur: '44s' },
 ] as const
 
-function KnotPaths({ strokeWidth = 14, opacity = 1 }: { strokeWidth?: number; opacity?: number }) {
+function KnotPaths({ strokeWidth = 10 }: { strokeWidth?: number }) {
   return (
     <g
       style={{ stroke: 'var(--brand)' }}
@@ -22,16 +58,10 @@ function KnotPaths({ strokeWidth = 14, opacity = 1 }: { strokeWidth?: number; op
       strokeLinecap="round"
       strokeLinejoin="round"
       fill="none"
-      opacity={opacity}
     >
-      <path d={VERTICAL_LOOP} />
-      <path d={HORIZONTAL_LOOP} />
-      <g transform="rotate(45 256 256)">
-        <path d={VERTICAL_LOOP} />
-      </g>
-      <g transform="rotate(-45 256 256)">
-        <path d={VERTICAL_LOOP} />
-      </g>
+      {LOBE_PATHS.map((d, i) => (
+        <path key={i} d={d} opacity={i % 2 === 0 ? 0.9 : 0.6} />
+      ))}
     </g>
   )
 }
@@ -50,9 +80,9 @@ export function KnotBackground() {
         height="100%"
       >
         <defs>
-          <pattern id={`kp${pid}`} width="120" height="120" patternUnits="userSpaceOnUse">
+          <pattern id={`kp${pid}`} width="110" height="110" patternUnits="userSpaceOnUse">
             <svg viewBox="0 0 512 512" width="100" height="100">
-              <KnotPaths strokeWidth={12} />
+              <KnotPaths strokeWidth={10} />
             </svg>
           </pattern>
         </defs>
@@ -76,19 +106,14 @@ export function KnotBackground() {
           <svg viewBox="0 0 512 512" fill="none" width="100%" height="100%">
             <g
               style={{ stroke: 'var(--mode-accent, var(--brand))' }}
-              strokeWidth={36}
+              strokeWidth={24}
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
             >
-              <path d={VERTICAL_LOOP} />
-              <path d={HORIZONTAL_LOOP} />
-              <g transform="rotate(45 256 256)">
-                <path d={VERTICAL_LOOP} />
-              </g>
-              <g transform="rotate(-45 256 256)">
-                <path d={VERTICAL_LOOP} />
-              </g>
+              {LOBE_PATHS.map((d, j) => (
+                <path key={j} d={d} />
+              ))}
             </g>
           </svg>
         </div>

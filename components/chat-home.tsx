@@ -18,7 +18,6 @@ import { getAgentConfig } from '@/lib/agent-session'
 const STATIC_SUGGESTIONS = [
   { icon: 'lucide:sparkles', label: 'Edit this', prefix: 'Edit ', desc: 'Modify selected code' },
   { icon: 'lucide:zap', label: 'Squash bug', prefix: 'Fix ', desc: 'Debug and fix issues' },
-  { icon: 'lucide:flame', label: 'Explain plz', prefix: 'Explain ', desc: 'Understand code flow' },
   {
     icon: 'lucide:wand-2',
     label: 'Test it',
@@ -280,7 +279,6 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
       })
     }
 
-    // Always include some generic actions
     contextChips.push(
       { icon: 'lucide:zap', label: 'Squash bug', prefix: 'Fix ', desc: 'Debug and fix issues' },
       {
@@ -292,17 +290,17 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
       { icon: 'lucide:star', label: 'Review PR', prefix: 'Review ', desc: 'Analyze pull request' },
     )
 
-    return contextChips.slice(0, 5)
+    return contextChips.slice(0, 4)
   }, [hasWorkspace, openFiles, local.localTree])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-8 sm:py-10 relative">
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-8 sm:py-10 pb-16 sm:pb-20 relative">
       <KnotBackground />
       <div className="min-h-full w-full max-w-[700px] mx-auto flex flex-col justify-center relative z-[1]">
         {/* Logo + Heading */}
-        <div className="flex flex-col items-center mb-5">
+        <div className="flex flex-col items-center mb-3">
           <div
-            className={`mb-3 text-[var(--text-tertiary)] ${
+            className={`mb-2.5 text-[var(--text-tertiary)] ${
               status === 'connected' ? 'logo-breathe-connected' : 'logo-breathe-idle'
             }`}
           >
@@ -316,37 +314,31 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
           <p className="mt-1.5 text-center text-[13px] text-[var(--text-secondary)] font-medium">
             {repoShort ? `What should we work on?` : `What do you want to build?`}
           </p>
-          <p className="mt-1.5 text-center text-[12px] leading-relaxed text-[var(--text-disabled)] max-w-[520px]">
-            {hasWorkspace
-              ? 'Move from idea to merged code with focused prompts, fast edits, and built-in review workflows.'
-              : 'Open a project or describe your idea to start coding with a context-aware agent.'}
-          </p>
 
-          {/* Workspace stats */}
-          {hasWorkspace && (fileCount > 0 || primaryLanguage || branchName) && (
-            <div className="mt-2.5 flex items-center justify-center gap-3 flex-wrap text-[10px] text-[var(--text-disabled)]">
-              {fileCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Icon icon="lucide:files" width={10} height={10} />
-                  {fileCount} files
-                </span>
-              )}
-              {primaryLanguage && (
-                <span className="inline-flex items-center gap-1">
-                  <Icon icon="lucide:code-2" width={10} height={10} />
-                  {primaryLanguage}
-                </span>
-              )}
-              {branchName && (
-                <span className="inline-flex items-center gap-1">
-                  <Icon icon="lucide:git-branch" width={10} height={10} />
-                  {branchName}
-                </span>
-              )}
-            </div>
-          )}
-
+          {/* Workspace stats — single compact row */}
           <div className="mt-2 flex items-center justify-center gap-2.5 flex-wrap text-[11px] text-[var(--text-disabled)]">
+            {hasWorkspace && (fileCount > 0 || primaryLanguage || branchName) && (
+              <>
+                {fileCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px]">
+                    <Icon icon="lucide:files" width={10} height={10} />
+                    {fileCount} files
+                  </span>
+                )}
+                {primaryLanguage && (
+                  <span className="inline-flex items-center gap-1 text-[10px]">
+                    <Icon icon="lucide:code-2" width={10} height={10} />
+                    {primaryLanguage}
+                  </span>
+                )}
+                {branchName && (
+                  <span className="inline-flex items-center gap-1 text-[10px]">
+                    <Icon icon="lucide:git-branch" width={10} height={10} />
+                    {branchName}
+                  </span>
+                )}
+              </>
+            )}
             {hasWorkspace ? (
               <button
                 onClick={onSelectFolder}
@@ -463,12 +455,9 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
         </div>
 
         {/* Quick action cards */}
-        <div className="mt-3">
-          <p className="text-center text-[10px] uppercase tracking-[0.08em] text-[var(--text-disabled)] font-medium">
-            Quick prompts
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-            {suggestions.map((a, i) => (
+        <div className="mt-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {suggestions.slice(0, 4).map((a, i) => (
               <button
                 key={a.label}
                 onClick={() => {
@@ -476,7 +465,7 @@ export const ChatHome = memo(function ChatHome({ onSend, onSelectFolder, onClone
                   inputRef.current?.focus()
                 }}
                 aria-label={`${a.label}: ${a.prefix}`}
-                className="quick-action-card chip-enter flex items-center gap-2 px-3.5 py-2 rounded-lg text-[12px] font-medium bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)] hover:text-[var(--text-primary)] cursor-pointer"
+                className="quick-action-card chip-enter flex items-center gap-2 px-3 py-2.5 rounded-lg text-[12px] font-medium bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)] hover:text-[var(--text-primary)] cursor-pointer"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
                 <div className="w-7 h-7 rounded-md bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] flex items-center justify-center shrink-0">

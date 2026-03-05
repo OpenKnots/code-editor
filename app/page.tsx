@@ -402,7 +402,7 @@ export default function EditorLayout() {
   }, [local])
 
   return (
-    <div className="flex h-full w-full bg-[var(--bg)] text-[var(--text-primary)] overflow-hidden gap-1.5 p-1.5">
+    <div className="flex h-full w-full bg-[var(--bg)] text-[var(--text-primary)] overflow-hidden gap-2 p-2">
       {/* Tauri drag region */}
       {isTauriDesktop && (
         <div
@@ -421,10 +421,10 @@ export default function EditorLayout() {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl overflow-hidden border border-[var(--border)]">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-2xl overflow-hidden border-[1.5px] border-[var(--border)] shadow-[var(--shadow-sm)]">
         {/* Mode accent line */}
         <div
-          className="h-[2px] shrink-0 transition-colors duration-500"
+          className="h-[3px] shrink-0 transition-colors duration-500"
           style={{
             background: `linear-gradient(90deg, transparent, var(--mode-accent, var(--brand)), transparent)`,
             opacity: 0.5,
@@ -434,7 +434,7 @@ export default function EditorLayout() {
         {/* View navigation bar — folder tabs */}
         <div
           data-tauri-drag-region
-          className={`flex items-center ${modeSpec.hideTabs ? 'h-10' : 'h-12'} bg-[var(--bg-elevated)] shrink-0 px-3 gap-1.5 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}
+          className={`flex items-center ${modeSpec.hideTabs ? 'h-12' : 'h-14'} bg-[var(--bg-elevated)] shrink-0 px-4 gap-2 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}
         >
           {/* Folder-style tab strip — hidden in TUI mode */}
           {!modeSpec.hideTabs && (
@@ -458,16 +458,16 @@ export default function EditorLayout() {
                     whileTap={{ scale: 0.95 }}
                     layout
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2.5">
                       <Icon
                         icon={VIEW_ICONS[v].icon}
-                        width={17}
-                        height={17}
+                        width={19}
+                        height={19}
                         className="folder-tab__icon"
                       />
                       <span className="hidden sm:inline">{VIEW_ICONS[v].label}</span>
                       {v === 'git' && dirtyCount > 0 && (
-                        <span className="px-1.5 min-w-[18px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[10px] leading-[18px] font-bold animate-badge-pop">
+                        <span className="px-2 min-w-[22px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[11px] leading-[22px] font-bold animate-badge-pop">
                           {dirtyCount}
                         </span>
                       )}
@@ -489,15 +489,15 @@ export default function EditorLayout() {
 
           {/* Minimal header with brand when tabs are hidden */}
           {modeSpec.hideTabs && (
-            <div className="flex items-center gap-2 tauri-no-drag">
-              <KnotLogo size={18} className="text-[var(--brand)]" />
-              <span className="text-[12px] font-semibold text-[var(--text-primary)] tracking-[-0.01em]">
+            <div className="flex items-center gap-2.5 tauri-no-drag">
+              <KnotLogo size={22} className="text-[var(--brand)]" />
+              <span className="text-[14px] font-semibold text-[var(--text-primary)] tracking-[-0.01em]">
                 KnotCode
               </span>
               {localRootPath && (
                 <>
                   <span className="text-[var(--text-disabled)]">&middot;</span>
-                  <span className="text-[11px] font-mono text-[var(--text-disabled)] truncate max-w-[200px]">
+                  <span className="text-[12px] font-mono text-[var(--text-disabled)] truncate max-w-[200px]">
                     {localRootPath.split('/').pop()}
                   </span>
                 </>

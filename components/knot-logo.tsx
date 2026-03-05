@@ -1,20 +1,63 @@
 'use client'
 
+import { useId } from 'react'
+
 interface KnotLogoProps {
   size?: number
   className?: string
   color?: string
-  strokeWidth?: number
 }
 
-const VERTICAL_LOOP =
-  'M176 132 C224 80,288 80,336 132 C368 168,368 344,336 380 C288 432,224 432,176 380 C144 344,144 168,176 132Z'
-
-const HORIZONTAL_LOOP =
-  'M132 176 C80 224,80 288,132 336 C168 368,344 368,380 336 C432 288,432 224,380 176 C344 144,168 144,132 176Z'
-
-export function KnotLogo({ size = 24, className, color, strokeWidth = 56 }: KnotLogoProps) {
+/**
+ * 6-loop interwoven Celtic knot with over/under weaving.
+ * Each loop is drawn as a thick teardrop lobe radiating from center,
+ * with SVG masks creating the woven crossing effect.
+ */
+export function KnotLogo({ size = 24, className, color }: KnotLogoProps) {
+  const uid = useId()
+  const id = uid.replace(/:/g, '')
   const c = color || 'currentColor'
+
+  const cx = 256
+  const cy = 256
+  const sw = 28
+  const gap = sw + 10
+
+  const lobes: string[] = []
+  const angles = [0, 60, 120, 180, 240, 300]
+
+  for (const deg of angles) {
+    const rad = (deg * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+
+    const startR = 42
+    const tipR = 155
+    const bulge = 80
+
+    const sx = cx + startR * cos
+    const sy = cy + startR * sin
+    const tx = cx + tipR * cos
+    const ty = cy + tipR * sin
+
+    const perp = rad + Math.PI / 2
+    const px = Math.cos(perp)
+    const py = Math.sin(perp)
+
+    const cp1x = cx + (startR + 50) * cos + bulge * px
+    const cp1y = cy + (startR + 50) * sin + bulge * py
+    const cp2x = cx + (tipR - 20) * cos + bulge * 0.7 * px
+    const cp2y = cy + (tipR - 20) * sin + bulge * 0.7 * py
+
+    const cp3x = cx + (tipR - 20) * cos - bulge * 0.7 * px
+    const cp3y = cy + (tipR - 20) * sin - bulge * 0.7 * py
+    const cp4x = cx + (startR + 50) * cos - bulge * px
+    const cp4y = cy + (startR + 50) * sin - bulge * py
+
+    lobes.push(
+      `M${f(sx)},${f(sy)} C${f(cp1x)},${f(cp1y)} ${f(cp2x)},${f(cp2y)} ${f(tx)},${f(ty)} C${f(cp3x)},${f(cp3y)} ${f(cp4x)},${f(cp4y)} ${f(sx)},${f(sy)}Z`,
+    )
+  }
 
   return (
     <svg
@@ -27,22 +70,51 @@ export function KnotLogo({ size = 24, className, color, strokeWidth = 56 }: Knot
       aria-label="KnotCode"
       role="img"
     >
-      <g
-        stroke={c}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      >
-        <path d={VERTICAL_LOOP} />
-        <path d={HORIZONTAL_LOOP} />
-        <g transform="rotate(45 256 256)">
-          <path d={VERTICAL_LOOP} />
+      <defs>
+        {angles.map((_, i) => {
+          const prevIdx = (i + 5) % 6
+          const prevRad = (angles[prevIdx] * Math.PI) / 180
+
+          const crossR = 100
+          const mx = cx + crossR * Math.cos(prevRad)
+          const my = cy + crossR * Math.sin(prevRad)
+
+          return (
+            <mask key={i} id={`${id}w${i}`}>
+              <rect width="512" height="512" fill="white" />
+              <ellipse cx={mx} cy={my} rx={gap} ry={gap} fill="black" />
+            </mask>
+          )
+        })}
+      </defs>
+
+      {lobes.map((d, i) => (
+        <g key={i}>
+          <path
+            d={d}
+            stroke={c}
+            strokeWidth={sw}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+            mask={`url(#${id}w${i})`}
+          />
+          <path
+            d={d}
+            stroke={c}
+            strokeWidth={sw * 0.45}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+            opacity={0.3}
+            mask={`url(#${id}w${i})`}
+          />
         </g>
-        <g transform="rotate(-45 256 256)">
-          <path d={VERTICAL_LOOP} />
-        </g>
-      </g>
+      ))}
     </svg>
   )
+}
+
+function f(n: number): string {
+  return n.toFixed(1)
 }
