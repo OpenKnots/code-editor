@@ -11,9 +11,9 @@ import {
   type ReactNode,
 } from 'react'
 
-export type ViewId = 'chat' | 'editor' | 'preview' | 'diff' | 'git' | 'settings'
+export type ViewId = 'chat' | 'editor' | 'preview' | 'diff' | 'git' | 'skills' | 'settings'
 
-const VIEW_ORDER: ViewId[] = ['chat', 'editor', 'preview', 'git', 'settings']
+const VIEW_ORDER: ViewId[] = ['chat', 'editor', 'preview', 'git', 'skills', 'settings']
 
 interface ViewState {
   activeView: ViewId

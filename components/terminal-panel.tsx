@@ -496,6 +496,16 @@ function TerminalPane({
     return () => window.removeEventListener('run-script-in-terminal', handler)
   }, [isDesktop, createTerminal])
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { command } = (e as CustomEvent).detail ?? {}
+      if (!command || !isDesktop) return
+      void createTerminal(command)
+    }
+    window.addEventListener('run-command-in-terminal', handler)
+    return () => window.removeEventListener('run-command-in-terminal', handler)
+  }, [createTerminal, isDesktop])
+
   // Reapply xterm theme when mode/theme/background changes
   useEffect(() => {
     const term = session.xterm
