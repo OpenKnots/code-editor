@@ -30,6 +30,7 @@ export default tseslint.config(
       'src-tauri/target/',
       '*.config.mjs',
       'scripts/',
+      '*.js',
     ],
   },
 )
