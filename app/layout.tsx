@@ -12,6 +12,9 @@ import { PreviewProvider } from '@/context/preview-context'
 
 import { LayoutProvider } from '@/context/layout-context'
 import { AppModeProvider } from '@/context/app-mode-context'
+import { Suspense } from 'react'
+import { ErrorBoundary } from '@/components/error-boundary'
+import { AppSkeleton } from '@/components/app-skeleton'
 
 export const metadata: Metadata = {
   title: 'Knot Code',
@@ -26,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-theme="obsidian" className="dark" suppressHydrationWarning>
       <body className="antialiased">
+        <ErrorBoundary fallbackLabel="Knot Code encountered an error">
           <ThemeProvider>
             <GatewayProvider>
               <GitHubAuthProvider>
@@ -34,13 +38,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <LocalProvider>
                       <ViewProvider>
                         <LayoutProvider>
-                        <AppModeProvider>
-                        <PreviewProvider>
-                        <PluginProvider>
-                          {children}
-                        </PluginProvider>
-                        </PreviewProvider>
-                        </AppModeProvider>
+                          <AppModeProvider>
+                            <PreviewProvider>
+                              <PluginProvider>
+                                <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
+                              </PluginProvider>
+                            </PreviewProvider>
+                          </AppModeProvider>
                         </LayoutProvider>
                       </ViewProvider>
                     </LocalProvider>
@@ -49,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </GitHubAuthProvider>
             </GatewayProvider>
           </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

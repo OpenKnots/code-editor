@@ -19,6 +19,7 @@ import { handleChatEvent, type ChatMessage, type StreamState } from '@/lib/chat-
 import { MessageList } from '@/components/chat/message-list'
 import { emit, on } from '@/lib/events'
 import { copyToClipboard } from '@/lib/clipboard'
+import type { PlanStep } from '@/components/plan-view'
 import { navigateToLine } from '@/lib/line-links'
 import {
   CODE_EDITOR_SESSION_KEY,
@@ -390,14 +391,7 @@ export function AgentPanel() {
 
   // ─── ⌘L: Send selection to agent panel ────────────────────
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as {
-        path: string
-        content: string
-        startLine: number
-        endLine: number
-      }
-      if (!detail) return
+    return on('add-to-chat', (detail) => {
       setContextAttachments((prev) => [
         ...prev,
         {
@@ -409,9 +403,7 @@ export function AgentPanel() {
         },
       ])
       inputRef.current?.focus()
-    }
-    window.addEventListener('add-to-chat', handler)
-    return () => window.removeEventListener('add-to-chat', handler)
+    })
   }, [])
 
   // ─── File handling (drag & drop, paste, file picker) ─────
@@ -512,20 +504,15 @@ export function AgentPanel() {
 
   // ─── Listen for set-agent-input events ─────────────────────
   useEffect(() => {
-    const handler = (e: Event) => {
-      const text = (e as CustomEvent).detail?.text as string
-      if (text) setInput(text)
+    return on('set-agent-input', (detail) => {
+      if (detail.text) setInput(detail.text)
       inputRef.current?.focus()
-    }
-    window.addEventListener('set-agent-input', handler)
-    return () => window.removeEventListener('set-agent-input', handler)
+    })
   }, [])
 
   // ─── Listen for focus-agent-input (⌘L from anywhere) ──────
   useEffect(() => {
-    const handler = () => inputRef.current?.focus()
-    window.addEventListener('focus-agent-input', handler)
-    return () => window.removeEventListener('focus-agent-input', handler)
+    return on('focus-agent-input', () => inputRef.current?.focus())
   }, [])
 
   // ─── Build per-message context ────────────────────────────────
@@ -572,12 +559,7 @@ export function AgentPanel() {
 
   // ─── Commit result listener ──────────────────────────────────
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as {
-        success: boolean
-        fileCount?: number
-        error?: string
-      }
+    return on('agent-commit-result', (detail) => {
       if (detail.success) {
         appendMessage({
           id: crypto.randomUUID(),
@@ -595,9 +577,7 @@ export function AgentPanel() {
           timestamp: Date.now(),
         })
       }
-    }
-    window.addEventListener('agent-commit-result', handler)
-    return () => window.removeEventListener('agent-commit-result', handler)
+    })
   }, [appendMessage])
 
   // ─── Send message ─────────────────────────────────────────────
@@ -627,7 +607,7 @@ export function AgentPanel() {
         content: text,
         timestamp: Date.now(),
       })
-      window.dispatchEvent(new CustomEvent('agent-commit', { detail: { message: commitMsg } }))
+      emit('agent-commit', { message: commitMsg })
       appendMessage({
         id: crypto.randomUUID(),
         role: 'system',
@@ -645,7 +625,7 @@ export function AgentPanel() {
         content: text,
         timestamp: Date.now(),
       })
-      window.dispatchEvent(new CustomEvent('open-changes-panel'))
+      emit('open-changes-panel')
       appendMessage({
         id: crypto.randomUUID(),
         role: 'system',
@@ -940,7 +920,7 @@ export function AgentPanel() {
           timestamp: Date.now(),
           editProposals: editProposals.length > 0 ? editProposals : undefined,
         })
-        window.dispatchEvent(new CustomEvent('agent-reply'))
+        emit('agent-reply')
       }
       setIsStreaming(false)
       setSending(false)
@@ -959,8 +939,14 @@ export function AgentPanel() {
 
   // ─── Handle ⌘K inline edit requests ────────────────────────────
   useEffect(() => {
-    const handler = (e: Event) => {
-      const { filePath, instruction, selectedText, startLine, endLine } = (e as CustomEvent).detail
+    const handler = (detail: {
+      filePath: string
+      instruction: string
+      selectedText: string
+      startLine: number
+      endLine: number
+    }) => {
+      const { filePath, instruction, selectedText, startLine, endLine } = detail
       if (!isConnected || sending) return
 
       const prompt = [
@@ -1017,7 +1003,7 @@ export function AgentPanel() {
               type: editProposals.length > 0 ? 'edit' : 'text',
               editProposals: editProposals.length > 0 ? editProposals : undefined,
             })
-            window.dispatchEvent(new CustomEvent('agent-reply'))
+            emit('agent-reply')
           }
           setIsStreaming(false)
           setSending(false)
@@ -1034,8 +1020,7 @@ export function AgentPanel() {
           setSending(false)
         })
     }
-    window.addEventListener('inline-edit-request', handler)
-    return () => window.removeEventListener('inline-edit-request', handler)
+    return on('inline-edit-request', handler)
   }, [isConnected, sending, sendRequest, buildContext, appendMessage])
 
   // ─── Diff review flow ─────────────────────────────────────────
@@ -1310,8 +1295,8 @@ export function AgentPanel() {
               sendMessage()
             }, 50)
           }}
-          onSelectFolder={() => window.dispatchEvent(new CustomEvent('open-folder'))}
-          onCloneRepo={() => window.dispatchEvent(new CustomEvent('open-folder'))}
+          onSelectFolder={() => emit('open-folder')}
+          onCloneRepo={() => emit('open-folder')}
         />
       )}
 

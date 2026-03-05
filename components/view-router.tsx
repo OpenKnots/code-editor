@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useView } from '@/context/view-context'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { PreviewProvider } from '@/context/preview-context'
 
 const EditorView = dynamic(
   () => import('@/components/views/editor-view').then((m) => ({ default: m.EditorView })),
