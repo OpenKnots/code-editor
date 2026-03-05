@@ -76,13 +76,14 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 
 function getRedirectUri(): string {
   const origin = window.location.origin
-  if (isTauri() || origin.startsWith('tauri://')) {
-    return 'http://127.0.0.1:3080/'
+  // In production Tauri, app is served via localhost plugin on http://localhost:3080
+  // Use the actual origin so the redirect URI matches what Spotify redirects back to
+  if (origin.startsWith('tauri://')) {
+    // Fallback if localhost plugin isn't active (shouldn't happen)
+    return 'http://localhost:3080/'
   }
-  if (origin.includes('localhost')) {
-    return origin.replace('localhost', '127.0.0.1') + window.location.pathname
-  }
-  return origin + window.location.pathname
+  // Use origin directly — works for localhost:3080 (Tauri prod), localhost:3000 (dev), or deployed URL
+  return origin + '/'
 }
 
 /**
