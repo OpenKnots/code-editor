@@ -57,15 +57,52 @@ pub fn create_terminal(
 
     let pair = pty_system.openpty(size).map_err(|e| e.to_string())?;
 
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-    let mut cmd = CommandBuilder::new(&shell);
-    cmd.arg("-l"); // login shell for proper PATH
+    // Platform-appropriate shell detection
+    #[cfg(target_os = "windows")]
+    let (shell, login_args): (String, Vec<String>) = {
+        if std::env::var("PSModulePath").is_ok() {
+            ("powershell.exe".to_string(), vec!["-NoLogo".to_string()])
+        } else {
+            let s = std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
+            (s, vec![])
+        }
+    };
+    #[cfg(not(target_os = "windows"))]
+    let (shell, login_args): (String, Vec<String>) = {
+        let s = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
+        (s, vec!["-l".to_string()]) // login shell for proper PATH
+    };
 
+    let mut cmd = CommandBuilder::new(&shell);
+    for arg in &login_args {
+        cmd.arg(arg);
+    }
+
+    // Platform-appropriate home directory
+    #[cfg(target_os = "windows")]
+    let home = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string());
+    #[cfg(not(target_os = "windows"))]
     let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+
     cmd.cwd(cwd.unwrap_or(home));
 
-    // Inherit common env vars
-    for key in &[
+    // Inherit platform-specific env vars
+    #[cfg(target_os = "windows")]
+    let env_keys: &[&str] = &[
+        "USERPROFILE",
+        "USERNAME",
+        "COMSPEC",
+        "PATH",
+        "SystemRoot",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "TEMP",
+        "TMP",
+        "CARGO_HOME",
+        "RUSTUP_HOME",
+    ];
+    #[cfg(not(target_os = "windows"))]
+    let env_keys: &[&str] = &[
         "HOME",
         "USER",
         "SHELL",
@@ -76,7 +113,9 @@ pub fn create_terminal(
         "NVM_DIR",
         "CARGO_HOME",
         "RUSTUP_HOME",
-    ] {
+    ];
+
+    for key in env_keys {
         if let Ok(val) = std::env::var(key) {
             cmd.env(key, val);
         }
