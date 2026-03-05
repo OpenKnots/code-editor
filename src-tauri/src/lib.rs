@@ -199,6 +199,7 @@ pub fn run() {
             local_fs::local_git_commit,
             local_fs::local_git_branches,
             local_fs::local_git_checkout,
+            local_fs::local_git_add,
             local_fs::local_git_unstage,
             local_fs::local_git_discard,
             local_fs::local_git_discard_staged,

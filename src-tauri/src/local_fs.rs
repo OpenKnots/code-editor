@@ -228,6 +228,14 @@ pub fn local_git_checkout(root: String, branch: String) -> Result<String, String
 }
 
 #[tauri::command]
+pub fn local_git_add(root: String, paths: Vec<String>) -> Result<String, String> {
+    for p in &paths {
+        run_git(&root, &["add", "--", p])?;
+    }
+    Ok("Staged".to_string())
+}
+
+#[tauri::command]
 pub fn local_git_unstage(root: String, paths: Vec<String>) -> Result<String, String> {
     for p in &paths {
         run_git(&root, &["reset", "HEAD", "--", p])?;

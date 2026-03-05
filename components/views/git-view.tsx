@@ -117,6 +117,7 @@ export function GitView() {
   const [branchFilter, setBranchFilter] = useState('')
   const [branchLimit, setBranchLimit] = useState(BRANCH_PAGE_SIZE)
   const [branchSwitchError, setBranchSwitchError] = useState<string | null>(null)
+  const [staging, setStaging] = useState(false)
   const [unstaging, setUnstaging] = useState(false)
   const [undoingCommit, setUndoingCommit] = useState(false)
   const [confirmUndo, setConfirmUndo] = useState(false)
@@ -312,6 +313,37 @@ export function GitView() {
   const [gqStatus, setGqStatus] = useState<'saving' | 'syncing' | 'cleaning' | 'done' | 'error' | null>(null)
   const [gqMessage, setGqMessage] = useState<string | null>(null)
 
+  const handleStage = useCallback(async () => {
+    if (!isLocalMode) return
+    const paths = Array.from(selectedFiles).filter(p => {
+      const entry = changeEntries.find(e => e.path === p)
+      return entry?.source === 'git' && (entry.index_status === ' ' || entry.index_status === '?')
+    })
+    if (paths.length === 0) return
+    setStaging(true)
+    setUnstageError(null)
+    try {
+      await local.stageFiles(paths)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setUnstageError(msg)
+      setTimeout(() => setUnstageError(null), 5000)
+    }
+    setStaging(false)
+  }, [isLocalMode, selectedFiles, changeEntries, local])
+
+  const handleStageSingle = useCallback(async (path: string) => {
+    if (!isLocalMode) return
+    setUnstageError(null)
+    try {
+      await local.stageFiles([path])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setUnstageError(msg)
+      setTimeout(() => setUnstageError(null), 5000)
+    }
+  }, [isLocalMode, local])
+
   const handleUnstage = useCallback(async () => {
     if (!isLocalMode) return
     const paths = Array.from(selectedFiles).filter(p => {
@@ -416,6 +448,13 @@ export function GitView() {
     return Array.from(selectedFiles).filter(p => {
       const entry = changeEntries.find(e => e.path === p)
       return entry?.source === 'git' && entry.index_status !== ' ' && entry.index_status !== '?'
+    }).length
+  }, [selectedFiles, changeEntries])
+
+  const unstagedSelectedCount = useMemo(() => {
+    return Array.from(selectedFiles).filter(p => {
+      const entry = changeEntries.find(e => e.path === p)
+      return entry?.source === 'git' && (entry.index_status === ' ' || entry.index_status === '?')
     }).length
   }, [selectedFiles, changeEntries])
 
@@ -678,6 +717,17 @@ export function GitView() {
                     {selectedFiles.size} of {changeEntries.length} selected
                   </span>
                 </label>
+                {isLocalMode && unstagedSelectedCount > 0 && (
+                  <button
+                    onClick={handleStage}
+                    disabled={staging}
+                    className="flex items-center gap-1 px-1.5 h-[20px] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors disabled:opacity-40 text-[9px] font-medium"
+                    title="Stage selected files"
+                  >
+                    <Icon icon="lucide:plus-circle" width={10} height={10} />
+                    {staging ? 'Staging...' : 'Stage'}
+                  </button>
+                )}
                 {isLocalMode && stagedSelectedCount > 0 && (
                   <button
                     onClick={handleUnstage}
@@ -772,6 +822,15 @@ export function GitView() {
                           <Icon icon="lucide:minus" width={10} height={10} />
                         </button>
                       )}
+                      {!staged && isLocalMode && entry.source === 'git' && (
+                        <button
+                          onClick={e => { e.stopPropagation(); handleStageSingle(entry.path) }}
+                          className="hidden group-hover:flex items-center justify-center w-[18px] h-[18px] shrink-0 rounded-[var(--radius-sm)] hover:bg-[var(--bg-elevated)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+                          title="Stage file"
+                        >
+                          <Icon icon="lucide:plus" width={10} height={10} />
+                        </button>
+                      )}
                       <span className={`text-[9px] font-mono font-bold shrink-0 ${statusColor}`} title={statusTitle}>
                         {statusLabel}
                       </span>
@@ -797,6 +856,16 @@ export function GitView() {
                           <span className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Staged Changes</span>
                           <span className="ml-1.5 px-1 min-w-[14px] text-center rounded-full bg-[var(--color-additions)] text-white text-[8px] font-bold leading-[14px]">{stagedEntries.length}</span>
                           <div className="ml-auto flex items-center gap-0.5">
+                            <button
+                              onClick={() => {
+                                const paths = stagedEntries.map(e => e.path)
+                                if (paths.length > 0) local.unstageFiles(paths)
+                              }}
+                              className="p-0.5 rounded hover:bg-[var(--bg-elevated)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
+                              title="Unstage all"
+                            >
+                              <Icon icon="lucide:minus" width={11} height={11} />
+                            </button>
                             {discardConfirm === 'staged' ? (
                               <>
                                 <span className="text-[9px] text-[var(--color-deletions)] mr-1">Discard all staged?</span>
@@ -820,6 +889,16 @@ export function GitView() {
                             <span className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Changes</span>
                             <span className="ml-1.5 px-1 min-w-[14px] text-center rounded-full bg-[var(--warning,#eab308)] text-white text-[8px] font-bold leading-[14px]">{unstagedEntries.length}</span>
                             <div className="ml-auto flex items-center gap-0.5">
+                              <button
+                                onClick={() => {
+                                  const paths = unstagedEntries.filter(e => e.source === 'git').map(e => e.path)
+                                  if (paths.length > 0) local.stageFiles(paths)
+                                }}
+                                className="p-0.5 rounded hover:bg-[var(--bg-elevated)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
+                                title="Stage all changes"
+                              >
+                                <Icon icon="lucide:plus" width={11} height={11} />
+                              </button>
                               {discardConfirm === 'changes' ? (
                                 <>
                                   <span className="text-[9px] text-[var(--color-deletions)] mr-1">Discard all changes?</span>

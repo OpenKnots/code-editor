@@ -39,6 +39,8 @@ if (typeof self !== 'undefined' && !(self as any).MonacoEnvironment) {
 function isAbortError(err: unknown): boolean {
   if (err instanceof DOMException && err.name === 'AbortError') return true
   if (err instanceof Error && (err.name === 'AbortError' || err.message === 'The operation was aborted.')) return true
+  if (typeof err === 'object' && err !== null && 'message' in err && (err as { message: unknown }).message === 'The operation was aborted.') return true
+  if (typeof err === 'object' && err !== null && 'name' in err && (err as { name: unknown }).name === 'AbortError') return true
   return false
 }
 
@@ -46,23 +48,25 @@ if (typeof window !== 'undefined') {
   const origConsoleError = console.error
   console.error = (...args: unknown[]) => {
     if (args.some(a => isAbortError(a))) return
-    if (args.some(a => typeof a === 'string' && a.includes('The operation was aborted'))) return
+    if (args.some(a => typeof a === 'string' && (a.includes('The operation was aborted') || a.includes('AbortError')))) return
     origConsoleError.apply(console, args)
   }
 
   window.addEventListener('error', (e) => {
-    if (isAbortError(e.error)) {
+    if (isAbortError(e.error) || (e.message && e.message.includes('The operation was aborted'))) {
       e.preventDefault()
+      e.stopImmediatePropagation()
       return
     }
-  })
+  }, true)
 
   window.addEventListener('unhandledrejection', (e) => {
     if (isAbortError(e.reason)) {
       e.preventDefault()
+      e.stopImmediatePropagation()
       return
     }
-  })
+  }, true)
 }
 
 function WelcomeView() {
