@@ -2,35 +2,11 @@
 
 import { useId, useMemo } from 'react'
 
-const cx = 50
-const cy = 50
-const R = 50
-const loopR = 22
-const ANGLES = [0, 60, 120, 180, 240, 300]
+const VERTICAL_LOOP =
+  'M176 132 C224 80,288 80,336 132 C368 168,368 344,336 380 C288 432,224 432,176 380 C144 344,144 168,176 132Z'
 
-function petalPath(deg: number): string {
-  const rad = (deg * Math.PI) / 180
-  const px = cx + R * 0.42 * Math.cos(rad)
-  const py = cy + R * 0.42 * Math.sin(rad)
-
-  const tangent = rad + Math.PI / 2
-  const cp1x = px + loopR * 1.1 * Math.cos(tangent)
-  const cp1y = py + loopR * 1.1 * Math.sin(tangent)
-  const cp2x = px - loopR * 1.1 * Math.cos(tangent)
-  const cp2y = py - loopR * 1.1 * Math.sin(tangent)
-
-  const tipDist = loopR * 1.55
-  const tipX = cx + (R * 0.42 + tipDist) * Math.cos(rad)
-  const tipY = cy + (R * 0.42 + tipDist) * Math.sin(rad)
-
-  const inTan1 = rad + 0.65
-  const inTan2 = rad - 0.65
-  const cpInnerR = loopR * 1.4
-
-  return `M ${cx.toFixed(1)} ${cy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${(tipX + cpInnerR * Math.cos(inTan1)).toFixed(1)} ${(tipY + cpInnerR * Math.sin(inTan1)).toFixed(1)}, ${tipX.toFixed(1)} ${tipY.toFixed(1)} C ${(tipX + cpInnerR * Math.cos(inTan2)).toFixed(1)} ${(tipY + cpInnerR * Math.sin(inTan2)).toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${cx.toFixed(1)} ${cy.toFixed(1)}`
-}
-
-const PETAL_PATHS = ANGLES.map(petalPath)
+const HORIZONTAL_LOOP =
+  'M132 176 C80 224,80 288,132 336 C168 368,344 368,380 336 C432 288,432 224,380 176 C344 144,168 144,132 176Z'
 
 const FLOATERS = [
   { size: 340, x: '-6%', y: '-10%', delay: '0s', dur: '50s' },
@@ -38,7 +14,7 @@ const FLOATERS = [
   { size: 220, x: '35%', y: '82%', delay: '-35s', dur: '44s' },
 ] as const
 
-function KnotPaths({ strokeWidth = 1.6, opacity = 1 }: { strokeWidth?: number; opacity?: number }) {
+function KnotPaths({ strokeWidth = 14, opacity = 1 }: { strokeWidth?: number; opacity?: number }) {
   return (
     <g
       style={{ stroke: 'var(--brand)' }}
@@ -48,9 +24,14 @@ function KnotPaths({ strokeWidth = 1.6, opacity = 1 }: { strokeWidth?: number; o
       fill="none"
       opacity={opacity}
     >
-      {PETAL_PATHS.map((d, i) => (
-        <path key={i} d={d} opacity={i % 2 === 0 ? 1 : 0.65} />
-      ))}
+      <path d={VERTICAL_LOOP} />
+      <path d={HORIZONTAL_LOOP} />
+      <g transform="rotate(45 256 256)">
+        <path d={VERTICAL_LOOP} />
+      </g>
+      <g transform="rotate(-45 256 256)">
+        <path d={VERTICAL_LOOP} />
+      </g>
     </g>
   )
 }
@@ -70,9 +51,9 @@ export function KnotBackground() {
       >
         <defs>
           <pattern id={`kp${pid}`} width="120" height="120" patternUnits="userSpaceOnUse">
-            <g transform="translate(10,10) scale(1)">
-              <KnotPaths strokeWidth={1.5} />
-            </g>
+            <svg viewBox="0 0 512 512" width="100" height="100">
+              <KnotPaths strokeWidth={12} />
+            </svg>
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill={`url(#kp${pid})`} />
@@ -92,17 +73,22 @@ export function KnotBackground() {
             animationDuration: f.dur,
           }}
         >
-          <svg viewBox="0 0 100 100" fill="none" width="100%" height="100%">
+          <svg viewBox="0 0 512 512" fill="none" width="100%" height="100%">
             <g
               style={{ stroke: 'var(--mode-accent, var(--brand))' }}
-              strokeWidth={3.5}
+              strokeWidth={36}
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
             >
-              {PETAL_PATHS.map((d, j) => (
-                <path key={j} d={d} opacity={j % 2 === 0 ? 1 : 0.7} />
-              ))}
+              <path d={VERTICAL_LOOP} />
+              <path d={HORIZONTAL_LOOP} />
+              <g transform="rotate(45 256 256)">
+                <path d={VERTICAL_LOOP} />
+              </g>
+              <g transform="rotate(-45 256 256)">
+                <path d={VERTICAL_LOOP} />
+              </g>
             </g>
           </svg>
         </div>
