@@ -974,8 +974,8 @@ export default function EditorLayout() {
             )}
             {/* Active file path */}
             {activeFile && (
-              <span className="text-[var(--text-disabled)] font-mono truncate max-w-[200px]" title={activeFile.path}>
-                {activeFile.path}
+              <span className="text-[var(--text-disabled)] font-mono truncate max-w-[200px]" title={activeFile}>
+                {activeFile}
               </span>
             )}
           </div>
