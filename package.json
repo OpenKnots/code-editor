@@ -3,7 +3,7 @@
   "version": "0.8.0",
   "private": true,
   "scripts": {
-    "frontend:dev": "PORT=3080 next dev --turbopack",
+    "frontend:dev": "next dev --turbopack",
     "frontend:build": "next build",
     "desktop:dev": "PORT=3080 tauri dev",
     "desktop:check": "tsc --noEmit",

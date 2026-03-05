@@ -184,16 +184,22 @@ export function YouTubePlayer() {
         <div className="flex-1" />
         {current && (
           <>
-            <select
-              value={ratio}
-              onChange={(e) => setRatio(e.target.value as '16 / 9' | '4 / 3' | '1 / 1')}
-              className="h-5 rounded border border-[var(--border)] bg-[var(--bg)] px-1 text-[8px] text-[var(--text-secondary)] outline-none mr-1"
-              title="Video ratio"
-            >
-              <option value="16 / 9">16:9</option>
-              <option value="4 / 3">4:3</option>
-              <option value="1 / 1">1:1</option>
-            </select>
+            <div className="flex items-center rounded-full bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] p-[2px] gap-[1px] shadow-[inset_0_0.5px_1px_rgba(0,0,0,0.2)] mr-1">
+              {(['16 / 9', '4 / 3', '1 / 1'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRatio(r)}
+                  className={`h-4 px-1.5 rounded-full text-[7px] font-medium transition-all duration-150 cursor-pointer ${
+                    ratio === r
+                      ? 'bg-[var(--bg)] text-[var(--text-primary)] shadow-[0_0.5px_2px_rgba(0,0,0,0.25),0_0.5px_0_rgba(255,255,255,0.06)_inset]'
+                      : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
+                  }`}
+                  title={r.replace(' / ', ':')}
+                >
+                  {r.replace(' / ', ':')}
+                </button>
+              ))}
+            </div>
             <button
               onClick={popoutPiP}
               className="p-0.5 rounded cursor-pointer text-[var(--text-disabled)] hover:text-[var(--text-secondary)]"
@@ -305,7 +311,7 @@ export function YouTubePlayer() {
       <div className="flex-1 flex flex-col min-h-0">
         {current ? (
           <div className="flex-1 min-h-0 p-2">
-            <div className="w-full h-full rounded-md overflow-hidden bg-black/80" style={{ aspectRatio: ratio }}>
+            <div className="w-full h-full rounded-xl overflow-hidden bg-black/80" style={{ aspectRatio: ratio }}>
               <iframe
                 src={buildEmbedUrl(current)}
                 className="w-full h-full border-0"

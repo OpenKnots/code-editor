@@ -53,6 +53,9 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     if (spec.autoExpandEditor) {
       layout.setEditorCollapsed(false)
     }
+
+    // Apply mode accent as CSS variable
+    document.documentElement.style.setProperty('--mode-accent', spec.accent)
   }, [mode, layout, activeView, setView])
 
   const value = useMemo<AppModeContextValue>(() => ({

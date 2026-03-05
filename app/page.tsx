@@ -695,6 +695,8 @@ export default function EditorLayout() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl overflow-hidden border border-[var(--border)]">
+        {/* Mode accent line */}
+        <div className="h-[2px] shrink-0 transition-colors duration-500" style={{ background: `linear-gradient(90deg, transparent, var(--mode-accent, var(--brand)), transparent)`, opacity: 0.5 }} />
         {/* View navigation bar — folder tabs */}
         <div data-tauri-drag-region className={`flex items-center ${modeSpec.hideTabs ? 'h-10' : 'h-12'} bg-[var(--bg-elevated)] shrink-0 px-3 gap-1.5 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}>
           {/* Folder-style tab strip — hidden in TUI mode */}
@@ -772,8 +774,8 @@ export default function EditorLayout() {
             </button>
           )}
 
-          {/* Mode switcher */}
-          <div className="tauri-no-drag flex items-center rounded-lg bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] p-[3px] gap-[2px]">
+          {/* Mode switcher — 3D pill group */}
+          <div className="tauri-no-drag flex items-center rounded-full bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] p-[3px] gap-[2px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)]">
             {([
               { id: 'classic' as AppMode, icon: 'lucide:code-2', label: 'Classic' },
               { id: 'chat' as AppMode, icon: 'lucide:message-square', label: 'Chat' },
@@ -782,12 +784,12 @@ export default function EditorLayout() {
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`relative h-7 w-7 flex items-center justify-center rounded-md transition-all cursor-pointer ${
+                className={`relative h-7 w-7 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer ${
                   mode === m.id
-                    ? 'bg-[var(--bg)] text-[var(--text-primary)] shadow-sm'
-                    : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
+                    ? 'bg-[var(--bg)] text-[var(--text-primary)] shadow-[0_1px_3px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.06)_inset]'
+                    : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]'
                 }`}
-                title={`${m.label} mode`}
+                title={`${m.label} mode (⌘⇧${['classic', 'chat', 'tui'].indexOf(m.id) + 1})`}
               >
                 <Icon icon={m.icon} width={15} height={15} />
               </button>
@@ -800,6 +802,16 @@ export default function EditorLayout() {
           </button>
         </div>
 
+        {/* Mode transition wrapper */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`mode-${mode}-${modeSpec.terminalCenter && terminalVisible ? 'term' : 'view'}`}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden"
+          >
         {/* TUI mode: terminal fills center */}
         {modeSpec.terminalCenter && terminalVisible ? (
           <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
@@ -840,6 +852,8 @@ export default function EditorLayout() {
         </div>
         </>
         )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* Terminal — docked (desktop) / drawer (mobile) / floating — hidden when TUI center terminal is active */}
         {!modeSpec.terminalCenter && !isMobile ? (
@@ -945,6 +959,11 @@ export default function EditorLayout() {
         {/* Status bar */}
         <footer className="flex items-center justify-between px-3 h-[22px] border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[10px] text-[var(--text-tertiary)] shrink-0">
           <div className="flex items-center gap-3">
+            {/* Mode indicator dot */}
+            <span className="flex items-center gap-1.5" title={`${modeSpec.label} mode`}>
+              <span className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: 'var(--mode-accent, var(--brand))' }} />
+              <span className="text-[var(--text-disabled)] font-medium">{modeSpec.label}</span>
+            </span>
             <FolderIndicator />
             <BranchPicker />
             {dirtyCount > 0 && (
@@ -953,9 +972,23 @@ export default function EditorLayout() {
                 {dirtyCount} unsaved
               </span>
             )}
+            {/* Active file path */}
+            {activeFile && (
+              <span className="text-[var(--text-disabled)] font-mono truncate max-w-[200px]" title={activeFile.path}>
+                {activeFile.path}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <PluginSlotRenderer slot="status-bar-right" />
+            {/* Connection status */}
+            <span className="flex items-center gap-1" title={status === 'connected' ? 'Gateway connected' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}>
+              <span className={`w-[5px] h-[5px] rounded-full ${
+                status === 'connected' ? 'bg-emerald-400' :
+                status === 'connecting' ? 'bg-amber-400 animate-pulse' :
+                'bg-red-400'
+              }`} />
+            </span>
             <span className="text-[var(--text-disabled)] font-medium">Knot Code</span>
             <ActivityPulseRing status={status} agentActive={agentActive} />
           </div>
@@ -970,7 +1003,7 @@ export default function EditorLayout() {
       <YouTubePlugin />
       <PipWindow />
       <WidgetPipWindow />
-      <ComponentIsolatorListener />
+      {activeView === 'preview' && <ComponentIsolatorListener />}
       <PluginSlotRenderer slot="floating" />
 
       {/* Modal overlays */}

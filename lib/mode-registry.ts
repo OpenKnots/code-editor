@@ -16,6 +16,8 @@ export interface ModeSpec {
   autoExpandEditor?: boolean
   /** Hide tab strip entirely */
   hideTabs?: boolean
+  /** Mode accent color (CSS color value) */
+  accent: string
 }
 
 export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
@@ -26,6 +28,7 @@ export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
     visibleViews: ['editor', 'preview', 'git', 'prs'],
     defaultView: 'editor',
     autoExpandEditor: true,
+    accent: '#a78bfa',
     panelDefaults: {
       sidebar: false,
       tree: true,
@@ -41,6 +44,7 @@ export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
     description: 'Agent-first mode with minimal editor chrome',
     visibleViews: ['editor', 'preview'],
     defaultView: 'editor',
+    accent: '#60a5fa',
     panelDefaults: {
       sidebar: true,
       tree: false,
@@ -58,6 +62,7 @@ export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
     defaultView: 'editor',
     terminalCenter: true,
     hideTabs: true,
+    accent: '#4ade80',
     panelDefaults: {
       sidebar: false,
       tree: false,
