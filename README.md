@@ -1,6 +1,8 @@
-# KnotCode
+# Knot Code
 
-A browser-based and desktop code editor powered by an AI coding agent via the [OpenClaw](https://github.com/openclaw/openclaw) gateway. Think Cursor, but with your own gateway-integrated agent.
+**AI coding, without the bloat.**
+
+A lightweight, AI-native code editor powered by [OpenClaw](https://github.com/openclaw/openclaw). Your agent, your gateway, your data. Browser + Desktop (Tauri).
 
 ```
 ┌──────────────┬──────────────────────────┬─────────────────┐
@@ -13,26 +15,31 @@ A browser-based and desktop code editor powered by an AI coding agent via the [O
 └───────────────────────────────────────────────────────────┘
 ```
 
+## How It Compares
+
+|                          |       **Knot Code**       |      **Cursor**       |  **Windsurf**   | **VS Code + Copilot** |
+| ------------------------ | :-----------------------: | :-------------------: | :-------------: | :-------------------: |
+| **App Size**             |        **8.4 MB**         |        ~500 MB        |     ~450 MB     | ~400 MB + extensions  |
+| **RAM (idle)**           |        **~80 MB**         |      500 MB–2 GB      |  400 MB–1.5 GB  |      300 MB–1 GB      |
+| **RAM (AI active)**      |        **~120 MB**        |       1–10+ GB        |     1–4 GB      |      500 MB–2 GB      |
+| **Startup**              |          **<1s**          |         3–8s          |      3–6s       |         2–5s          |
+| **Electron?**            | ❌ Tauri (native WebKit)  |      ✅ Electron      |   ✅ Electron   |      ✅ Electron      |
+| **AI Backend**           |     Your own gateway      |     Cursor cloud      | Windsurf cloud  |     GitHub cloud      |
+| **Data Privacy**         |      **100% local**       |    Sent to Cursor     | Sent to Codeium |    Sent to GitHub     |
+| **BYO Model**            | ✅ Any model via OpenClaw | ❌ Cursor models only |   ❌ Limited    |    ❌ Copilot only    |
+| **Custom System Prompt** |  ✅ Agent Builder wizard  |          ❌           |       ❌        |          ❌           |
+| **Themes**               |        7 built-in         |           3           | VS Code themes  |    VS Code themes     |
+| **Offline AI**           | ✅ Local models supported |          ❌           |       ❌        |          ❌           |
+| **Subscription**         |     **Free forever**      |        $20/mo         |     $15/mo      |        $10/mo         |
+| **Open Source**          |       ✅ Apache 2.0       |    ❌ Proprietary     | ❌ Proprietary  |       Partially       |
+
+> **Why so light?** Knot Code uses Tauri (Rust + native WebKit) instead of Electron. No bundled Chromium. No background processes phoning home. The AI runs through your own [OpenClaw](https://github.com/openclaw/openclaw) gateway — your keys, your models, your data stays on your machine.
+
 ## Quick Start
 
-### Web (Vercel)
-
-Live at [editor.openknot.ai](https://editor.openknot.ai)
-
-```bash
-pnpm install
-pnpm dev              # http://localhost:3080
-pnpm build            # production build (Vercel)
-```
-
-Or use the unified run script:
-
-```bash
-pnpm run:web          # dev server
-pnpm run:web --build  # production build + start
-```
-
 ### Desktop (macOS)
+
+Download the [latest release](https://github.com/OpenKnots/code-editor/releases/latest) (.dmg), or build from source:
 
 ```bash
 pnpm install
@@ -42,13 +49,37 @@ pnpm run:desktop --build  # production build (.app + .dmg)
 
 > First Tauri build takes 2-5 minutes (compiling Rust deps). Subsequent builds are fast.
 
+### Web (self-hosted)
+
+```bash
+pnpm install
+pnpm dev              # http://localhost:3080
+pnpm build            # static export
+```
+
+### Prerequisites
+
+- [OpenClaw](https://github.com/openclaw/openclaw) gateway running locally
+- Node.js 20+
+- pnpm
+
 ### Environment
 
-Copy `.env.example` to `.env.local` and fill in the required values. See the file for detailed descriptions of each variable (WorkOS keys, GitHub tokens, IP allowlist, sponsor gate, etc.).
+Copy `.env.example` to `.env` and configure. All variables are optional — the editor works without them, but GitHub auth and plugins need their respective keys.
 
 ## Features
 
-See [docs/FEATURES.md](docs/FEATURES.md) for the full feature list with current status and roadmap.
+- **AI Agent Chat** — Ask, Agent, and Plan modes with streaming responses
+- **Agent Builder** — Choose a persona, customize your system prompt, configure behaviors
+- **Inline Edits** — Agent proposes changes, you review diffs and accept/reject per-hunk
+- **7 Themes** — Obsidian, Bone, Neon, Catppuccin, VooDoo, CyberNord, PrettyPink
+- **Monaco Editor** — Multi-tab, Vim mode, syntax highlighting, ⌘P quick open
+- **GitHub Integration** — Device flow auth, commit, push, branch switching
+- **Terminal** — Integrated xterm.js with gateway slash commands
+- **Spotify + YouTube** — Built-in music and video plugins
+- **Desktop Native** — Tauri v2 with local file system access, git operations, OS keychain
+
+See [docs/FEATURES.md](docs/FEATURES.md) for the full feature list and roadmap.
 
 ## Architecture
 
@@ -56,15 +87,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the technical architecture,
 
 ## Documentation
 
-| Doc                                           | Description                                                   |
-| --------------------------------------------- | ------------------------------------------------------------- |
-| [FEATURES.md](docs/FEATURES.md)               | Feature list, status, and roadmap                             |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md)       | Technical architecture and component map                      |
-| [DEVELOPMENT.md](docs/DEVELOPMENT.md)         | Development workflow and conventions                          |
-| [DESKTOP.md](docs/DESKTOP.md)                 | Tauri desktop build details                                   |
-| [AGENT.md](docs/AGENT.md)                     | AI agent integration                                          |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes                                       |
-| [SECURITY.md](docs/SECURITY.md)               | Secret handling, incident response, and author privacy policy |
+| Doc                                           | Description                                 |
+| --------------------------------------------- | ------------------------------------------- |
+| [FEATURES.md](docs/FEATURES.md)               | Feature list, status, and roadmap           |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)       | Technical architecture and component map    |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md)         | Development workflow and conventions        |
+| [DESKTOP.md](docs/DESKTOP.md)                 | Tauri desktop build details                 |
+| [AGENT.md](docs/AGENT.md)                     | AI agent integration                        |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes                     |
+| [SECURITY.md](SECURITY.md)                    | Security policy and vulnerability reporting |
 
 ## Keyboard Shortcuts
 
@@ -73,23 +104,25 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the technical architecture,
 | `⌘P`     | Quick file open (fuzzy search) |
 | `⌘K`     | Inline edit at selection       |
 | `⌘B`     | Toggle file explorer           |
-| `⌘J`     | Toggle agent panel             |
-| `?`      | Keyboard shortcuts overlay     |
-| `Enter`  | Send message (in agent panel)  |
+| `⌘I`     | Toggle agent panel             |
+| `⌘J`     | Toggle terminal                |
+| `Enter`  | Send message / Start chat      |
 | `Esc`    | Close overlays                 |
 
 ## Tech Stack
 
 - **Framework:** Next.js 16 + React 19 + TypeScript 5.9
-- **Styling:** Tailwind CSS v4 (CSS variables, no `@apply`)
-- **Editor:** Monaco Editor (`@monaco-editor/react`) with optional vim mode (`monaco-vim`)
-- **Terminal:** xterm.js (`@xterm/xterm`) with fit addon and web links
-- **Icons:** `@iconify/react` with Lucide icon set
-- **Auth:** WorkOS AuthKit (`@workos-inc/authkit-nextjs`)
-- **Proxy:** Next.js 16 proxy (`proxy.ts`) for IP allowlist, CORS, security headers, and session management
-- **Desktop:** Tauri v2 (Rust + system WebKit)
-- **Package Manager:** pnpm (always pnpm, never npm/yarn/bun)
+- **Desktop:** Tauri v2 (Rust + system WebKit) — no Electron
+- **Editor:** Monaco Editor with optional Vim mode
+- **Terminal:** xterm.js with fit addon and web links
+- **Styling:** Tailwind CSS v4 (CSS custom properties)
+- **Icons:** @iconify/react (Lucide icon set)
+- **Package Manager:** pnpm
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome.
 
 ## License
 
-Private — OpenKnot organization.
+[Apache License 2.0](LICENSE) — Copyright 2025-2026 OpenKnots Contributors
