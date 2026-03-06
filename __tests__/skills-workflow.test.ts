@@ -11,17 +11,19 @@ describe('skills workflow', () => {
   it('seeds the bundled catalog with superpowers plus find-skills', () => {
     expect(SKILLS_CATALOG).toHaveLength(15)
     expect(getSkillBySlug('brainstorming')?.installCommand).toBe(
-      'npx skills add https://github.com/obra/superpowers --skill brainstorming -g -y',
+      'pnpm dlx skills add https://github.com/obra/superpowers --skill brainstorming -g -y',
     )
     expect(getSkillBySlug('find-skills')?.installCommand).toBe(
-      'npx skills add https://github.com/vercel-labs/skills --skill find-skills -g -y',
+      'pnpm dlx skills add https://github.com/vercel-labs/skills --skill find-skills -g -y',
     )
   })
 
   it('quotes ecosystem search queries for shell execution', () => {
-    expect(buildSkillsFindCommand('react performance')).toBe("npx skills find 'react performance'")
+    expect(buildSkillsFindCommand('react performance')).toBe(
+      "pnpm dlx skills find 'react performance'",
+    )
     expect(buildSkillsFindCommand("author's workflow")).toBe(
-      "npx skills find 'author'\\''s workflow'",
+      "pnpm dlx skills find 'author'\\''s workflow'",
     )
   })
 
@@ -52,7 +54,8 @@ describe('skills workflow', () => {
     expect(installPlan).toMatchObject({
       kind: 'install',
       target: 'terminal',
-      command: 'npx skills add https://github.com/obra/superpowers --skill brainstorming -g -y',
+      command:
+        'pnpm dlx skills add https://github.com/obra/superpowers --skill brainstorming -g -y',
     })
 
     const findPlan = buildExecutionPlan(
@@ -60,7 +63,7 @@ describe('skills workflow', () => {
       { preferTerminal: false },
     )
     expect(findPlan?.target).toBe('gateway-chat')
-    expect(findPlan?.message).toContain("npx skills find 'react performance'")
+    expect(findPlan?.message).toContain("pnpm dlx skills find 'react performance'")
   })
 
   it('hydrates runtime state with defaults for every bundled skill', () => {

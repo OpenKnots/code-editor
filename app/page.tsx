@@ -121,6 +121,7 @@ export default function EditorLayout() {
   const terminalVisible = layout.isVisible('terminal')
   const terminalHeight = layout.getSize('terminal')
   const terminalFloating = layout.isFloating('terminal')
+  const viewportHeight = layout.viewport.height
   const terminalRefreshToken = mode
   const terminalStartupCommand = modeSpec.terminalCenter ? 'openclaw tui' : undefined
 
@@ -655,7 +656,7 @@ export default function EditorLayout() {
                     {
                       '--height': Math.min(
                         Math.max(terminalHeight, 260),
-                        Math.floor(window.innerHeight * 0.72),
+                        Math.floor(viewportHeight * 0.72),
                       ),
                     } as React.CSSProperties
                   }

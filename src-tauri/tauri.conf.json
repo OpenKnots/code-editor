@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KnotCode",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "identifier": "ai.openknot.code-editor",
   "build": {
     "frontendDist": "../out",
@@ -27,7 +27,8 @@
     ],
     "security": {
       "csp": null
-    }
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,

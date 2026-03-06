@@ -93,6 +93,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-shell",
  "tauri-plugin-window-state",
+ "url",
  "window-vibrancy 0.7.1",
 ]
 

@@ -8,6 +8,7 @@ import type {
 } from '@/lib/skills/types'
 
 export const SKILLS_RUNTIME_STORAGE_KEY = 'knot-code:skills:runtime'
+const SKILLS_CLI = 'pnpm dlx skills'
 
 function escapeSingleQuotes(value: string): string {
   return value.replace(/'/g, `'\\''`)
@@ -19,15 +20,15 @@ export function shellQuote(value: string): string {
 }
 
 export function buildSkillsFindCommand(query: string): string {
-  return `npx skills find ${shellQuote(query.trim())}`
+  return `${SKILLS_CLI} find ${shellQuote(query.trim())}`
 }
 
 export function buildSkillsCheckCommand(): string {
-  return 'npx skills check'
+  return `${SKILLS_CLI} check`
 }
 
 export function buildSkillsUpdateCommand(): string {
-  return 'npx skills update'
+  return `${SKILLS_CLI} update`
 }
 
 export function buildSkillInstallCommand(skill: SkillCatalogItem): string {

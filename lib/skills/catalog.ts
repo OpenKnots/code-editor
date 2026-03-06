@@ -6,7 +6,7 @@ const VERCEL_SKILLS_REPO_URL = 'https://github.com/vercel-labs/skills'
 const VERCEL_SKILLS_PAGE_URL = 'https://skills.sh/vercel-labs/skills'
 
 function buildRepoInstallCommand(repoUrl: string, skillSlug: string): string {
-  return `npx skills add ${repoUrl} --skill ${skillSlug} -g -y`
+  return `pnpm dlx skills add ${repoUrl} --skill ${skillSlug} -g -y`
 }
 
 function superpower(

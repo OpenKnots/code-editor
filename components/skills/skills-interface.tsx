@@ -26,6 +26,8 @@ import {
   parseSkillSlashCommand,
 } from '@/lib/skills/workflow'
 
+const SKILL_IDS = SKILLS_CATALOG.map((skill) => skill.id)
+
 interface SkillsInterfaceProps {
   variant?: 'page' | 'settings'
 }
@@ -53,10 +55,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
   const [actionNote, setActionNote] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [runtimeState, setRuntimeState] = useState<SkillsRuntimeMap>(() =>
-    mergeRuntimeState(
-      SKILLS_CATALOG.map((skill) => skill.id),
-      loadStoredRuntimeState(),
-    ),
+    mergeRuntimeState(SKILL_IDS, loadStoredRuntimeState()),
   )
   const [composer, setComposer] = useState<{ skillId: string | null; request: string }>({
     skillId: null,
@@ -70,12 +69,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
   }, [runtimeState])
 
   const refreshState = useCallback(() => {
-    setRuntimeState(
-      mergeRuntimeState(
-        SKILLS_CATALOG.map((skill) => skill.id),
-        loadStoredRuntimeState(),
-      ),
-    )
+    setRuntimeState(mergeRuntimeState(SKILL_IDS, loadStoredRuntimeState()))
     setActionNote('Refreshed local skill state.')
   }, [])
 
