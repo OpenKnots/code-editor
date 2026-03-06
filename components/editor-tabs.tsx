@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { Icon } from '@iconify/react'
 import { useEditor } from '@/context/editor-context'
+import { formatShortcut } from '@/lib/platform'
 
 const EXT_ICONS: Record<string, { icon: string; color: string }> = {
   ts: { icon: 'lucide:file-code', color: '#3178c6' },
@@ -151,7 +152,7 @@ export function EditorTabs() {
                 closeFile(file.path)
               }}
               className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] transition-all cursor-pointer ml-1 hover:scale-110"
-              title="Close (⌘W)"
+              title={`Close (${formatShortcut('meta+W')})`}
             >
               <Icon icon="lucide:x" width={14} height={14} />
             </button>

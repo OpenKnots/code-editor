@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import { isTauri } from '@/lib/tauri'
+import { formatShortcutKeys } from '@/lib/platform'
 
 interface ShortcutsOverlayProps {
   open: boolean
@@ -10,31 +11,31 @@ interface ShortcutsOverlayProps {
 }
 
 const NAV_SHORTCUTS = [
-  { keys: ['⌘', 'K'], desc: 'Command palette' },
-  { keys: ['⌘', 'P'], desc: 'Quick file open' },
-  { keys: ['⌘', 'B'], desc: 'Toggle file explorer' },
-  { keys: ['⌘', 'J'], desc: 'Toggle agent panel' },
-  { keys: ['⌘', '⇧', 'E'], desc: 'Toggle Gateway Engine' },
-  { keys: ['⌘', '⌥', '1'], desc: 'Focus Explorer' },
-  { keys: ['⌘', '⌥', '2'], desc: 'Focus Editor' },
-  { keys: ['⌘', '⌥', '3'], desc: 'Focus Chat' },
-  { keys: ['?'], desc: 'This shortcuts overlay' },
+  { combo: 'meta+shift+P', desc: 'Command palette' },
+  { combo: 'meta+P', desc: 'Quick file open' },
+  { combo: 'meta+B', desc: 'Toggle file explorer' },
+  { combo: 'meta+J', desc: 'Toggle agent panel' },
+  { combo: 'meta+shift+E', desc: 'Toggle Gateway Engine' },
+  { combo: 'meta+alt+1', desc: 'Focus Explorer' },
+  { combo: 'meta+alt+2', desc: 'Focus Editor' },
+  { combo: 'meta+alt+3', desc: 'Focus Chat' },
+  { combo: '?', desc: 'This shortcuts overlay' },
 ]
 
 const NAV_TERMINAL_SHORTCUTS = [
-  { keys: ['⌘', '`'], desc: 'Toggle terminal' },
-  { keys: ['⌘', '⌥', '4'], desc: 'Focus Terminal' },
+  { combo: 'meta+`', desc: 'Toggle terminal' },
+  { combo: 'meta+alt+4', desc: 'Focus Terminal' },
 ]
 
 const STATIC_SECTIONS = [
   {
     title: 'Editing',
     shortcuts: [
-      { keys: ['⌘', '⇧', 'K'], desc: 'Inline edit at selection' },
-      { keys: ['⌘', '⇧', 'V'], desc: 'Cycle markdown edit/preview/split' },
-      { keys: ['⌘', 'S'], desc: 'Save (commit) file' },
-      { keys: ['⌘', 'Z'], desc: 'Undo' },
-      { keys: ['⌘', '⇧', 'Z'], desc: 'Redo' },
+      { combo: 'meta+shift+K', desc: 'Inline edit at selection' },
+      { combo: 'meta+shift+V', desc: 'Cycle markdown edit/preview/split' },
+      { combo: 'meta+S', desc: 'Save (commit) file' },
+      { combo: 'meta+Z', desc: 'Undo' },
+      { combo: 'meta+shift+Z', desc: 'Redo' },
     ],
   },
   {
@@ -51,7 +52,7 @@ const STATIC_SECTIONS = [
       { keys: ['/undo'], desc: 'Undo last commit' },
     ],
   },
-]
+] as const
 
 export function ShortcutsOverlay({ open, onClose }: ShortcutsOverlayProps) {
   const [isDesktop, setIsDesktop] = useState(false)
@@ -119,30 +120,33 @@ export function ShortcutsOverlay({ open, onClose }: ShortcutsOverlayProps) {
                 <span className="flex-1 h-px bg-[var(--border)]" />
               </h3>
               <div className="space-y-0.5">
-                {section.shortcuts.map((s) => (
-                  <div
-                    key={s.desc}
-                    className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-[var(--bg-subtle)] transition-colors group"
-                  >
-                    <span className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
-                      {s.desc}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {s.keys.map((key, i) => (
-                        <kbd
-                          key={i}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono border shadow-sm ${
-                            key.startsWith('/')
-                              ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] border-[color-mix(in_srgb,var(--brand)_25%,transparent)] text-[var(--brand)]'
-                              : 'bg-[var(--bg-subtle)] border-[var(--border)] text-[var(--text-primary)]'
-                          }`}
-                        >
-                          {key}
-                        </kbd>
-                      ))}
+                {section.shortcuts.map((s) => {
+                  const keys = 'combo' in s ? formatShortcutKeys(s.combo) : s.keys
+                  return (
+                    <div
+                      key={s.desc}
+                      className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-[var(--bg-subtle)] transition-colors group"
+                    >
+                      <span className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+                        {s.desc}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {keys.map((key, i) => (
+                          <kbd
+                            key={i}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono border shadow-sm ${
+                              key.startsWith('/')
+                                ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] border-[color-mix(in_srgb,var(--brand)_25%,transparent)] text-[var(--brand)]'
+                                : 'bg-[var(--bg-subtle)] border-[var(--border)] text-[var(--text-primary)]'
+                            }`}
+                          >
+                            {key}
+                          </kbd>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))}

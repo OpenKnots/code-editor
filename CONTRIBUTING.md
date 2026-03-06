@@ -74,7 +74,13 @@ This repo uses `gitleaks` for local hooks and CI history scanning with a version
 Install `gitleaks` once:
 
 ```bash
+# macOS
 brew install gitleaks
+
+# Windows (scoop)
+scoop install gitleaks
+
+# Or download from https://github.com/gitleaks/gitleaks/releases
 ```
 
 Useful commands:

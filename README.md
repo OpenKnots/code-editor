@@ -8,8 +8,8 @@ A lightweight, AI-native code editor powered by [OpenClaw](https://github.com/op
 ┌──────────────┬──────────────────────────┬─────────────────┐
 │  File Tree   │   Monaco Editor          │   Agent Panel   │
 │              │   (multi-tab, vim mode)  │   (chat + diff) │
-│  ⌘B toggle   │   ⌘K inline edit         │   ⌘J toggle     │
-│              │   ⌘P quick open          │                 │
+│  Cmd/Ctrl+B  │   Cmd/Ctrl+K inline edit │   Cmd/Ctrl+J    │
+│              │   Cmd/Ctrl+P quick open  │                 │
 ├──────────────┴──────────────────────────┴─────────────────┤
 │  Terminal (xterm.js)                                      │
 └───────────────────────────────────────────────────────────┘
@@ -37,11 +37,15 @@ A lightweight, AI-native code editor powered by [OpenClaw](https://github.com/op
 
 ## Quick Start
 
-### Desktop (macOS)
+### Desktop (Windows, macOS, Linux)
 
-Download the [latest release](https://github.com/OpenKnots/code-editor/releases/latest) (.dmg).
+Download the [latest release](https://github.com/OpenKnots/code-editor/releases/latest):
 
-After installing, macOS may show _"KnotCode is damaged"_ — this is because the app isn't notarized with Apple (yet). Fix it with:
+- **Windows** — `.msi` or `.exe` installer
+- **macOS** — `.dmg` (Apple Silicon + Intel)
+- **Linux** — `.deb`, `.AppImage`, or `.rpm` (varies by distro)
+
+**macOS only:** After installing, macOS may show _"KnotCode is damaged"_ — this is because the app isn't notarized with Apple (yet). Fix it with:
 
 ```bash
 xattr -cr /Applications/KnotCode.app
@@ -81,7 +85,7 @@ Copy `.env.example` to `.env` and configure. All variables are optional — the 
 - **Agent Builder** — Choose a persona, customize your system prompt, configure behaviors
 - **Inline Edits** — Agent proposes changes, you review diffs and accept/reject per-hunk
 - **7 Themes** — Obsidian, Bone, Neon, Catppuccin, VooDoo, CyberNord, PrettyPink
-- **Monaco Editor** — Multi-tab, Vim mode, syntax highlighting, ⌘P quick open
+- **Monaco Editor** — Multi-tab, Vim mode, syntax highlighting, Cmd/Ctrl+P quick open
 - **GitHub Integration** — Device flow auth, commit, push, branch switching
 - **Terminal** — Integrated xterm.js with gateway slash commands
 - **Spotify + YouTube** — Built-in music and video plugins
@@ -108,15 +112,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the technical architecture,
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action                         |
-| -------- | ------------------------------ |
-| `⌘P`     | Quick file open (fuzzy search) |
-| `⌘K`     | Inline edit at selection       |
-| `⌘B`     | Toggle file explorer           |
-| `⌘I`     | Toggle agent panel             |
-| `⌘J`     | Toggle terminal                |
-| `Enter`  | Send message / Start chat      |
-| `Esc`    | Close overlays                 |
+Use **Cmd** on macOS, **Ctrl** on Windows/Linux.
+
+| Shortcut     | Action                         |
+| ------------ | ------------------------------ |
+| `Cmd/Ctrl+P` | Quick file open (fuzzy search) |
+| `Cmd/Ctrl+K` | Inline edit at selection       |
+| `Cmd/Ctrl+B` | Toggle file explorer           |
+| `Cmd/Ctrl+I` | Toggle agent panel             |
+| `Cmd/Ctrl+J` | Toggle terminal                |
+| `Enter`      | Send message / Start chat      |
+| `Esc`        | Close overlays                 |
 
 ## Tech Stack
 

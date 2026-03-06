@@ -37,32 +37,32 @@ export function useKeyboardShortcuts({
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey
 
-      // ⌘P — Quick open
+      // meta+P — Quick open
       if (meta && e.key === 'p' && !e.shiftKey) {
         e.preventDefault()
         onQuickOpen()
       }
-      // ⌘⇧P — Command palette
+      // meta+shift+P — Command palette
       if (meta && e.shiftKey && e.key === 'p') {
         e.preventDefault()
         onCommandPalette()
       }
-      // ⌘⇧F — Global search
+      // meta+shift+F — Global search
       if (meta && e.shiftKey && e.key === 'f') {
         e.preventDefault()
         onGlobalSearch()
       }
-      // ⌘\\ — Toggle sidebar
+      // meta+\ — Toggle sidebar
       if (meta && e.key === '\\') {
         e.preventDefault()
         layout.toggle('sidebar')
       }
-      // ⌘J / ⌘` — Toggle terminal
+      // meta+J / meta+` — Toggle terminal
       if (meta && (e.key === 'j' || e.key === '`') && !e.shiftKey) {
         e.preventDefault()
         layout.toggle('terminal')
       }
-      // ⌘L — Open side chat panel and focus input
+      // meta+L — Open side chat panel and focus input
       if (meta && e.key === 'l' && !e.shiftKey) {
         e.preventDefault()
         if (mode === 'chat') {
@@ -73,7 +73,7 @@ export function useKeyboardShortcuts({
         }
         requestAnimationFrame(() => emit('focus-agent-input'))
       }
-      // ⌘⌥1-4 — Focus key regions (explorer/editor/chat/terminal)
+      // meta+alt+1-4 — Focus key regions (explorer/editor/chat/terminal)
       if (meta && e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
         e.preventDefault()
         if (activeViewRef.current !== 'editor') setView('editor')
@@ -94,7 +94,7 @@ export function useKeyboardShortcuts({
         }
       }
       // Esc — Close overlays (handled by each overlay individually via props)
-      // ⌘⇧1/2/3 — Mode switching
+      // meta+shift+1/2/3 — Mode switching
       if (meta && e.shiftKey && ['1', '2', '3'].includes(e.key)) {
         e.preventDefault()
         const modes: AppMode[] = ['classic', 'chat', 'tui']
@@ -102,7 +102,7 @@ export function useKeyboardShortcuts({
         if (target) setMode(target)
         return
       }
-      // ⌘1..N — View switching (mode-aware)
+      // meta+1..N — View switching (mode-aware)
       if (meta && e.key >= '1' && e.key <= String(visibleViews.length)) {
         e.preventDefault()
         const target = visibleViews[parseInt(e.key) - 1]
@@ -126,7 +126,7 @@ export function useKeyboardShortcuts({
     onFlashTab,
   ])
 
-  // ─── ⌘S — Save file ───────────────────────────────────
+  // ─── meta+S — Save file ───────────────────────────────
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {

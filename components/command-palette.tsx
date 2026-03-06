@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react'
 import { cn } from '@/lib/utils'
 import { useView, type ViewId } from '@/context/view-context'
 import { isTauri } from '@/lib/tauri'
+import { formatShortcut } from '@/lib/platform'
 
 type CommandId =
   | 'find-files'
@@ -53,7 +54,7 @@ interface CommandItem {
   hint: string
   keywords: string[]
   icon: string
-  shortcut?: string
+  combo?: string
   group: 'search' | 'layout' | 'preset' | 'navigate' | 'git' | 'pr' | 'preview'
 }
 
@@ -65,7 +66,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Open quick file search',
     keywords: ['file', 'quick', 'open'],
     icon: 'lucide:file-search',
-    shortcut: '\u2318P',
+    combo: 'meta+P',
     group: 'search',
   },
   {
@@ -74,7 +75,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Save the active file',
     keywords: ['save', 'write', 'file'],
     icon: 'lucide:save',
-    shortcut: '\u2318S',
+    combo: 'meta+S',
     group: 'search',
   },
   {
@@ -91,7 +92,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Open editor search',
     keywords: ['find', 'search', 'match'],
     icon: 'lucide:search',
-    shortcut: '\u2318F',
+    combo: 'meta+F',
     group: 'search',
   },
   {
@@ -100,7 +101,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Open replace widget',
     keywords: ['replace', 'search', 'find'],
     icon: 'lucide:replace',
-    shortcut: '\u2318H',
+    combo: 'meta+H',
     group: 'search',
   },
   {
@@ -135,7 +136,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Show or hide the file tree',
     keywords: ['files', 'tree', 'explorer', 'sidebar'],
     icon: 'lucide:folder',
-    shortcut: '\u2318B',
+    combo: 'meta+B',
     group: 'layout',
   },
   {
@@ -144,7 +145,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Show or hide the terminal panel',
     keywords: ['terminal', 'shell', 'console'],
     icon: 'lucide:terminal',
-    shortcut: '\u2318J',
+    combo: 'meta+J',
     group: 'layout',
   },
   {
@@ -153,7 +154,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Show or hide the AI agent panel',
     keywords: ['chat', 'agent', 'ai', 'assistant'],
     icon: 'lucide:message-square',
-    shortcut: '\u2318I',
+    combo: 'meta+I',
     group: 'layout',
   },
   {
@@ -170,7 +171,7 @@ const COMMANDS: CommandItem[] = [
     hint: 'Minimize editor to icon rail',
     keywords: ['collapse', 'minimize', 'hide', 'editor'],
     icon: 'lucide:minimize-2',
-    shortcut: '\u2318E',
+    combo: 'meta+E',
     group: 'layout',
   },
 
@@ -577,9 +578,9 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
                         {command.hint}
                       </p>
                     </div>
-                    {command.shortcut && (
+                    {command.combo && (
                       <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-disabled)] shrink-0">
-                        {command.shortcut}
+                        {formatShortcut(command.combo)}
                       </kbd>
                     )}
                   </button>

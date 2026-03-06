@@ -10,6 +10,7 @@ import { AgentBuilder, AgentSummary } from '@/components/agent-builder'
 import { SkillsInterface } from '@/components/skills/skills-interface'
 import { type AgentConfig, getAgentConfig, clearAgentConfig } from '@/lib/agent-session'
 import { isTauri, tauriReadFileBase64 } from '@/lib/tauri'
+import { formatShortcut } from '@/lib/platform'
 
 interface Props {
   open: boolean
@@ -151,20 +152,20 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
   ]
 
   const shortcuts = [
-    { keys: '⌘B', desc: 'Toggle explorer' },
-    { keys: '⌘J', desc: 'Toggle terminal' },
-    { keys: '⌘\\', desc: 'Toggle sidebar' },
-    { keys: '⌘P', desc: 'Quick open file' },
-    { keys: '⌘K', desc: 'Inline edit' },
-    { keys: '⌘L', desc: 'Send selection to chat' },
-    { keys: '⌘⌥1', desc: 'Focus explorer' },
-    { keys: '⌘⌥2', desc: 'Focus editor' },
-    { keys: '⌘⌥3', desc: 'Focus chat' },
-    { keys: '⌘⌥4', desc: 'Focus terminal' },
-    { keys: '⌘S', desc: 'Save file' },
-    { keys: '⌘⇧F', desc: 'Global search' },
-    { keys: '⌘⇧P', desc: 'Command palette' },
-    { keys: 'Esc', desc: 'Close overlays' },
+    { combo: 'meta+B', desc: 'Toggle explorer' },
+    { combo: 'meta+J', desc: 'Toggle terminal' },
+    { combo: 'meta+\\', desc: 'Toggle sidebar' },
+    { combo: 'meta+P', desc: 'Quick open file' },
+    { combo: 'meta+K', desc: 'Inline edit' },
+    { combo: 'meta+L', desc: 'Send selection to chat' },
+    { combo: 'meta+alt+1', desc: 'Focus explorer' },
+    { combo: 'meta+alt+2', desc: 'Focus editor' },
+    { combo: 'meta+alt+3', desc: 'Focus chat' },
+    { combo: 'meta+alt+4', desc: 'Focus terminal' },
+    { combo: 'meta+S', desc: 'Save file' },
+    { combo: 'meta+shift+F', desc: 'Global search' },
+    { combo: 'meta+shift+P', desc: 'Command palette' },
+    { combo: 'Escape', desc: 'Close overlays' },
   ]
 
   return (
@@ -625,12 +626,12 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
             <div className="space-y-0.5">
               {shortcuts.map((s) => (
                 <div
-                  key={s.keys}
+                  key={s.combo}
                   className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--bg-subtle)]"
                 >
                   <span className="text-[11px] text-[var(--text-secondary)]">{s.desc}</span>
                   <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text-tertiary)]">
-                    {s.keys}
+                    {formatShortcut(s.combo)}
                   </kbd>
                 </div>
               ))}

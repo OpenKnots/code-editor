@@ -2,13 +2,13 @@
 
 ## Overview
 
-KnotCode ships as a native macOS desktop application via [Tauri v2](https://v2.tauri.app). Tauri wraps the system's native WebView (WebKit on macOS) instead of bundling Chromium, resulting in a ~10MB binary vs ~150MB for Electron.
+KnotCode ships as a native desktop application for **Windows, macOS, and Linux** via [Tauri v2](https://v2.tauri.app). Tauri wraps the system's native WebView (WebKit on macOS, WebView2 on Windows) instead of bundling Chromium, resulting in a ~10MB binary vs ~150MB for Electron.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────┐
-│         macOS .app Bundle       │
+│      Native Desktop Bundle      │
 │                                 │
 │  ┌───────────────────────────┐  │
 │  │     System WebKit View    │  │
@@ -36,7 +36,7 @@ KnotCode ships as a native macOS desktop application via [Tauri v2](https://v2.t
 # Install Rust via rustup
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-# Add to shell profile (~/.zshrc for macOS)
+# Add to shell profile (~/.zshrc on macOS, ~/.bashrc on Linux, $PROFILE on Windows)
 echo '. "$HOME/.cargo/env"' >> ~/.zshrc
 source ~/.zshrc
 
@@ -45,11 +45,11 @@ rustc --version  # rustc 1.x.x
 cargo --version  # cargo 1.x.x
 ```
 
-### 2. Xcode Command Line Tools
+### 2. Platform-specific tools
 
-```bash
-xcode-select --install
-```
+- **macOS:** Xcode Command Line Tools — `xcode-select --install`
+- **Windows:** Visual Studio Build Tools (for Rust MSVC target)
+- **Linux:** Build essentials — `sudo apt install build-essential` (Debian/Ubuntu) or equivalent
 
 ### 3. Node.js + pnpm
 
@@ -66,7 +66,7 @@ pnpm --version   # any recent version
 pnpm install
 
 # Start Tauri dev mode
-# This runs Next.js dev server + opens a native macOS window
+# This runs Next.js dev server + opens a native desktop window
 pnpm tauri:dev
 ```
 
@@ -77,19 +77,11 @@ The dev window connects to `http://localhost:3080` with full hot reload. Code ch
 ## Production Build
 
 ```bash
-# Build .app bundle + .dmg installer
+# Build native installer (.msi/.exe on Windows, .app/.dmg on macOS, .deb/.AppImage on Linux)
 pnpm tauri:build
 ```
 
-Output location:
-
-```
-src-tauri/target/release/bundle/
-├── macos/
-│   └── KnotCode.app      # macOS application bundle
-└── dmg/
-    └── KnotCode_0.1.0_aarch64.dmg  # Installer
-```
+Output location: `src-tauri/target/release/bundle/` — structure varies by platform (e.g. `macos/KnotCode.app`, `windows/*.msi`, `linux/*.AppImage`).
 
 ## Configuration
 
@@ -188,6 +180,5 @@ src-tauri/
 - [ ] **Auto-updater** — check for updates on launch
 - [ ] **Native notifications** — build status, agent replies
 - [ ] **Deep linking** — `code-editor://open?repo=...` URL scheme
-- [ ] **Touch Bar** — common actions (save, run, commit)
-- [ ] **Spotlight integration** — search files via macOS Spotlight
-- [ ] **Windows + Linux** — Tauri supports all platforms natively
+- [ ] **Touch Bar** (macOS) — common actions (save, run, commit)
+- [ ] **Spotlight integration** (macOS) — search files via macOS Spotlight

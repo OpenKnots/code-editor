@@ -88,12 +88,12 @@
 
 ### Desktop App (Tauri)
 
-- [x] **macOS native** — Tauri v2 with system WebKit
+- [x] **Windows, macOS, Linux** — Tauri v2 with native WebView (WebKit on macOS, WebView2 on Windows)
 - [x] **~10MB binary** — no bundled Chromium
 - [x] **Custom icons** — OpenKnot logo at all sizes
-- [x] **macOS titlebar overlay** — native feel
+- [x] **Native titlebar** — platform-appropriate styling
 - [x] **Dev mode** — `pnpm tauri:dev` with hot reload
-- [x] **Production build** — `pnpm tauri:build` → .app + .dmg
+- [x] **Production build** — `pnpm tauri:build` → .msi/.exe, .app/.dmg, or .deb/.AppImage
 
 ---
 
@@ -103,7 +103,7 @@
 
 - [ ] **Git status in file tree** — green (new), orange (modified), red (deleted) indicators
 - [ ] **Modified files diff** — view all changes before committing
-- [ ] **⌘S Save shortcut** — quick commit current file
+- [ ] **Cmd/Ctrl+S Save shortcut** — quick commit current file
 - [ ] **Agent-initiated file navigation** — agent says "open file X" → editor opens it
 - [ ] **Selection-aware /explain** — explain selected code, not whole file
 - [ ] **Recent files** — quick access to recently opened files

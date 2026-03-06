@@ -131,14 +131,17 @@ npx serve out
 ./scripts/build-release.sh web --serve
 ```
 
-### Desktop (macOS DMG)
+### Desktop (Windows, macOS, Linux)
 
 ```bash
-# Apple Silicon (aarch64) DMG
+# Build for current platform
 ./scripts/build-release.sh desktop
+
+# macOS: Universal binary (arm64 + Intel)
+./scripts/build-release.sh desktop --universal
 ```
 
-The DMG is output to `src-tauri/target/.../bundle/dmg/`.
+Output location: `src-tauri/target/.../bundle/` (`.msi`/`.exe` on Windows, `.app`/`.dmg` on macOS, `.deb`/`.AppImage` on Linux).
 
 **First build takes 5–10 minutes** (Rust compilation). Subsequent builds are cached and much faster.
 
@@ -199,19 +202,21 @@ The `release.yml` workflow:
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action                      |
-| -------- | --------------------------- |
-| `⌘B`     | Toggle file explorer        |
-| `⌘J`     | Toggle terminal             |
-| `⌘\`     | Toggle sidebar              |
-| `⌘P`     | Quick open file             |
-| `⌘⇧I`    | Isolate component (preview) |
-| `⌘K`     | Inline edit                 |
-| `⌘L`     | Send selection to chat      |
-| `⌘S`     | Save file                   |
-| `⌘⇧F`    | Global search               |
-| `⌘⇧P`    | Command palette             |
-| `Esc`    | Close overlays              |
+Use **Cmd** on macOS, **Ctrl** on Windows/Linux.
+
+| Shortcut      | Action                      |
+| ------------- | --------------------------- |
+| `Cmd/Ctrl+B`  | Toggle file explorer        |
+| `Cmd/Ctrl+J`  | Toggle terminal             |
+| `Cmd/Ctrl+\`  | Toggle sidebar              |
+| `Cmd/Ctrl+P`  | Quick open file             |
+| `Cmd/Ctrl+⇧I` | Isolate component (preview) |
+| `Cmd/Ctrl+K`  | Inline edit                 |
+| `Cmd/Ctrl+L`  | Send selection to chat      |
+| `Cmd/Ctrl+S`  | Save file                   |
+| `Cmd/Ctrl+⇧F` | Global search               |
+| `Cmd/Ctrl+⇧P` | Command palette             |
+| `Esc`         | Close overlays              |
 
 ---
 
@@ -237,11 +242,11 @@ To add a new theme:
 
 ## Preview System
 
-The preview panel (`⌘3` or click Preview tab) connects to any local dev server:
+The preview panel (`Cmd/Ctrl+3` or click Preview tab) connects to any local dev server:
 
 - **URL bar** — type `localhost:5173` or any dev server URL
 - **Device Carousel** — see your app on iPhone, Pixel, iPad, MacBook, Desktop simultaneously
-- **Component Isolation** (`⌘⇧I`) — isolate a React component from the active file
+- **Component Isolation** (`Cmd/Ctrl+⇧I`) — isolate a React component from the active file
 - **Picture-in-Picture** — float the preview over your code while editing
 - **Agent Annotations** — when the AI makes changes, glowing highlights show what changed
 

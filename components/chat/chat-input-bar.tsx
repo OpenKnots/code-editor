@@ -5,11 +5,13 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type KeyboardEvent,
   type DragEvent,
   type ClipboardEvent,
 } from 'react'
 import { Icon } from '@iconify/react'
+import { formatShortcut } from '@/lib/platform'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
 
@@ -113,12 +115,14 @@ function formatFileSize(dataUrl: string): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const PLACEHOLDER_HINTS = [
-  'Ask anything...',
-  'Ask anything... \u2318L to add selection',
-  'Ask anything... @ to mention a file',
-  'Ask anything... /commit to save changes',
-]
+function getPlaceholderHints(): string[] {
+  return [
+    'Ask anything...',
+    `Ask anything... ${formatShortcut('meta+L')} to add selection`,
+    'Ask anything... @ to mention a file',
+    'Ask anything... /commit to save changes',
+  ]
+}
 
 export function ChatInputBar({
   input,
@@ -160,17 +164,19 @@ export function ChatInputBar({
   const [inputDragOver, setInputDragOver] = useState(false)
   const inputDragCounter = useRef(0)
 
+  const placeholderHints = useMemo(() => getPlaceholderHints(), [])
+
   useEffect(() => {
     if (input) return
     const interval = setInterval(() => {
-      setPlaceholderIdx((i) => (i + 1) % PLACEHOLDER_HINTS.length)
+      setPlaceholderIdx((i) => (i + 1) % placeholderHints.length)
     }, 4000)
     return () => clearInterval(interval)
-  }, [input])
+  }, [input, placeholderHints.length])
 
   const currentPlaceholder = activeFile
     ? `Ask about ${activeFile.split('/').pop()}...`
-    : PLACEHOLDER_HINTS[placeholderIdx]
+    : placeholderHints[placeholderIdx]
 
   const handleInputDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()

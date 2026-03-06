@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { isTauri } from '@/lib/tauri'
+import { formatShortcut } from '@/lib/platform'
 import { emit } from '@/lib/events'
 
 const SIDEBAR_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
@@ -120,7 +121,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={onToggle}
             className="p-2.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-all cursor-pointer hover:scale-110"
-            title="Expand sidebar (⌘\\)"
+            title={`Expand sidebar (${formatShortcut('meta+\\')})`}
           >
             <Icon icon="lucide:panel-left" width={20} height={20} />
           </button>
