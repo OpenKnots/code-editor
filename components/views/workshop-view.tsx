@@ -96,16 +96,28 @@ function SectionFrame({
   eyebrow,
   description,
   children,
+  active = false,
 }: {
   title: string
   eyebrow: string
   description: string
   children: React.ReactNode
+  active?: boolean
 }) {
   return (
-    <section className="min-w-0 rounded-3xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
+    <section
+      className={`min-w-0 rounded-3xl border p-5 shadow-[var(--shadow-sm)] transition ${
+        active
+          ? 'border-[var(--info)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--info)_14%,var(--bg-elevated)),var(--bg-elevated)_44%,color-mix(in_srgb,var(--info)_5%,transparent))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--info)_24%,transparent),var(--shadow-sm)]'
+          : 'border-[var(--border)] bg-[var(--bg-elevated)]'
+      }`}
+    >
       <div className="mb-5">
-        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-disabled)]">
+        <div
+          className={`text-[11px] font-medium uppercase tracking-[0.18em] ${
+            active ? 'text-[var(--info)]' : 'text-[var(--text-disabled)]'
+          }`}
+        >
           {eyebrow}
         </div>
         <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
@@ -228,19 +240,22 @@ export function WorkshopView() {
     [],
   )
 
-  const updatePrimaryBlueprint = useCallback((updater: (current: WorkshopBlueprint) => WorkshopBlueprint) => {
-    setDocumentState((current) => {
-      const nextPrimary = updater(current.primaryBlueprint)
-      return {
-        ...current,
-        updatedAt: Date.now(),
-        primaryBlueprint: {
-          ...nextPrimary,
+  const updatePrimaryBlueprint = useCallback(
+    (updater: (current: WorkshopBlueprint) => WorkshopBlueprint) => {
+      setDocumentState((current) => {
+        const nextPrimary = updater(current.primaryBlueprint)
+        return {
+          ...current,
           updatedAt: Date.now(),
-        },
-      }
-    })
-  }, [])
+          primaryBlueprint: {
+            ...nextPrimary,
+            updatedAt: Date.now(),
+          },
+        }
+      })
+    },
+    [],
+  )
 
   const setPrimaryBlueprint = useCallback((next: WorkshopBlueprint) => {
     setDocumentState((current) => ({
@@ -335,27 +350,30 @@ export function WorkshopView() {
     [updatePrimaryBlueprint],
   )
 
-  const applyTemplate = useCallback((templateId: string) => {
-    const template = WORKSHOP_TEMPLATE_CATALOG.find((entry) => entry.id === templateId)
-    if (!template) return
-    updatePrimaryBlueprint((current) => ({
-      ...current,
-      identity: {
-        ...current.identity,
-        name: template.label,
-        tagline: template.tagline,
-        personaId: template.personaId,
-        mission: template.mission,
-        toneId: template.toneId,
-        customPrompt: '',
-      },
-      skillIds: [...template.skillIds],
-      toolIds: [...template.toolIds],
-      workflowIds: [...template.workflowIds],
-      automationIds: [...template.automationIds],
-      guardrails: buildGuardrailsForProfile(template.guardrailProfileId),
-    }))
-  }, [updatePrimaryBlueprint])
+  const applyTemplate = useCallback(
+    (templateId: string) => {
+      const template = WORKSHOP_TEMPLATE_CATALOG.find((entry) => entry.id === templateId)
+      if (!template) return
+      updatePrimaryBlueprint((current) => ({
+        ...current,
+        identity: {
+          ...current.identity,
+          name: template.label,
+          tagline: template.tagline,
+          personaId: template.personaId,
+          mission: template.mission,
+          toneId: template.toneId,
+          customPrompt: '',
+        },
+        skillIds: [...template.skillIds],
+        toolIds: [...template.toolIds],
+        workflowIds: [...template.workflowIds],
+        automationIds: [...template.automationIds],
+        guardrails: buildGuardrailsForProfile(template.guardrailProfileId),
+      }))
+    },
+    [updatePrimaryBlueprint],
+  )
 
   const handleSaveBlueprint = useCallback(() => {
     setDocumentState((current) => {
@@ -453,11 +471,17 @@ export function WorkshopView() {
 
         <div className="grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
           <div className="grid min-w-0 gap-6">
-            <div ref={setStageRef('identity')} onFocus={() => setActiveStage('identity')} className="min-w-0">
+            <div
+              ref={setStageRef('identity')}
+              onFocusCapture={() => setActiveStage('identity')}
+              onClickCapture={() => setActiveStage('identity')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Guided Build"
                 title="Identity and Intent"
                 description="Define who the agent is, what it should optimize for, and how it should feel when it speaks."
+                active={activeStage === 'identity'}
               >
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
@@ -519,15 +543,21 @@ export function WorkshopView() {
                           <button
                             key={tone.id}
                             type="button"
-                            onClick={() => updatePrimaryIdentity({ toneId: tone.id as WorkshopToneId })}
+                            onClick={() =>
+                              updatePrimaryIdentity({ toneId: tone.id as WorkshopToneId })
+                            }
                             className={`rounded-xl border px-3 py-3 text-left transition ${
                               active
                                 ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]'
                                 : 'border-[var(--border)] bg-[var(--bg)] hover:border-[var(--brand)]/60'
                             }`}
                           >
-                            <div className="text-sm font-semibold text-[var(--text-primary)]">{tone.label}</div>
-                            <p className="mt-1 text-xs text-[var(--text-tertiary)]">{tone.description}</p>
+                            <div className="text-sm font-semibold text-[var(--text-primary)]">
+                              {tone.label}
+                            </div>
+                            <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                              {tone.description}
+                            </p>
                           </button>
                         )
                       })}
@@ -555,7 +585,9 @@ export function WorkshopView() {
                   </span>
                   <textarea
                     value={primaryBlueprint.identity.customPrompt}
-                    onChange={(event) => updatePrimaryIdentity({ customPrompt: event.target.value })}
+                    onChange={(event) =>
+                      updatePrimaryIdentity({ customPrompt: event.target.value })
+                    }
                     onFocus={() => setActiveStage('identity')}
                     rows={5}
                     className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
@@ -565,11 +597,17 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div ref={setStageRef('skills')} className="min-w-0">
+            <div
+              ref={setStageRef('skills')}
+              onFocusCapture={() => setActiveStage('skills')}
+              onClickCapture={() => setActiveStage('skills')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Modules"
                 title="Skills"
                 description="Equip workflows that change how the agent approaches problems before it ever answers."
+                active={activeStage === 'skills'}
               >
                 <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-4">
@@ -584,7 +622,9 @@ export function WorkshopView() {
                           onClick={() => applySkillBundle(bundle.skillIds)}
                           className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition hover:border-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_6%,var(--bg-elevated))]"
                         >
-                          <div className="text-sm font-semibold text-[var(--text-primary)]">{bundle.label}</div>
+                          <div className="text-sm font-semibold text-[var(--text-primary)]">
+                            {bundle.label}
+                          </div>
                           <p className="mt-1 text-xs leading-5 text-[var(--text-tertiary)]">
                             {bundle.description}
                           </p>
@@ -645,7 +685,9 @@ export function WorkshopView() {
                                 }`}
                               >
                                 <Icon
-                                  icon={active ? 'lucide:check-circle-2' : getSkillDisplayIcon(skill)}
+                                  icon={
+                                    active ? 'lucide:check-circle-2' : getSkillDisplayIcon(skill)
+                                  }
                                   width={18}
                                   height={18}
                                 />
@@ -685,11 +727,17 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div ref={setStageRef('tools')} className="min-w-0">
+            <div
+              ref={setStageRef('tools')}
+              onFocusCapture={() => setActiveStage('tools')}
+              onClickCapture={() => setActiveStage('tools')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Capabilities"
                 title="Tools"
                 description="Enable only the surfaces the agent truly needs. Power without clarity becomes risk."
+                active={activeStage === 'tools'}
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   {WORKSHOP_TOOL_CATALOG.map((tool) => (
@@ -707,11 +755,17 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div ref={setStageRef('workflow')} className="min-w-0">
+            <div
+              ref={setStageRef('workflow')}
+              onFocusCapture={() => setActiveStage('workflow')}
+              onClickCapture={() => setActiveStage('workflow')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Orchestration"
                 title="Workflow Spine"
                 description="Decide how the agent should move through discovery, planning, execution, review, and handoff."
+                active={activeStage === 'workflow'}
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   {WORKSHOP_WORKFLOW_CATALOG.map((workflow) => (
@@ -728,11 +782,17 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div ref={setStageRef('automation')} className="min-w-0">
+            <div
+              ref={setStageRef('automation')}
+              onFocusCapture={() => setActiveStage('automation')}
+              onClickCapture={() => setActiveStage('automation')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Momentum"
                 title="Automations"
                 description="Set up the quality pulses and reminders that keep the agent aligned before and after each move."
+                active={activeStage === 'automation'}
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   {WORKSHOP_AUTOMATION_CATALOG.map((automation) => (
@@ -749,11 +809,17 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div ref={setStageRef('guardrails')} className="min-w-0">
+            <div
+              ref={setStageRef('guardrails')}
+              onFocusCapture={() => setActiveStage('guardrails')}
+              onClickCapture={() => setActiveStage('guardrails')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Safety"
                 title="Guardrails"
                 description="Make security, review, and execution posture visible so the agent earns trust instead of assuming it."
+                active={activeStage === 'guardrails'}
               >
                 <div className="grid gap-3 md:grid-cols-3">
                   {WORKSHOP_GUARDRAIL_PROFILES.map((profile) => {
@@ -774,7 +840,9 @@ export function WorkshopView() {
                             : 'border-[var(--border)] bg-[var(--bg)] hover:border-[var(--brand)]/60'
                         }`}
                       >
-                        <div className="text-sm font-semibold text-[var(--text-primary)]">{profile.label}</div>
+                        <div className="text-sm font-semibold text-[var(--text-primary)]">
+                          {profile.label}
+                        </div>
                         <p className="mt-1 text-xs leading-5 text-[var(--text-tertiary)]">
                           {profile.description}
                         </p>
@@ -833,7 +901,9 @@ export function WorkshopView() {
                             : 'border-[var(--border)] bg-[var(--bg)] hover:border-[var(--brand)]/60'
                         }`}
                       >
-                        <span className="text-sm font-medium text-[var(--text-primary)]">{toggle.label}</span>
+                        <span className="text-sm font-medium text-[var(--text-primary)]">
+                          {toggle.label}
+                        </span>
                         <Icon
                           icon={active ? 'lucide:toggle-right' : 'lucide:toggle-left'}
                           width={22}
@@ -847,11 +917,17 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div ref={setStageRef('evaluation')} className="min-w-0">
+            <div
+              ref={setStageRef('evaluation')}
+              onFocusCapture={() => setActiveStage('evaluation')}
+              onClickCapture={() => setActiveStage('evaluation')}
+              className="min-w-0"
+            >
               <SectionFrame
                 eyebrow="Verification"
                 title="Evaluation Posture"
                 description="Choose a test scenario now so the workshop closes with evidence, not vibes."
+                active={activeStage === 'evaluation'}
               >
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
@@ -889,7 +965,8 @@ export function WorkshopView() {
                       Why this matters
                     </div>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      The workshop only becomes trustworthy when the blueprint survives a realistic prompt under the guardrails you selected.
+                      The workshop only becomes trustworthy when the blueprint survives a realistic
+                      prompt under the guardrails you selected.
                     </p>
                     <button
                       type="button"
@@ -915,7 +992,9 @@ export function WorkshopView() {
             <section className="rounded-3xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">Blueprint Summary</h2>
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                    Blueprint Summary
+                  </h2>
                   <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                     The selected modules that will shape the final system prompt.
                   </p>
@@ -931,8 +1010,9 @@ export function WorkshopView() {
                     Persona
                   </div>
                   <div className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
-                    {PERSONA_PRESETS.find((preset) => preset.id === primaryBlueprint.identity.personaId)?.name ??
-                      'Custom'}
+                    {PERSONA_PRESETS.find(
+                      (preset) => preset.id === primaryBlueprint.identity.personaId,
+                    )?.name ?? 'Custom'}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-4">
@@ -968,7 +1048,9 @@ export function WorkshopView() {
 
             <section className="rounded-3xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
               <div className="mb-4">
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">Live Prompt Preview</h2>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                  Live Prompt Preview
+                </h2>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                   This is the prompt the workshop will inject into the gateway.
                 </p>

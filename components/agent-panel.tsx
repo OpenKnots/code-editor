@@ -8,6 +8,7 @@ import { KnotLogo } from '@/components/knot-logo'
 import { ChatHeader } from '@/components/chat-header'
 import type { AgentMode } from '@/components/mode-selector'
 import { usePermissions } from '@/components/permissions-toggle'
+import { AgentApproval } from '@/components/agent-approval'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
 import { useRepo } from '@/context/repo-context'
@@ -245,9 +246,7 @@ function formatPullRequestList(
   ].join('\n')
 }
 
-function summarizeChecks(
-  checks: Array<{ conclusion: string | null; status: string }>,
-): string {
+function summarizeChecks(checks: Array<{ conclusion: string | null; status: string }>): string {
   if (checks.length === 0) return 'No checks reported'
   const passed = checks.filter((check) => check.conclusion === 'success').length
   const failed = checks.filter((check) => check.conclusion === 'failure').length
@@ -1081,11 +1080,7 @@ export function AgentPanel() {
   }, [files, local])
 
   const appendChatMessage = useCallback(
-    (
-      role: ChatMessage['role'],
-      type: ChatMessage['type'],
-      content: string,
-    ) => {
+    (role: ChatMessage['role'], type: ChatMessage['type'], content: string) => {
       appendMessage({
         id: crypto.randomUUID(),
         role,
@@ -1130,9 +1125,7 @@ export function AgentPanel() {
       const branch = repo?.branch ?? local.gitInfo?.branch ?? null
 
       if (!repoFullName) {
-        appendErrorMessage(
-          `${action} requires a GitHub repo or a local repo with a GitHub origin.`,
-        )
+        appendErrorMessage(`${action} requires a GitHub repo or a local repo with a GitHub origin.`)
         return null
       }
 
@@ -1377,12 +1370,12 @@ export function AgentPanel() {
             fetchPRReviews(githubRepo.repoFullName, number),
             fetchPRChecks(githubRepo.repoFullName, pr.headSha),
           ])
-          appendStatusMessage(
-            formatPullRequestDetails(pr, reviews.length, summarizeChecks(checks)),
-          )
+          appendStatusMessage(formatPullRequestDetails(pr, reviews.length, summarizeChecks(checks)))
         } else {
           const prs = await fetchPullRequests(githubRepo.repoFullName, 'open', 20)
-          appendStatusMessage(formatPullRequestList(githubRepo.repoFullName, prs, githubRepo.branch))
+          appendStatusMessage(
+            formatPullRequestList(githubRepo.repoFullName, prs, githubRepo.branch),
+          )
         }
       } catch (err) {
         appendErrorMessage(
@@ -1399,8 +1392,7 @@ export function AgentPanel() {
       if (!githubRepo) return
 
       const prNumber = Number.parseInt(mergeMatch[1], 10)
-      const mergeMethod = (mergeMatch[2]?.toLowerCase() ??
-        'merge') as 'merge' | 'squash' | 'rebase'
+      const mergeMethod = (mergeMatch[2]?.toLowerCase() ?? 'merge') as 'merge' | 'squash' | 'rebase'
 
       try {
         appendStatusMessage(`Merging PR #${prNumber} with ${mergeMethod}...`)
@@ -1408,9 +1400,7 @@ export function AgentPanel() {
         const shaLine = result.sha ? `\nCommit: ${result.sha.slice(0, 7)}` : ''
         appendStatusMessage(`Merged PR #${prNumber}. ${result.message}${shaLine}`)
       } catch (err) {
-        appendErrorMessage(
-          `Merge failed: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        appendErrorMessage(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
       }
       return
     }
@@ -2110,6 +2100,9 @@ export function AgentPanel() {
           onRemoveImage={(i) => setImageAttachments((prev) => prev.filter((_, j) => j !== i))}
         />
       )}
+
+      {/* Agent Approvals */}
+      <AgentApproval />
 
       {/* Messages */}
       {messages.length > 0 && (

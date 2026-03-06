@@ -26,10 +26,10 @@ import { PreviewProvider } from '@/context/preview-context'
 import { ViewRouter } from '@/components/view-router'
 import { StatusBar } from '@/components/status-bar'
 import { useKeyboardShortcuts } from '@/components/keyboard-handler'
-import { SidebarPluginSlot } from '@/components/sidebar-plugin-slot'
 import { emit, on } from '@/lib/events'
 import { KnotLogo } from '@/components/knot-logo'
 import type { AppMode } from '@/lib/mode-registry'
+import { openNewEditorInstance } from '@/lib/tauri'
 
 const GitSidebarPanel = dynamic(
   () => import('@/components/git-sidebar-panel').then((m) => ({ default: m.GitSidebarPanel })),
@@ -261,6 +261,9 @@ export default function EditorLayout() {
     onQuickOpen: () => setQuickOpenVisible((v) => !v),
     onCommandPalette: () => setCommandPaletteVisible((v) => !v),
     onGlobalSearch: () => setGlobalSearchVisible((v) => !v),
+    onNewWindow: () => {
+      openNewEditorInstance().catch((err) => console.error('Failed to open new window:', err))
+    },
     onFlashTab: (v) => {
       setFlashedTab(v)
       setTimeout(() => setFlashedTab(null), 400)
@@ -732,9 +735,6 @@ export default function EditorLayout() {
       {/* Git sidebar panel — Codex-style always-visible right panel */}
       {mode !== 'tui' && layout.isVisible('gitPanel') && <GitSidebarPanel />}
 
-      {/* Sidebar plugins (Spotify, etc.) */}
-      <SidebarPluginSlot />
-
       {/* Plugins */}
       <SpotifyPlugin />
       <YouTubePlugin />
@@ -828,6 +828,11 @@ export default function EditorLayout() {
               break
             case 'open-onboarding':
               setOnboardingOpen(true)
+              break
+            case 'open-new-window':
+              openNewEditorInstance().catch((err) =>
+                console.error('Failed to open new window:', err),
+              )
               break
           }
         }}

@@ -84,7 +84,14 @@ export interface AppEvents {
 
   // Plugins
   'spotify-state-changed': Record<string, unknown>
-  'youtube-state-changed': { playing: boolean; type: string; id: string }
+  'youtube-state-changed': {
+    playing: boolean
+    type: string
+    id: string
+    muted?: boolean
+    volume?: number
+    current?: { id: string; label: string; type: 'playlist' | 'video' } | null
+  }
 
   // Threads (sidebar list refresh when chat persists)
   'threads-updated': void

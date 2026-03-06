@@ -12,6 +12,7 @@ interface KeyboardHandlerProps {
   onQuickOpen: () => void
   onCommandPalette: () => void
   onGlobalSearch: () => void
+  onNewWindow: () => void
   onFlashTab: (v: ViewId) => void
   saveFile: (path: string) => Promise<void>
 }
@@ -20,6 +21,7 @@ export function useKeyboardShortcuts({
   onQuickOpen,
   onCommandPalette,
   onGlobalSearch,
+  onNewWindow,
   onFlashTab,
   saveFile,
 }: KeyboardHandlerProps) {
@@ -51,6 +53,11 @@ export function useKeyboardShortcuts({
       if (meta && e.shiftKey && e.key === 'f') {
         e.preventDefault()
         onGlobalSearch()
+      }
+      // ⌘⇧N — New editor window
+      if (meta && e.shiftKey && e.key === 'N') {
+        e.preventDefault()
+        onNewWindow()
       }
       // ⌘\\ — Toggle sidebar
       if (meta && e.key === '\\') {
@@ -123,6 +130,7 @@ export function useKeyboardShortcuts({
     onQuickOpen,
     onCommandPalette,
     onGlobalSearch,
+    onNewWindow,
     onFlashTab,
   ])
 

@@ -9,6 +9,8 @@
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:webview:default",
+    "core:window:allow-create",
+    "core:webview:allow-create-webview-window",
     "core:menu:default",
     "core:event:default",
     "window-state:default",

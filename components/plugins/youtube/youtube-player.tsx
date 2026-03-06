@@ -18,6 +18,13 @@ interface PlaylistInfo {
   label: string
 }
 
+type YouTubeCommandDetail =
+  | { type: 'toggle-play' }
+  | { type: 'next-video' }
+  | { type: 'set-volume'; value: number }
+  | { type: 'toggle-mute' }
+  | { type: 'show-input' }
+
 function parseYouTubeUrl(input: string): PlaylistInfo | null {
   const trimmed = input.trim()
 
@@ -106,6 +113,7 @@ export function YouTubePlayer() {
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory)
   const [error, setError] = useState<string | null>(null)
   const [showInput, setShowInput] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState<number>(() => {
     try {
       const raw = localStorage.getItem(VOLUME_KEY)
@@ -133,14 +141,31 @@ export function YouTubePlayer() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(current))
       } catch {}
-      emit('youtube-state-changed', { playing: true, type: current.type, id: current.id })
+      setIsPlaying(true)
     } else {
       try {
         localStorage.removeItem(STORAGE_KEY)
       } catch {}
-      emit('youtube-state-changed', { playing: false, type: '', id: '' })
+      setIsPlaying(false)
     }
   }, [current])
+
+  useEffect(() => {
+    emit('youtube-state-changed', {
+      playing: Boolean(current) && isPlaying,
+      muted,
+      volume,
+      type: current?.type ?? '',
+      id: current?.id ?? '',
+      current: current
+        ? {
+            id: current.id,
+            label: current.label,
+            type: current.type,
+          }
+        : null,
+    })
+  }, [current, isPlaying, muted, volume])
 
   useEffect(() => {
     try {
@@ -253,6 +278,37 @@ export function YouTubePlayer() {
   const toggleMute = useCallback(() => {
     setMuted((prev) => !prev)
   }, [])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<YouTubeCommandDetail>).detail
+      switch (detail?.type) {
+        case 'toggle-play':
+          if (!current) return
+          sendPlayerCommand(isPlaying ? 'pauseVideo' : 'playVideo')
+          setIsPlaying((prev) => !prev)
+          break
+        case 'next-video':
+          if (!current) return
+          sendPlayerCommand('nextVideo')
+          setIsPlaying(true)
+          break
+        case 'set-volume':
+          handleVolumeChange(detail.value)
+          break
+        case 'toggle-mute':
+          toggleMute()
+          break
+        case 'show-input':
+          setShowInput(true)
+          window.setTimeout(() => inputRef.current?.focus(), 100)
+          break
+      }
+    }
+
+    window.addEventListener('youtube-command', handler)
+    return () => window.removeEventListener('youtube-command', handler)
+  }, [current, handleVolumeChange, isPlaying, sendPlayerCommand, toggleMute])
 
   const removeHistoryItem = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation()

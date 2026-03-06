@@ -40,3 +40,26 @@ export async function tauriReadFileBase64(absolutePath: string): Promise<string 
   const file = absolutePath.slice(lastSlash + 1)
   return tauriInvoke<string>('local_read_file_base64', { root, path: file })
 }
+
+export async function openNewEditorInstance(): Promise<void> {
+  if (isTauri()) {
+    const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+    const label = `editor-${Date.now()}`
+    new WebviewWindow(label, {
+      url: 'index.html',
+      title: 'KnotCode',
+      width: 1440,
+      height: 900,
+      minWidth: 800,
+      minHeight: 600,
+      resizable: true,
+      decorations: true,
+      transparent: true,
+    })
+    return
+  }
+
+  if (typeof window !== 'undefined') {
+    window.open('/', '_blank', 'noopener,noreferrer')
+  }
+}

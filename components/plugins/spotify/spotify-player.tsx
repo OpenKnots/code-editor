@@ -63,6 +63,13 @@ interface SearchResult {
   type: 'track' | 'album' | 'playlist'
 }
 
+type SpotifyCommandDetail =
+  | { type: 'toggle-play' }
+  | { type: 'previous-track' }
+  | { type: 'next-track' }
+  | { type: 'set-volume'; value: number }
+  | { type: 'toggle-mute' }
+
 const SDK_URL = 'https://sdk.scdn.co/spotify-player.js'
 
 function formatMs(ms: number): string {
@@ -158,7 +165,6 @@ export function SpotifyPlayer() {
         setLocalPosition(state.position)
         lastStateTime.current = Date.now()
       }
-      emit('spotify-state-changed', state as unknown as Record<string, unknown>)
     })
     player.addListener('authentication_error', ({ message }: { message: string }) =>
       setError(`Auth: ${message}`),
@@ -174,6 +180,17 @@ export function SpotifyPlayer() {
       playerRef.current = null
     }
   }, [sdkReady, authenticated])
+
+  useEffect(() => {
+    emit('spotify-state-changed', {
+      authenticated,
+      deviceId,
+      paused: playerState?.paused ?? true,
+      muted,
+      volume,
+      track_window: playerState?.track_window ?? null,
+    })
+  }, [authenticated, deviceId, muted, playerState, volume])
 
   useEffect(() => {
     if (positionTimer.current) clearInterval(positionTimer.current)
@@ -212,6 +229,32 @@ export function SpotifyPlayer() {
       handleVolume(0)
     }
   }, [muted, volume, handleVolume])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<SpotifyCommandDetail>).detail
+      switch (detail?.type) {
+        case 'toggle-play':
+          togglePlay()
+          break
+        case 'previous-track':
+          prevTrack()
+          break
+        case 'next-track':
+          nextTrack()
+          break
+        case 'set-volume':
+          handleVolume(detail.value)
+          break
+        case 'toggle-mute':
+          toggleMute()
+          break
+      }
+    }
+
+    window.addEventListener('spotify-command', handler)
+    return () => window.removeEventListener('spotify-command', handler)
+  }, [handleVolume, nextTrack, prevTrack, toggleMute, togglePlay])
 
   const handleLogin = useCallback(async () => {
     setLoggingIn(true)

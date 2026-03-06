@@ -7,6 +7,7 @@ import { useLocal } from '@/context/local-context'
 import { useEditor } from '@/context/editor-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { useView } from '@/context/view-context'
+import { GitSidebarAddons } from '@/components/git-sidebar-addons'
 import { emit } from '@/lib/events'
 
 interface ChangeEntry {
@@ -285,39 +286,39 @@ export function GitSidebarPanel() {
               <Icon icon="lucide:chevron-down" width={10} height={10} />
             </button>
 
-          {actionsOpen && (
-            <div className="codex-git-dropdown absolute right-0 top-full mt-1 w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg z-50 py-1">
-              <button
-                onClick={() => {
-                  setActionsOpen(false)
-                  handleCommit()
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              >
-                <Icon icon="lucide:check" width={13} height={13} />
-                Commit
-              </button>
-              <button
-                onClick={() => {
-                  setActionsOpen(false)
-                  handlePush()
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              >
-                <Icon icon="lucide:upload" width={13} height={13} />
-                Push
-              </button>
-              <button
-                onClick={() => {
-                  setActionsOpen(false)
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              >
-                <Icon icon="lucide:git-pull-request" width={13} height={13} />
-                Create PR
-              </button>
-            </div>
-          )}
+            {actionsOpen && (
+              <div className="codex-git-dropdown absolute right-0 top-full mt-1 w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg z-50 py-1">
+                <button
+                  onClick={() => {
+                    setActionsOpen(false)
+                    handleCommit()
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <Icon icon="lucide:check" width={13} height={13} />
+                  Commit
+                </button>
+                <button
+                  onClick={() => {
+                    setActionsOpen(false)
+                    handlePush()
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <Icon icon="lucide:upload" width={13} height={13} />
+                  Push
+                </button>
+                <button
+                  onClick={() => {
+                    setActionsOpen(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <Icon icon="lucide:git-pull-request" width={13} height={13} />
+                  Create PR
+                </button>
+              </div>
+            )}
           </div>
           <button
             onClick={() => layout.hide('gitPanel')}
@@ -377,6 +378,8 @@ export function GitSidebarPanel() {
           </div>
         )}
       </div>
+
+      <GitSidebarAddons />
 
       {/* Bottom action bar */}
       <div className="codex-git-bottom-bar flex items-center justify-end gap-2 px-3 py-2 border-t border-[var(--border)] shrink-0">

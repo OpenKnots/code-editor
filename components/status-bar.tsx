@@ -10,6 +10,8 @@ import { useAppMode } from '@/context/app-mode-context'
 import { PluginSlotRenderer } from '@/context/plugin-context'
 import { BranchPicker } from '@/components/branch-picker'
 import { FolderIndicator } from '@/components/source-switcher'
+import { SessionPresence } from '@/components/session-presence'
+import { CaffeinateToggle } from '@/components/caffeinate-toggle'
 
 // ─── Activity Pulse Ring ─────────────────────────────
 function ActivityPulseRing({ status, agentActive }: { status: string; agentActive: boolean }) {
@@ -115,6 +117,8 @@ export function StatusBar({ agentActive }: StatusBarProps) {
         )}
       </div>
       <div className="flex items-center gap-3.5">
+        <SessionPresence compact />
+        <CaffeinateToggle compact />
         <PluginSlotRenderer slot="status-bar-right" />
         {/* Terminal toggle */}
         <button

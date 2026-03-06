@@ -31,6 +31,7 @@ type CommandId =
   | 'view-workshop'
   | 'view-settings'
   | 'open-onboarding'
+  | 'open-new-window'
   // Git operations
   | 'git-commit'
   | 'toggle-git-panel'
@@ -229,6 +230,15 @@ const COMMANDS: CommandItem[] = [
   },
 
   {
+    id: 'open-new-window',
+    label: 'Open New Window',
+    hint: 'Launch another editor instance',
+    keywords: ['new', 'window', 'instance', 'editor', 'desktop'],
+    icon: 'lucide:square-plus',
+    shortcut: '\u2318\u21e7N',
+    group: 'navigate',
+  },
+  {
     id: 'view-settings',
     label: 'Go to Settings',
     hint: 'Open settings panel',
@@ -337,7 +347,7 @@ const VIEW_CONTEXT_COMMANDS: Partial<Record<ViewId, CommandId[]>> = {
     'toggle-terminal',
   ],
   git: ['git-commit', 'toggle-git-panel', 'git-push', 'git-pull', 'git-stash', 'toggle-terminal'],
-  workshop: ['view-workshop', 'view-editor', 'view-git'],
+  workshop: ['view-workshop', 'open-new-window', 'view-editor', 'view-git'],
 
   preview: ['preview-refresh', 'view-editor'],
 }
