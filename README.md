@@ -82,7 +82,7 @@ Copy `.env.example` to `.env` and configure. All variables are optional — the 
 - **Inline Edits** — Agent proposes changes, you review diffs and accept/reject per-hunk
 - **7 Themes** — Obsidian, Bone, Neon, Catppuccin, VooDoo, CyberNord, PrettyPink
 - **Monaco Editor** — Multi-tab, Vim mode, syntax highlighting, ⌘P quick open
-- **GitHub Integration** — Device flow auth, commit, push, branch switching
+- **GitHub Integration** — Token-based auth, commit, push, branch switching
 - **Terminal** — Integrated xterm.js with gateway slash commands
 - **Spotify + YouTube** — Built-in music and video plugins
 - **Desktop Native** — Tauri v2 with local file system access, git operations, OS keychain

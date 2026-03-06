@@ -12,6 +12,7 @@ import { PreviewProvider } from '@/context/preview-context'
 import { ChatAppearanceProvider } from '@/context/chat-appearance-context'
 
 import { LayoutProvider } from '@/context/layout-context'
+import { ThreadProvider } from '@/context/thread-context'
 import { AppModeProvider } from '@/context/app-mode-context'
 import { Suspense } from 'react'
 import { ErrorBoundary } from '@/components/error-boundary'
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <LocalProvider>
                       <ViewProvider>
                         <LayoutProvider>
+                          <ThreadProvider>
                           <AppModeProvider>
                             <PreviewProvider>
                               <ChatAppearanceProvider>
@@ -48,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                               </ChatAppearanceProvider>
                             </PreviewProvider>
                           </AppModeProvider>
+                          </ThreadProvider>
                         </LayoutProvider>
                       </ViewProvider>
                     </LocalProvider>

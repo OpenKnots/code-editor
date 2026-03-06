@@ -7,7 +7,6 @@ import { useTheme, THEME_PRESETS } from '@/context/theme-context'
 import { usePlugins } from '@/context/plugin-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
 import { AgentBuilder, AgentSummary } from '@/components/agent-builder'
-import { SkillsInterface } from '@/components/skills/skills-interface'
 import { type AgentConfig, getAgentConfig, clearAgentConfig } from '@/lib/agent-session'
 import { isTauri, tauriReadFileBase64 } from '@/lib/tauri'
 
@@ -17,7 +16,7 @@ interface Props {
   initialTab?: SettingsTab
 }
 
-type SettingsTab = 'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | 'skills'
+type SettingsTab = 'general' | 'editor' | 'agent' | 'keybindings' | 'plugins'
 const TOKEN_REVEAL_TIMEOUT_MS = 15000
 
 export function SettingsPanel({ open, onClose, initialTab }: Props) {
@@ -40,10 +39,6 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
     authenticated: ghAuthenticated,
     setManualToken: setGhToken,
     clearToken: clearGhToken,
-    oauthAvailable,
-    oauthStep,
-    startOAuth,
-    cancelOAuth,
     loading: ghLoading,
   } = useGitHubAuth()
   const [ghTokenDraft, setGhTokenDraft] = useState('')
@@ -147,7 +142,6 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
     { id: 'agent', label: 'Agent', icon: 'lucide:bot' },
     { id: 'keybindings', label: 'Keys', icon: 'lucide:keyboard' },
     { id: 'plugins', label: 'Plugins', icon: 'lucide:puzzle' },
-    { id: 'skills', label: 'Skills', icon: 'lucide:sparkles' },
   ]
 
   const shortcuts = [
@@ -171,7 +165,7 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className={`relative w-full max-h-[75vh] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col ${tab === 'skills' ? 'max-w-[980px]' : 'max-w-[580px]'}`}
+        className="relative w-[520px] h-[760px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -400,74 +394,6 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
                           : 'Desktop stores token in OS keychain. Web keeps token in memory only.'}
                     </p>
                   </div>
-                ) : oauthStep.type === 'device-pending' ? (
-                  <div className="space-y-2 px-3 py-3 rounded-lg border border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_4%,var(--bg))]">
-                    <div className="flex items-center gap-2">
-                      <Icon
-                        icon="lucide:loader-2"
-                        width={14}
-                        height={14}
-                        className="text-[var(--brand)] animate-spin"
-                      />
-                      <span className="text-[11px] text-[var(--text-primary)] font-medium">
-                        Waiting for authorization…
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[var(--text-secondary)]">
-                      Enter code{' '}
-                      <span className="font-mono font-bold text-[var(--brand)]">
-                        {oauthStep.userCode}
-                      </span>{' '}
-                      at GitHub
-                    </p>
-                    <div className="flex gap-2">
-                      <a
-                        href={oauthStep.verificationUriComplete}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 transition-opacity cursor-pointer"
-                      >
-                        <Icon icon="lucide:external-link" width={10} height={10} />
-                        Open GitHub
-                      </a>
-                      <button
-                        onClick={cancelOAuth}
-                        className="px-2.5 py-1 rounded-md text-[10px] font-medium border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : oauthStep.type === 'error' ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[color-mix(in_srgb,var(--error)_30%,var(--border))] bg-[color-mix(in_srgb,var(--error)_4%,var(--bg))]">
-                      <Icon
-                        icon="lucide:alert-circle"
-                        width={14}
-                        height={14}
-                        className="text-[var(--error)] shrink-0"
-                      />
-                      <span className="text-[11px] text-[var(--error)]">{oauthStep.message}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {oauthAvailable && (
-                        <button
-                          onClick={startOAuth}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
-                        >
-                          <Icon icon="lucide:rotate-cw" width={10} height={10} />
-                          Try Again
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setShowGhTokenInput(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-                      >
-                        <Icon icon="lucide:key" width={10} height={10} />
-                        Enter Token Manually
-                      </button>
-                    </div>
-                  </div>
                 ) : showGhTokenInput ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
@@ -544,21 +470,12 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
                 ) : (
                   <div className="space-y-2">
                     <div className="flex gap-2">
-                      {oauthAvailable && (
-                        <button
-                          onClick={startOAuth}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-medium bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
-                        >
-                          <Icon icon="simple-icons:github" width={14} height={14} />
-                          Sign in with GitHub
-                        </button>
-                      )}
                       <button
                         onClick={() => setShowGhTokenInput(true)}
-                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-medium border border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer ${oauthAvailable ? '' : 'flex-1'}`}
+                        className="flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-medium border border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer inline-flex"
                       >
                         <Icon icon="lucide:key" width={12} height={12} />
-                        {oauthAvailable ? 'Use Token' : 'Add GitHub Token'}
+                        Add GitHub Token
                       </button>
                     </div>
                     <p className="text-[9px] text-[var(--text-disabled)]">
@@ -670,7 +587,6 @@ export function SettingsPanel({ open, onClose, initialTab }: Props) {
             </>
           )}
 
-          {tab === 'skills' && <SkillsInterface variant="settings" />}
         </div>
       </div>
     </div>
@@ -906,17 +822,21 @@ function Toggle({
   label: string
 }) {
   return (
-    <label className="flex items-center justify-between cursor-pointer">
+    <div className="flex items-center justify-between">
       <span className="text-[11px] text-[var(--text-secondary)]">{label}</span>
       <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={`w-8 h-4.5 rounded-full transition-colors cursor-pointer ${checked ? 'bg-[var(--brand)]' : 'bg-[var(--bg-tertiary)]'}`}
       >
         <div
-          className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`}
+          className={`w-3.5 h-3.5 rounded-full bg-[var(--bg-elevated)] shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`}
         />
       </button>
-    </label>
+    </div>
   )
 }
 

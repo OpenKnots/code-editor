@@ -44,7 +44,7 @@ code-editor/
 │   ├── preview-context     # Preview state (devices, PiP, annotations)
 │   ├── theme-context       # Theme management (18 themes × dark/light)
 │   ├── gateway-context     # OpenClaw gateway WebSocket
-│   ├── github-auth-context # GitHub token (OAuth + manual + gateway)
+│   ├── github-auth-context # GitHub token (manual + gateway)
 │   ├── editor-context      # Open files + tabs
 │   ├── local-context       # Local filesystem (Tauri + Web FS API)
 │   └── view-context        # View routing (chat/editor/preview/git/prs)
@@ -103,10 +103,9 @@ Copy `.env.example` → `.env` and fill in:
 
 | Variable                        | Required | Description                                                                                                                                                                                           |
 | ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_GITHUB_CLIENT_ID`  | Optional | GitHub OAuth App Client ID for device-flow login. Create at [github.com/settings/developers](https://github.com/settings/developers). Without this, users can still paste a PAT manually in Settings. |
 | `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` | Optional | Spotify PKCE OAuth Client ID for the music plugin. Create at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard).                                                              |
 
-> **Note:** These are `NEXT_PUBLIC_` variables — they're embedded in the client bundle. Only put client IDs here, never secrets.
+> **Note:** `NEXT_PUBLIC_` variables are embedded in the client bundle. Only put public client IDs here, never secrets.
 
 ---
 
@@ -249,11 +248,10 @@ The preview panel (`⌘3` or click Preview tab) connects to any local dev server
 
 ## GitHub Authentication
 
-Three methods (Settings → General → GitHub Connection):
+Two methods (Settings → General → GitHub Connection):
 
 1. **Gateway token** — auto-detected from OpenClaw gateway `GITHUB_TOKEN` env
-2. **OAuth device flow** — click "Sign in with GitHub" (requires `NEXT_PUBLIC_GITHUB_CLIENT_ID`)
-3. **Manual PAT** — paste a Personal Access Token directly
+2. **Manual PAT** — paste a Personal Access Token directly
 
 Token is stored locally with obfuscation. Never sent to external servers.
 

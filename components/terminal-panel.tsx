@@ -37,6 +37,9 @@ const FILE_PATH_REGEX = new RegExp(
   'g',
 )
 
+const SOLID_TERMINAL_BG = '#000000'
+const SOLID_TERMINAL_FG = '#e5e7eb'
+
 function findFileLinksInLine(
   lineText: string,
 ): Array<{ text: string; startCol: number; endCol: number; line?: number; col?: number }> {
@@ -80,10 +83,10 @@ function buildXtermTheme(hasBgImage?: boolean) {
   const v = (name: string) => s.getPropertyValue(name).trim()
   const dark = document.documentElement.classList.contains('dark')
   return {
-    background: hasBgImage ? 'transparent' : v('--bg') || (dark ? '#0a0a0a' : '#fafafa'),
-    foreground: v('--text-primary') || (dark ? '#e5e5e5' : '#171717'),
+    background: hasBgImage ? 'transparent' : SOLID_TERMINAL_BG,
+    foreground: hasBgImage ? v('--text-primary') || (dark ? '#e5e5e5' : '#171717') : SOLID_TERMINAL_FG,
     cursor: v('--brand') || '#a855f7',
-    cursorAccent: hasBgImage ? 'transparent' : v('--bg') || (dark ? '#0a0a0a' : '#fafafa'),
+    cursorAccent: hasBgImage ? 'transparent' : SOLID_TERMINAL_BG,
     selectionBackground: (v('--brand') || '#a855f7') + '40',
     black: dark ? '#1e1e1e' : '#d4d4d4',
     red: dark ? '#f87171' : '#dc2626',
@@ -578,7 +581,7 @@ function TerminalPane({
       )}
 
       {/* Terminal viewport */}
-      <div className={`flex-1 overflow-hidden relative ${hasBgImage ? '' : 'bg-[var(--bg)]'}`}>
+      <div className={`flex-1 overflow-hidden relative ${hasBgImage ? '' : 'bg-black'}`}>
         {hasBgImage && (
           <>
             <div

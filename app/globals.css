@@ -4785,6 +4785,25 @@ p {
   overflow: hidden;
 }
 
+/* Concave top-left and bottom-left corners (modern app notch) */
+.codex-git-sidebar::before,
+.codex-git-sidebar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg);
+  z-index: 1;
+}
+.codex-git-sidebar::before {
+  top: 0;
+}
+.codex-git-sidebar::after {
+  bottom: 0;
+}
+
 .codex-git-tab {
   border: 1px solid transparent;
   transition: all 150ms;

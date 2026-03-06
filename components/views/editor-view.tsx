@@ -253,6 +253,7 @@ export function EditorView() {
               <div className="welcome-screen flex-1 flex flex-col items-center justify-center relative overflow-hidden select-none">
                 {/* Match chat background styling for visual consistency */}
                 <KnotBackground />
+                <div className="welcome-grid z-[1]" aria-hidden="true" />
 
                 <div className="relative z-10 flex flex-col items-center gap-8 max-w-[480px] px-6">
                   {/* Logo hero */}

@@ -6,6 +6,7 @@ import DOMPurify from 'dompurify'
 import { parse } from 'create-markdown'
 import { BlockRenderer } from 'create-markdown/react'
 import { copyToClipboard } from '@/lib/clipboard'
+import { installAbortErrorSuppression, isAbortError } from '@/lib/abort-error'
 import { registerEditorTheme } from '@/lib/monaco-theme'
 interface MarkdownPreviewProps {
   content: string
@@ -121,6 +122,20 @@ function decodeHtmlEntities(s: string): string {
 
 const MENTION_HREF_RE = /^https:\/\/github\.com\/([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?)$/
 
+let markdownMonacoPromise: Promise<Awaited<ReturnType<typeof import('@monaco-editor/loader').default.init>>> | null =
+  null
+
+async function getMarkdownMonaco() {
+  if (!markdownMonacoPromise) {
+    markdownMonacoPromise = import('@monaco-editor/loader').then(({ default: loader }) =>
+      loader.init(),
+    )
+  }
+  return markdownMonacoPromise
+}
+
+installAbortErrorSuppression()
+
 type HoverTarget =
   | { kind: 'mention'; login: string; rect: DOMRect }
   | { kind: 'link'; url: string; rect: DOMRect }
@@ -201,79 +216,107 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
     const el = containerRef.current
     if (!el) return
 
+    let cancelled = false
     const cleanups: (() => void)[] = []
 
-    el.querySelectorAll<HTMLPreElement>('pre').forEach(async (pre) => {
-      if (pre.dataset.highlighted) return
-      pre.dataset.highlighted = 'true'
+    const highlightCodeBlocks = async () => {
+      const blocks = Array.from(el.querySelectorAll<HTMLPreElement>('pre')).filter(
+        (pre) => !pre.dataset.highlighted,
+      )
+      if (!blocks.length) return
 
-      const code = pre.querySelector('code')
-      if (!code) return
-
-      const langClass = Array.from(code.classList).find((c) => c.startsWith('language-'))
-      const lang = langClass?.replace('language-', '') || ''
-      const rawText = code.textContent || ''
-
-      if (!rawText.trim()) return
-
-      // Style the <pre> in-place (no reparenting)
-      pre.className =
-        'overflow-x-auto p-3 text-[11px] leading-[1.6] font-mono m-0 rounded-b-lg border border-[var(--border)] bg-[var(--bg)]'
-      pre.style.marginTop = '0'
-
-      // Insert a header *before* the <pre> as a sibling (not wrapping)
-      const header = document.createElement('div')
-      header.className =
-        'code-block-header flex items-center justify-between h-7 px-3 bg-[var(--bg-secondary)] border border-b-0 border-[var(--border)] rounded-t-lg my-2 mb-0'
-      header.innerHTML = `<span class="text-[9px] font-mono text-[var(--text-disabled)] uppercase tracking-wider">${lang || 'code'}</span><button class="copy-btn flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Copy code">Copy</button>`
-
-      const copyHandler = () => {
-        copyToClipboard(rawText).then((ok) => {
-          if (!ok) return
-          const btn = header.querySelector('.copy-btn')
-          if (btn) {
-            btn.textContent = 'Copied!'
-            setTimeout(() => (btn.textContent = 'Copy'), 1500)
-          }
-        })
-      }
-      header.querySelector('.copy-btn')?.addEventListener('click', copyHandler)
-
-      pre.parentNode?.insertBefore(header, pre)
-
-      cleanups.push(() => {
-        header.querySelector('.copy-btn')?.removeEventListener('click', copyHandler)
-        header.remove()
-      })
-
-      // Monaco colorize (in-place innerHTML swap, no node reparenting)
+      // eslint-disable-next-line no-useless-assignment
+      let monaco: Awaited<ReturnType<typeof getMarkdownMonaco>> | null = null
       try {
-        const { default: loader } = await import('@monaco-editor/loader')
-        const monaco = await loader.init()
+        monaco = await getMarkdownMonaco()
+        if (cancelled) return
         registerEditorTheme(monaco)
         monaco.editor.setTheme('code-editor')
-        const langId =
-          lang === 'js'
-            ? 'javascript'
-            : lang === 'ts'
-              ? 'typescript'
-              : lang === 'jsx'
-                ? 'javascript'
-                : lang === 'tsx'
-                  ? 'typescript'
-                  : lang === 'py'
-                    ? 'python'
-                    : lang === 'sh' || lang === 'bash'
-                      ? 'shell'
-                      : lang === 'yml'
-                        ? 'yaml'
-                        : lang || 'plaintext'
-        const html = await monaco.editor.colorize(rawText, langId, { tabSize: 2 })
-        code.innerHTML = html
-      } catch {}
-    })
+      } catch (error) {
+        if (!isAbortError(error)) {
+          // Markdown rendering should keep working even if Monaco highlighting fails.
+        }
+        return
+      }
+
+      for (const pre of blocks) {
+        if (cancelled || pre.dataset.highlighted) continue
+        pre.dataset.highlighted = 'true'
+
+        const code = pre.querySelector('code')
+        if (!code) continue
+
+        const langClass = Array.from(code.classList).find((c) => c.startsWith('language-'))
+        const lang = langClass?.replace('language-', '') || ''
+        const rawText = code.textContent || ''
+
+        if (!rawText.trim()) continue
+
+        // Style the <pre> in-place (no reparenting)
+        pre.className =
+          'overflow-x-auto p-3 text-[11px] leading-[1.6] font-mono m-0 rounded-b-lg border border-[var(--border)] bg-[var(--bg)]'
+        pre.style.marginTop = '0'
+
+        // Insert a header *before* the <pre> as a sibling (not wrapping)
+        const header = document.createElement('div')
+        header.className =
+          'code-block-header flex items-center justify-between h-7 px-3 bg-[var(--bg-secondary)] border border-b-0 border-[var(--border)] rounded-t-lg my-2 mb-0'
+        header.innerHTML = `<span class="text-[9px] font-mono text-[var(--text-disabled)] uppercase tracking-wider">${lang || 'code'}</span><button class="copy-btn flex items-center gap-1 text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer" title="Copy code">Copy</button>`
+
+        const copyHandler = () => {
+          copyToClipboard(rawText).then((ok) => {
+            if (!ok) return
+            const btn = header.querySelector('.copy-btn')
+            if (btn) {
+              btn.textContent = 'Copied!'
+              setTimeout(() => {
+                if (!cancelled) btn.textContent = 'Copy'
+              }, 1500)
+            }
+          })
+        }
+        header.querySelector('.copy-btn')?.addEventListener('click', copyHandler)
+
+        pre.parentNode?.insertBefore(header, pre)
+
+        cleanups.push(() => {
+          header.querySelector('.copy-btn')?.removeEventListener('click', copyHandler)
+          header.remove()
+        })
+
+        try {
+          const langId =
+            lang === 'js'
+              ? 'javascript'
+              : lang === 'ts'
+                ? 'typescript'
+                : lang === 'jsx'
+                  ? 'javascript'
+                  : lang === 'tsx'
+                    ? 'typescript'
+                    : lang === 'py'
+                      ? 'python'
+                      : lang === 'sh' || lang === 'bash'
+                        ? 'shell'
+                        : lang === 'yml'
+                          ? 'yaml'
+                          : lang || 'plaintext'
+          const html = await monaco.editor.colorize(rawText, langId, { tabSize: 2 })
+          if (!cancelled) {
+            code.innerHTML = html
+          }
+        } catch (error) {
+          if (!isAbortError(error)) {
+            // Leave the raw code block intact if highlighting fails.
+          }
+        }
+      }
+    }
+
+    void highlightCodeBlocks()
 
     return () => {
+      cancelled = true
       cleanups.forEach((fn) => fn())
     }
   }, [blocks])

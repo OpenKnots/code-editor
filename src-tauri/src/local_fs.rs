@@ -336,6 +336,11 @@ pub fn local_git_push(root: String, branch: String, set_upstream: bool) -> Resul
     }
 }
 
+#[tauri::command]
+pub fn local_git_pull(root: String, branch: String) -> Result<String, String> {
+    run_git(&root, &["pull", "--rebase", "origin", &branch])
+}
+
 /// gq sync: pull --rebase then push
 #[tauri::command]
 pub fn local_git_sync(root: String) -> Result<String, String> {

@@ -4,13 +4,16 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { useLayout, usePanelResize } from '@/context/layout-context'
+import { useThread, THREAD_IDS, type ThreadId } from '@/context/thread-context'
+import { useView } from '@/context/view-context'
 import { isTauri } from '@/lib/tauri'
-import { emit } from '@/lib/events'
+import { emit, on } from '@/lib/events'
 
 const SIDEBAR_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
+const CHAT_PREFIX = 'code-editor:chat:'
 
 interface ThreadPreview {
-  id: string
+  id: ThreadId
   title: string
   timestamp: number
   messageCount: number
@@ -18,33 +21,35 @@ interface ThreadPreview {
 }
 
 function getThreadPreviews(): ThreadPreview[] {
+  const out: ThreadPreview[] = []
   try {
-    const saved = localStorage.getItem('code-editor:chat:main')
-    if (!saved) return []
-    const messages = (
-      JSON.parse(saved) as Array<{
-        role: string
-        content: string
-        timestamp: number
-      }>
-    ).filter((m) => {
-      const c = m.content?.slice(0, 120) ?? ''
-      return !c.includes('You are KnotCode Agent') && !c.includes('KnotCode system prompt')
-    })
-    if (!messages.length) return []
-    const firstUser = messages.find((m) => m.role === 'user')
-    if (!firstUser) return []
-    return [
-      {
-        id: 'main',
+    for (const id of THREAD_IDS) {
+      const saved = localStorage.getItem(`${CHAT_PREFIX}${id}`)
+      if (!saved) continue
+      const messages = (
+        JSON.parse(saved) as Array<{
+          role: string
+          content: string
+          timestamp: number
+        }>
+      ).filter((m) => {
+        const c = m.content?.slice(0, 120) ?? ''
+        return !c.includes('You are KnotCode Agent') && !c.includes('KnotCode system prompt')
+      })
+      if (!messages.length) continue
+      const firstUser = messages.find((m) => m.role === 'user')
+      if (!firstUser) continue
+      const last = messages[messages.length - 1]
+      out.push({
+        id,
         title: firstUser.content.slice(0, 50).replace(/\n/g, ' '),
-        timestamp: messages[messages.length - 1].timestamp,
+        timestamp: last?.timestamp ?? Date.now(),
         messageCount: messages.length,
-      },
-    ]
-  } catch {
-    return []
-  }
+      })
+    }
+    out.sort((a, b) => b.timestamp - a.timestamp)
+  } catch {}
+  return out
 }
 
 function formatAge(ts: number): string {
@@ -68,18 +73,26 @@ interface Props {
 
 export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
   const layout = useLayout()
+  const { activeThreadId, setActiveThreadId, maxThreads } = useThread()
+  const { setView } = useView()
   const sidebarResize = usePanelResize('sidebar')
   const sidebarWidth = layout.getSize('sidebar')
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
   const [threads, setThreads] = useState<ThreadPreview[]>([])
+
+  const refreshThreads = useCallback(() => setThreads(getThreadPreviews()), [])
 
   useEffect(() => {
     setIsTauriDesktop(isTauri())
   }, [])
 
   useEffect(() => {
-    setThreads(getThreadPreviews())
-  }, [])
+    refreshThreads()
+  }, [refreshThreads, activeThreadId])
+
+  useEffect(() => {
+    return on('threads-updated', refreshThreads)
+  }, [refreshThreads])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -98,11 +111,30 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
   }, [repoName])
 
   const handleNewThread = useCallback(() => {
-    try {
-      localStorage.removeItem('code-editor:chat:main')
-    } catch {}
-    window.location.reload()
-  }, [])
+    const previews = getThreadPreviews()
+    const usedIds = new Set(previews.map((p) => p.id))
+    const emptySlot = THREAD_IDS.find((id) => !usedIds.has(id))
+    if (emptySlot) {
+      setActiveThreadId(emptySlot)
+      emit('threads-updated')
+      return
+    }
+    if (previews.length >= maxThreads) {
+      const oldest = previews[previews.length - 1]
+      try {
+        localStorage.removeItem(`${CHAT_PREFIX}${oldest.id}`)
+      } catch {}
+      setActiveThreadId(oldest.id)
+      emit('threads-updated')
+    }
+  }, [setActiveThreadId, maxThreads])
+
+  const handleSelectThread = useCallback(
+    (id: ThreadId) => {
+      setActiveThreadId(id)
+    },
+    [setActiveThreadId],
+  )
 
   return (
     <motion.div
@@ -179,7 +211,19 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
             {/* Nav items */}
             <div className="mt-3 space-y-0.5">
               <button
-                onClick={() => emit('open-agent-settings')}
+                onClick={() => setView('workshop')}
+                className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
+              >
+                <Icon
+                  icon="lucide:bot"
+                  width={15}
+                  height={15}
+                  className="text-[var(--text-tertiary)]"
+                />
+                Workshop
+              </button>
+              <button
+                onClick={() => setView('workshop')}
                 className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
               >
                 <Icon
@@ -191,7 +235,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                 Automations
               </button>
               <button
-                onClick={() => emit('open-agent-settings')}
+                onClick={() => setView('workshop')}
                 className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
               >
                 <Icon
@@ -233,7 +277,12 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                   {threads.map((thread) => (
                     <button
                       key={thread.id}
-                      className="codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer w-full"
+                      onClick={() => handleSelectThread(thread.id)}
+                      className={`codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer w-full ${
+                        activeThreadId === thread.id
+                          ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
+                          : 'hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]'
+                      }`}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
@@ -254,7 +303,12 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                 {threads.map((thread) => (
                   <button
                     key={thread.id}
-                    className="codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors cursor-pointer w-full"
+                    onClick={() => handleSelectThread(thread.id)}
+                    className={`codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer w-full ${
+                      activeThreadId === thread.id
+                        ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
+                        : 'hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]'
+                    }`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">

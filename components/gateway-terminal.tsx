@@ -13,7 +13,7 @@
  * - Raw RPC mode (> method.name key=val)
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useTheme } from '@/context/theme-context'
@@ -376,6 +376,20 @@ export function GatewayTerminal() {
   const { terminalBg, terminalBgOpacity } = useTheme()
   const isConnected = status === 'connected'
   const hasBgImage = !!terminalBg
+  const terminalStyle = useMemo(
+    () =>
+      hasBgImage
+        ? { fontFamily: MONO }
+        : ({
+            fontFamily: MONO,
+            '--text-primary': '#e5e7eb',
+            '--text-secondary': '#cbd5e1',
+            '--text-tertiary': '#94a3b8',
+            '--text-disabled': '#64748b',
+            '--bg-subtle': 'rgba(255, 255, 255, 0.08)',
+          } as CSSProperties),
+    [hasBgImage],
+  )
 
   const [entries, setEntries] = useState<TerminalEntry[]>([])
   const [input, setInput] = useState('')
@@ -729,8 +743,8 @@ export function GatewayTerminal() {
 
   return (
     <div
-      className={`flex flex-col h-full w-full overflow-hidden relative ${hasBgImage ? '' : 'bg-[var(--bg)]'}`}
-      style={{ fontFamily: MONO }}
+      className={`flex flex-col h-full w-full overflow-hidden relative ${hasBgImage ? '' : 'bg-black'}`}
+      style={terminalStyle}
     >
       {hasBgImage && (
         <>

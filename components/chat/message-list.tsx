@@ -60,6 +60,99 @@ function estimateTokens(content: string): number {
   return Math.ceil(content.length / 4)
 }
 
+type UserAttachmentChip = {
+  kind: 'file' | 'selection'
+  path: string
+  title: string
+  detail: string
+}
+
+function getFileTypeIcon(path: string, kind: UserAttachmentChip['kind']): string {
+  if (kind === 'selection') return 'lucide:text-cursor-input'
+
+  const ext = path.split('.').pop()?.toLowerCase() ?? ''
+  switch (ext) {
+    case 'ts':
+    case 'tsx':
+    case 'py':
+    case 'rs':
+    case 'go':
+    case 'java':
+    case 'cpp':
+    case 'c':
+      return 'lucide:file-code-2'
+    case 'js':
+    case 'jsx':
+      return 'lucide:file-json'
+    case 'css':
+    case 'scss':
+    case 'less':
+      return 'lucide:palette'
+    case 'json':
+      return 'lucide:braces'
+    case 'md':
+    case 'mdx':
+      return 'lucide:file-text'
+    case 'svg':
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'webp':
+      return 'lucide:image'
+    default:
+      return 'lucide:file-text'
+  }
+}
+
+function parseUserAttachmentPreview(content: string): { text: string; chips: UserAttachmentChip[] } {
+  const match = content.match(/^\[([^\]]*(?:📄|📝|🖼)[^\]]*)\]\n?/)
+  if (!match) return { text: content, chips: [] }
+
+  const chips: UserAttachmentChip[] = []
+  for (const token of match[1].split(' · ').map((item) => item.trim())) {
+    if (!token || token.startsWith('🖼 ')) continue
+
+    const kind = token.startsWith('📝 ') ? 'selection' : token.startsWith('📄 ') ? 'file' : null
+    if (!kind) continue
+
+    const rawLabel = token.slice(2).trim()
+    const detailMatch = rawLabel.match(/^(.*?)(?:\s+\(([^()]+)\))?$/)
+    const label = detailMatch?.[1]?.trim() ?? rawLabel
+    const parsedDetail = detailMatch?.[2]?.trim() ?? ''
+
+    if (kind === 'selection') {
+      const selectionMatch = label.match(/^(.*?):(\d+)-(\d+)$/)
+      if (selectionMatch) {
+        const [, path, start, end] = selectionMatch
+        const startLine = Number.parseInt(start, 10)
+        const endLine = Number.parseInt(end, 10)
+        const fileName = path.split('/').pop() || path
+        const lineCount = Math.max(1, endLine - startLine + 1)
+        chips.push({
+          kind,
+          path,
+          title: `${fileName}:${startLine}-${endLine}`,
+          detail: parsedDetail || `${lineCount} line${lineCount === 1 ? '' : 's'} selected`,
+        })
+        continue
+      }
+    }
+
+    chips.push({
+      kind,
+      path: label,
+      title: label.split('/').pop() || label,
+      detail: parsedDetail || 'Attached file',
+    })
+  }
+
+  return {
+    text: content.slice(match[0].length),
+    chips,
+  }
+}
+
 /** Get tool step icon */
 function getToolIcon(step: string): string {
   if (step.startsWith('Reading')) return 'lucide:file-text'
@@ -248,6 +341,7 @@ export function MessageList({
                     : t === 'edit' && isAssistant
                       ? 'lucide:file-diff'
                       : null
+          const userPreview = isUser ? parseUserAttachmentPreview(msg.content) : null
 
           return (
             <div
@@ -351,6 +445,32 @@ export function MessageList({
                   )}
                   {isUser ? (
                     <div>
+                      {userPreview && userPreview.chips.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {userPreview.chips.map((chip, chipIdx) => (
+                            <div
+                              key={`${chip.path}-${chipIdx}`}
+                              className="inline-flex max-w-[220px] items-start gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--border)_85%,transparent)] bg-[color-mix(in_srgb,var(--bg)_76%,transparent)] px-2.5 py-1.5"
+                            >
+                              <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_12%,transparent)] text-[var(--color-deletions,#ef4444)]">
+                                <Icon
+                                  icon={getFileTypeIcon(chip.path, chip.kind)}
+                                  width={9}
+                                  height={9}
+                                />
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate font-mono text-[10px] leading-tight text-[var(--text-primary)]">
+                                  {chip.title}
+                                </span>
+                                <span className="block text-[8px] leading-tight text-[var(--text-disabled)]">
+                                  {chip.detail}
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {msg.images && msg.images.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-2">
                           {msg.images.map((img, imgIdx) => (
@@ -382,9 +502,9 @@ export function MessageList({
                           ))}
                         </div>
                       )}
-                      <p className="whitespace-pre-wrap break-words">
-                        {msg.content.replace(/^\[[^\]]*🖼[^\]]*\]\n?/, '')}
-                      </p>
+                      {userPreview?.text ? (
+                        <p className="whitespace-pre-wrap break-words">{userPreview.text}</p>
+                      ) : null}
                     </div>
                   ) : isSystem && (t === 'tool' || t === 'status' || t === 'error') ? (
                     <span className="inline">{msg.content}</span>

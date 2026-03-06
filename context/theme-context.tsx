@@ -59,6 +59,13 @@ const STORAGE_BG_TINT = 'code-editor:bg-tint'
 const STORAGE_TERMINAL_BG = 'code-editor:terminal-bg'
 const STORAGE_TERMINAL_BG_OPACITY = 'code-editor:terminal-bg-opacity'
 
+const LEGACY_DEFAULT_TERMINAL_BG = '/terminal-bg-default.png'
+
+function normalizeTerminalBg(value: string | null) {
+  if (value === null || value === '' || value === LEGACY_DEFAULT_TERMINAL_BG) return null
+  return value
+}
+
 function getSystemPreference(): ResolvedMode {
   if (typeof window === 'undefined') return 'dark'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
@@ -114,7 +121,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setModeState(md)
       setResolvedMode(rm)
       setBgTintState(tint)
-      if (savedTermBg) setTerminalBgState(savedTermBg)
+      if (savedTermBg !== null) {
+        const normalizedTermBg = normalizeTerminalBg(savedTermBg)
+        setTerminalBgState(normalizedTermBg)
+        if (normalizedTermBg === null && savedTermBg !== '') {
+          localStorage.setItem(STORAGE_TERMINAL_BG, '')
+        }
+      }
       if (savedTermBgOpacity !== null) setTerminalBgOpacityState(Number(savedTermBgOpacity))
       document.documentElement.style.setProperty('--theme-bg-intensity', `${tint}%`)
       applyToDOM(tid, rm)
@@ -173,7 +186,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTerminalBgState(url)
     try {
       if (url) localStorage.setItem(STORAGE_TERMINAL_BG, url)
-      else localStorage.removeItem(STORAGE_TERMINAL_BG)
+      else localStorage.setItem(STORAGE_TERMINAL_BG, '') // persist "no bg" so we don't revert to default
     } catch {}
   }, [])
 

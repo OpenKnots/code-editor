@@ -28,11 +28,12 @@ type CommandId =
   | 'view-editor'
   | 'view-preview'
   | 'view-git'
-  | 'view-skills'
+  | 'view-workshop'
   | 'view-settings'
   | 'open-onboarding'
   // Git operations
   | 'git-commit'
+  | 'toggle-git-panel'
   | 'git-push'
   | 'git-pull'
   | 'git-stash'
@@ -219,11 +220,11 @@ const COMMANDS: CommandItem[] = [
     group: 'navigate',
   },
   {
-    id: 'view-skills',
-    label: 'Go to Skills',
-    hint: 'Open the curated skills catalog',
-    keywords: ['skills', 'catalog', 'workflow', 'agents'],
-    icon: 'lucide:sparkles',
+    id: 'view-workshop',
+    label: 'Go to Workshop',
+    hint: 'Open the unified agent workshop',
+    keywords: ['workshop', 'agents', 'skills', 'automation', 'playground'],
+    icon: 'lucide:bot',
     group: 'navigate',
   },
 
@@ -252,6 +253,14 @@ const COMMANDS: CommandItem[] = [
     keywords: ['git', 'commit', 'save', 'changes'],
     icon: 'lucide:git-commit-horizontal',
     group: 'git',
+  },
+  {
+    id: 'toggle-git-panel',
+    label: 'Toggle commit panel',
+    hint: 'Show or hide the commit / source control side panel',
+    keywords: ['git', 'commit', 'panel', 'sidebar', 'source control', 'close'],
+    icon: 'lucide:panel-right-close',
+    group: 'layout',
   },
   {
     id: 'git-push',
@@ -327,8 +336,8 @@ const VIEW_CONTEXT_COMMANDS: Partial<Record<ViewId, CommandId[]>> = {
     'toggle-chat',
     'toggle-terminal',
   ],
-  git: ['git-commit', 'git-push', 'git-pull', 'git-stash', 'toggle-terminal'],
-  skills: ['view-skills', 'view-editor', 'view-git'],
+  git: ['git-commit', 'toggle-git-panel', 'git-push', 'git-pull', 'git-stash', 'toggle-terminal'],
+  workshop: ['view-workshop', 'view-editor', 'view-git'],
 
   preview: ['preview-refresh', 'view-editor'],
 }

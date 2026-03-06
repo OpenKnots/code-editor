@@ -62,6 +62,8 @@ interface LocalContextValue {
   remoteRepo: string | null
   /** Push current branch to origin */
   push: (branch?: string) => Promise<string>
+  /** Pull latest changes from origin with rebase */
+  pull: (branch?: string) => Promise<string>
   /** Get recent git log entries */
   gitLog: (count?: number) => Promise<GitLogEntry[]>
   /** Commits ahead/behind origin */
@@ -410,6 +412,15 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     return result ?? 'Pushed'
   }, [desktop, rootPath, gitInfo, hasUpstream, refresh])
 
+  const pull = useCallback(async (branch?: string): Promise<string> => {
+    if (!desktop || !rootPath) throw new Error('Pull requires the desktop app')
+    const br = branch || gitInfo?.branch
+    if (!br) throw new Error('No branch to pull')
+    const result = await tauriInvoke<string>('local_git_pull', { root: rootPath, branch: br })
+    await refresh()
+    return result ?? `Pulled ${br}`
+  }, [desktop, rootPath, gitInfo, refresh])
+
   const gitLog = useCallback(async (count = 20): Promise<GitLogEntry[]> => {
     if (!desktop || !rootPath) return []
     const entries = await tauriInvoke<GitLogEntry[]>('local_git_log', { root: rootPath, count })
@@ -430,11 +441,11 @@ export function LocalProvider({ children }: { children: ReactNode }) {
     available: true, isWebFS, remoteRepo, aheadBehind,
     openFolder, setRootPath, exitLocalMode,
     readFile, readFileBase64, writeFile, deletePath, refresh, commitFiles, getDiff,
-    stageFiles, unstageFiles, undoLastCommit, discardChanges, discardStagedChanges, gitSave, gitSync, gitCleanBranches, switchBranch, push, gitLog, refreshAheadBehind, hasUpstream,
+    stageFiles, unstageFiles, undoLastCommit, discardChanges, discardStagedChanges, gitSave, gitSync, gitCleanBranches, switchBranch, push, pull, gitLog, refreshAheadBehind, hasUpstream,
   }), [localMode, rootPath, localTree, gitInfo, branches, isWebFS, remoteRepo, aheadBehind,
     openFolder, setRootPath, exitLocalMode,
     readFile, readFileBase64, writeFile, deletePath, refresh, commitFiles, getDiff,
-    stageFiles, unstageFiles, undoLastCommit, discardChanges, discardStagedChanges, gitSave, gitSync, gitCleanBranches, switchBranch, push, gitLog, refreshAheadBehind, hasUpstream])
+    stageFiles, unstageFiles, undoLastCommit, discardChanges, discardStagedChanges, gitSave, gitSync, gitCleanBranches, switchBranch, push, pull, gitLog, refreshAheadBehind, hasUpstream])
 
   return (
     <LocalContext.Provider value={value}>

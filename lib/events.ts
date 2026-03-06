@@ -85,6 +85,9 @@ export interface AppEvents {
   // Plugins
   'spotify-state-changed': Record<string, unknown>
   'youtube-state-changed': { playing: boolean; type: string; id: string }
+
+  // Threads (sidebar list refresh when chat persists)
+  'threads-updated': void
 }
 
 // ─── Typed wrappers ──────────────────────────────────────

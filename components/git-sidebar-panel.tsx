@@ -274,15 +274,16 @@ export function GitSidebarPanel() {
           </button>
         </div>
 
-        {/* Git actions dropdown */}
-        <div className="relative" ref={actionsRef}>
-          <button
-            onClick={() => setActionsOpen(!actionsOpen)}
-            className="codex-git-actions-btn flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-all cursor-pointer"
-          >
-            <Icon icon="lucide:git-commit-horizontal" width={13} height={13} />
-            <Icon icon="lucide:chevron-down" width={10} height={10} />
-          </button>
+        <div className="flex items-center gap-1">
+          {/* Git actions dropdown */}
+          <div className="relative" ref={actionsRef}>
+            <button
+              onClick={() => setActionsOpen(!actionsOpen)}
+              className="codex-git-actions-btn flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-all cursor-pointer"
+            >
+              <Icon icon="lucide:git-commit-horizontal" width={13} height={13} />
+              <Icon icon="lucide:chevron-down" width={10} height={10} />
+            </button>
 
           {actionsOpen && (
             <div className="codex-git-dropdown absolute right-0 top-full mt-1 w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg z-50 py-1">
@@ -317,6 +318,14 @@ export function GitSidebarPanel() {
               </button>
             </div>
           )}
+          </div>
+          <button
+            onClick={() => layout.hide('gitPanel')}
+            className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
+            title="Close commit panel"
+          >
+            <Icon icon="lucide:panel-right-close" width={14} height={14} />
+          </button>
         </div>
       </div>
 

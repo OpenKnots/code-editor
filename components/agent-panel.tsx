@@ -12,6 +12,17 @@ import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
 import { useRepo } from '@/context/repo-context'
 import { useLocal } from '@/context/local-context'
+import {
+  createPullRequest,
+  fetchPRChecks,
+  fetchPRReviews,
+  fetchPullRequest,
+  fetchPullRequests,
+  fetchRepoByName,
+  getGithubToken,
+  mergePullRequest,
+  type PullRequestSummary,
+} from '@/lib/github-api'
 import { DiffViewer } from '@/components/diff-viewer'
 import { parseEditProposals, type EditProposal } from '@/lib/edit-parser'
 import { showInlineDiff, type InlineDiffResult } from '@/lib/inline-diff'
@@ -30,6 +41,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import type { PlanStep } from '@/components/plan-view'
 import { navigateToLine } from '@/lib/line-links'
 import { useChatAppearance, FONT_OPTIONS } from '@/context/chat-appearance-context'
+import { useThread } from '@/context/thread-context'
 import {
   CODE_EDITOR_SESSION_KEY,
   SESSION_INIT_STORAGE_KEY,
@@ -179,6 +191,96 @@ function buildGatewayMessage(message: string, context?: string): string {
   return `${message}\n\n[Additional Context]\n${trimmedContext}`
 }
 
+function titleFromBranchName(branch: string): string {
+  const raw = branch.split('/').pop() ?? branch
+  const normalized = raw.replace(/[-_]+/g, ' ').trim()
+  if (!normalized) return 'Update'
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function buildDefaultPullRequestBody(head: string, base: string): string {
+  return [
+    '## Summary',
+    `- Merge \`${head}\` into \`${base}\``,
+    '',
+    '## Test plan',
+    '- [ ] Not run',
+  ].join('\n')
+}
+
+function parsePullRequestCreateArgs(rawArgs: string): {
+  title: string
+  body: string
+  base: string | null
+} {
+  let args = rawArgs.trim()
+  let base: string | null = null
+
+  const baseMatch = args.match(/(?:^|\s)--base\s+([^\s]+)\s*$/i)
+  if (baseMatch) {
+    base = baseMatch[1]
+    args = args.slice(0, baseMatch.index).trim()
+  }
+
+  const [title = '', body = ''] = args.split(/\s+::\s+/, 2)
+  return { title: title.trim(), body: body.trim(), base }
+}
+
+function formatPullRequestList(
+  repoFullName: string,
+  prs: PullRequestSummary[],
+  currentBranch: string | null,
+): string {
+  if (prs.length === 0) return `No open pull requests in \`${repoFullName}\`.`
+
+  return [
+    `Open pull requests in \`${repoFullName}\`:`,
+    ...prs.slice(0, 10).map((pr) => {
+      const flags: string[] = []
+      if (pr.draft) flags.push('draft')
+      if (currentBranch && pr.headRef === currentBranch) flags.push('current branch')
+      const suffix = flags.length > 0 ? ` · ${flags.join(', ')}` : ''
+      return `- #${pr.number} ${pr.title} (${pr.headRef} -> ${pr.baseRef})${suffix}`
+    }),
+  ].join('\n')
+}
+
+function summarizeChecks(
+  checks: Array<{ conclusion: string | null; status: string }>,
+): string {
+  if (checks.length === 0) return 'No checks reported'
+  const passed = checks.filter((check) => check.conclusion === 'success').length
+  const failed = checks.filter((check) => check.conclusion === 'failure').length
+  const pending = checks.filter(
+    (check) => check.status !== 'completed' || check.conclusion === null,
+  ).length
+  return `${passed} passing, ${failed} failing, ${pending} pending`
+}
+
+function formatPullRequestDetails(
+  pr: PullRequestSummary,
+  reviewCount: number,
+  checksSummary: string,
+): string {
+  const stateLabel = pr.merged ? 'merged' : pr.draft ? 'draft' : pr.state
+  const bodyPreview = pr.body?.trim()
+  const lines = [
+    `PR #${pr.number}: ${pr.title}`,
+    `State: ${stateLabel}`,
+    `Branch: ${pr.headRef} -> ${pr.baseRef}`,
+    `Files: ${pr.changedFiles} changed · +${pr.additions} -${pr.deletions}`,
+    `Reviews: ${reviewCount}`,
+    `Checks: ${checksSummary}`,
+    `URL: ${pr.url}`,
+  ]
+
+  if (bodyPreview) {
+    lines.push('', bodyPreview)
+  }
+
+  return lines.join('\n')
+}
+
 export function AgentPanel() {
   const { sendRequest, onEvent, status } = useGateway()
   const { files, activeFile, getFile, openFile, updateFileContent } = useEditor()
@@ -194,11 +296,13 @@ export function AgentPanel() {
     setChatFontFamily,
   } = useChatAppearance()
 
-  // Single persistent session — no multi-chat
-  const sessionKey = CODE_EDITOR_SESSION_KEY
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  const { activeThreadId, chatStorageKey } = useThread()
+  const storageKey = chatStorageKey(activeThreadId)
+  const sessionKey = `${CODE_EDITOR_SESSION_KEY}:${activeThreadId}`
+
+  function loadMessagesForThread(key: string): ChatMessage[] {
     try {
-      const saved = localStorage.getItem('code-editor:chat:main')
+      const saved = localStorage.getItem(key)
       if (!saved) return []
       const parsed = JSON.parse(saved) as ChatMessage[]
       return parsed.filter((m) => {
@@ -210,7 +314,9 @@ export function AgentPanel() {
     } catch {
       return []
     }
-  })
+  }
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesForThread(storageKey))
   const [input, setInput] = useState('')
   const [contextAttachments, setContextAttachments] = useState<
     Array<{
@@ -269,6 +375,12 @@ export function AgentPanel() {
   useEffect(() => {
     sessionKeyRef.current = sessionKey
   }, [sessionKey])
+
+  // When switching thread, load that thread's messages and reset session init for the new session
+  useEffect(() => {
+    setMessages(loadMessagesForThread(storageKey))
+    sessionInitRef.current = false
+  }, [activeThreadId, storageKey])
   useEffect(() => {
     sendingRef.current = sending
   }, [sending])
@@ -702,6 +814,32 @@ export function AgentPanel() {
     return attachCtx
   }, [contextAttachments, imageAttachments])
 
+  const buildAttachmentLabels = useCallback(() => {
+    const labels: string[] = []
+
+    for (const att of contextAttachments) {
+      if (att.type === 'selection') {
+        const startLine = att.startLine ?? 1
+        const endLine = att.endLine ?? startLine
+        const lineCount = Math.max(1, endLine - startLine + 1)
+        labels.push(
+          `📝 ${att.path.split('/').pop()}:${startLine}-${endLine} (${lineCount} line${lineCount === 1 ? '' : 's'} selected)`,
+        )
+      } else {
+        const lineCount = att.content.split('\n').length
+        labels.push(
+          `📄 ${att.path.split('/').pop()} (${lineCount} line${lineCount === 1 ? '' : 's'})`,
+        )
+      }
+    }
+
+    for (const img of imageAttachments) {
+      labels.push(`🖼 ${img.name}`)
+    }
+
+    return labels
+  }, [contextAttachments, imageAttachments])
+
   const buildSilentContext = useCallback(() => {
     const context = buildContext()
     const attachCtx = buildAttachmentContext()
@@ -717,14 +855,15 @@ export function AgentPanel() {
   // ─── Message helpers ──────────────────────────────────────────
   // parsePlanSteps moved to components/chat/message-list.tsx
 
-  // Persist messages to localStorage
+  // Persist messages to localStorage for current thread and notify sidebar to refresh list
   useEffect(() => {
     if (messages.length > 0) {
       try {
-        localStorage.setItem('code-editor:chat:main', JSON.stringify(messages.slice(-50)))
+        localStorage.setItem(storageKey, JSON.stringify(messages.slice(-50)))
+        emit('threads-updated')
       } catch {}
     }
-  }, [messages])
+  }, [messages, storageKey])
 
   const appendMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => {
@@ -941,28 +1080,82 @@ export function AgentPanel() {
     return changes
   }, [files, local])
 
+  const appendChatMessage = useCallback(
+    (
+      role: ChatMessage['role'],
+      type: ChatMessage['type'],
+      content: string,
+    ) => {
+      appendMessage({
+        id: crypto.randomUUID(),
+        role,
+        type,
+        content,
+        timestamp: Date.now(),
+      })
+    },
+    [appendMessage],
+  )
+
+  const appendSlashCommand = useCallback(
+    (content: string) => appendChatMessage('user', 'text', content),
+    [appendChatMessage],
+  )
+
+  const appendStatusMessage = useCallback(
+    (content: string) => appendChatMessage('assistant', 'tool', content),
+    [appendChatMessage],
+  )
+
+  const appendErrorMessage = useCallback(
+    (content: string) => appendChatMessage('system', 'error', content),
+    [appendChatMessage],
+  )
+
+  const requireLocalGitRepo = useCallback(
+    (action: string) => {
+      const branch = local.gitInfo?.branch ?? null
+      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo || !branch) {
+        appendErrorMessage(`${action} requires a local git repository.`)
+        return null
+      }
+      return { branch }
+    },
+    [local.localMode, local.rootPath, local.gitInfo, appendErrorMessage],
+  )
+
+  const requireGithubRepo = useCallback(
+    (action: string, requireAuth = false) => {
+      const repoFullName = repo?.fullName ?? local.remoteRepo ?? null
+      const branch = repo?.branch ?? local.gitInfo?.branch ?? null
+
+      if (!repoFullName) {
+        appendErrorMessage(
+          `${action} requires a GitHub repo or a local repo with a GitHub origin.`,
+        )
+        return null
+      }
+
+      if (requireAuth && !getGithubToken()) {
+        appendErrorMessage(`${action} requires a GitHub token. Add one in Settings first.`)
+        return null
+      }
+
+      return { repoFullName, branch }
+    },
+    [repo?.fullName, repo?.branch, local.remoteRepo, local.gitInfo?.branch, appendErrorMessage],
+  )
+
   // ─── Commit result listener ──────────────────────────────────
   useEffect(() => {
     return on('agent-commit-result', (detail) => {
       if (detail.success) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: `Committed ${detail.fileCount} file(s) successfully.`,
-          timestamp: Date.now(),
-        })
+        appendStatusMessage(`Committed ${detail.fileCount} file(s) successfully.`)
       } else {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: `Commit failed: ${detail.error}`,
-          timestamp: Date.now(),
-        })
+        appendErrorMessage(`Commit failed: ${detail.error}`)
       }
     })
-  }, [appendMessage])
+  }, [appendErrorMessage, appendStatusMessage])
 
   // ─── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
@@ -983,56 +1176,26 @@ export function AgentPanel() {
     // ─── Slash command interception ───────────────────────────
     if (text.startsWith('/commit')) {
       const commitMsg = text.replace(/^\/commit\s*/, '').trim()
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
-      })
+      appendSlashCommand(text)
 
       if (commitMsg) {
         emit('agent-commit', { message: commitMsg })
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: 'Committing...',
-          timestamp: Date.now(),
-        })
+        appendStatusMessage('Committing...')
         return
       }
 
       if (!isConnected) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: 'Gateway disconnected — cannot generate commit message.',
-          timestamp: Date.now(),
-        })
+        appendErrorMessage('Gateway disconnected — cannot generate commit message.')
         return
       }
 
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        type: 'status',
-        content: 'Generating commit message with gateway AI...',
-        timestamp: Date.now(),
-      })
+      appendStatusMessage('Generating commit message with gateway AI...')
 
       try {
         await ensureSessionInit()
         const changes = await collectCommitChangesForGeneration()
         if (changes.length === 0) {
-          appendMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            type: 'status',
-            content: 'No changes detected to commit.',
-            timestamp: Date.now(),
-          })
+          appendStatusMessage('No changes detected to commit.')
           return
         }
 
@@ -1045,219 +1208,209 @@ export function AgentPanel() {
           changes,
         })
 
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: `Generated commit message: ${generatedCommitMsg}`,
-          timestamp: Date.now(),
-        })
+        appendStatusMessage(`Generated commit message: ${generatedCommitMsg}`)
         emit('agent-commit', { message: generatedCommitMsg })
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: 'Committing...',
-          timestamp: Date.now(),
-        })
+        appendStatusMessage('Committing...')
       } catch (err) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: `Generate commit message failed: ${err instanceof Error ? err.message : String(err)}`,
-          timestamp: Date.now(),
-        })
+        appendErrorMessage(
+          `Generate commit message failed: ${err instanceof Error ? err.message : String(err)}`,
+        )
       }
       return
     }
     if (text === '/changes') {
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
-      })
+      appendSlashCommand(text)
       emit('open-changes-panel')
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        type: 'status',
-        content: 'Opening pre-commit review...',
-        timestamp: Date.now(),
-      })
+      appendStatusMessage('Opening pre-commit review...')
       return
     }
     if (text === '/diff') {
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
-      })
+      appendSlashCommand(text)
       const changes = diffEngine.getChanges()
       if (changes.length > 0) {
         const summary = diffEngine.getSummary()
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: `${summary.fileCount} file(s) changed: +${summary.additions} -${summary.deletions}\nFiles: ${changes.map((c) => c.path).join(', ')}`,
-          timestamp: Date.now(),
-        })
+        appendStatusMessage(
+          `${summary.fileCount} file(s) changed: +${summary.additions} -${summary.deletions}\nFiles: ${changes.map((c) => c.path).join(', ')}`,
+        )
       } else {
         const dirtyFiles = files.filter((f) => f.dirty)
         if (dirtyFiles.length > 0) {
-          appendMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            type: 'status',
-            content: `${dirtyFiles.length} unsaved file(s): ${dirtyFiles.map((f) => f.path).join(', ')}`,
-            timestamp: Date.now(),
-          })
+          appendStatusMessage(
+            `${dirtyFiles.length} unsaved file(s): ${dirtyFiles.map((f) => f.path).join(', ')}`,
+          )
         } else {
-          appendMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            type: 'status',
-            content: 'No changes detected.',
-            timestamp: Date.now(),
-          })
+          appendStatusMessage('No changes detected.')
         }
       }
       return
     }
     if (text === '/unstage') {
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
-      })
+      appendSlashCommand(text)
       if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: 'Unstage requires a local git repository.',
-          timestamp: Date.now(),
-        })
+        appendErrorMessage('Unstage requires a local git repository.')
         return
       }
       const staged = local.gitInfo.status?.filter((s) => s.status !== '??').map((s) => s.path) ?? []
       if (staged.length === 0) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: 'No staged files to unstage.',
-          timestamp: Date.now(),
-        })
+        appendStatusMessage('No staged files to unstage.')
         return
       }
       try {
         await local.unstageFiles(staged)
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: `Unstaged ${staged.length} file(s).`,
-          timestamp: Date.now(),
-        })
+        appendStatusMessage(`Unstaged ${staged.length} file(s).`)
       } catch (err) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: `Unstage failed: ${err instanceof Error ? err.message : String(err)}`,
-          timestamp: Date.now(),
-        })
+        appendErrorMessage(`Unstage failed: ${err instanceof Error ? err.message : String(err)}`)
       }
       return
     }
     if (text === '/undo') {
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
-      })
+      appendSlashCommand(text)
       if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: 'Undo commit requires a local git repository.',
-          timestamp: Date.now(),
-        })
+        appendErrorMessage('Undo commit requires a local git repository.')
         return
       }
       try {
         await local.undoLastCommit()
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: 'Undid last commit. Changes are back in the working tree.',
-          timestamp: Date.now(),
-        })
+        appendStatusMessage('Undid last commit. Changes are back in the working tree.')
       } catch (err) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: `Undo failed: ${err instanceof Error ? err.message : String(err)}`,
-          timestamp: Date.now(),
-        })
+        appendErrorMessage(`Undo failed: ${err instanceof Error ? err.message : String(err)}`)
       }
       return
     }
     if (text === '/push') {
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
-      })
-      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: 'Push requires a local git repository.',
-          timestamp: Date.now(),
-        })
-        return
-      }
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        type: 'status',
-        content: `Pushing ${local.gitInfo.branch} to origin...`,
-        timestamp: Date.now(),
-      })
+      appendSlashCommand(text)
+      const localRepo = requireLocalGitRepo('Push')
+      if (!localRepo) return
+      appendStatusMessage(`Pushing ${localRepo.branch} to origin...`)
       try {
         await local.push()
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: `Pushed ${local.gitInfo.branch} to origin.`,
-          timestamp: Date.now(),
-        })
+        appendStatusMessage(`Pushed ${localRepo.branch} to origin.`)
       } catch (err) {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'error',
-          content: `Push failed: ${err instanceof Error ? err.message : String(err)}`,
-          timestamp: Date.now(),
-        })
+        appendErrorMessage(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
+      }
+      return
+    }
+    if (text === '/pull') {
+      appendSlashCommand(text)
+      const localRepo = requireLocalGitRepo('Pull')
+      if (!localRepo) return
+      appendStatusMessage(`Pulling ${localRepo.branch} from origin with rebase...`)
+      try {
+        const result = await local.pull()
+        appendStatusMessage(result || `Pulled ${localRepo.branch} from origin.`)
+      } catch (err) {
+        appendErrorMessage(`Pull failed: ${err instanceof Error ? err.message : String(err)}`)
+      }
+      return
+    }
+    if (text === '/sync') {
+      appendSlashCommand(text)
+      const localRepo = requireLocalGitRepo('Sync')
+      if (!localRepo) return
+      appendStatusMessage(`Syncing ${localRepo.branch} with origin...`)
+      try {
+        const result = await local.gitSync()
+        appendStatusMessage(result || `Synced ${localRepo.branch}.`)
+      } catch (err) {
+        appendErrorMessage(`Sync failed: ${err instanceof Error ? err.message : String(err)}`)
+      }
+      return
+    }
+
+    const pullRequestCreateMatch = text.match(/^\/pr\s+create(?:\s+(.*))?$/i)
+    if (pullRequestCreateMatch) {
+      appendSlashCommand(text)
+      const githubRepo = requireGithubRepo('Create pull request', true)
+      if (!githubRepo) return
+      const currentBranch = githubRepo.branch
+      if (!currentBranch) {
+        appendErrorMessage('Create pull request requires an active branch.')
+        return
+      }
+
+      try {
+        const { title, body, base } = parsePullRequestCreateArgs(pullRequestCreateMatch[1] ?? '')
+        const repoInfo = await fetchRepoByName(githubRepo.repoFullName)
+        const baseBranch = base || repoInfo.default_branch
+
+        if (currentBranch === baseBranch) {
+          appendErrorMessage(
+            `Current branch \`${currentBranch}\` matches the base branch. Switch to a feature branch first.`,
+          )
+          return
+        }
+
+        if (local.localMode && local.rootPath && local.gitInfo?.is_repo) {
+          appendStatusMessage(`Pushing ${currentBranch} to origin before creating the PR...`)
+          await local.push(currentBranch)
+        }
+
+        appendStatusMessage(`Creating pull request from ${currentBranch} to ${baseBranch}...`)
+        const created = await createPullRequest(
+          githubRepo.repoFullName,
+          title || titleFromBranchName(currentBranch),
+          body || buildDefaultPullRequestBody(currentBranch, baseBranch),
+          currentBranch,
+          baseBranch,
+        )
+        appendStatusMessage(`Created PR #${created.number}: ${created.title}\n${created.url}`)
+      } catch (err) {
+        appendErrorMessage(
+          `Create pull request failed: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }
+      return
+    }
+
+    const pullRequestDetailMatch = text.match(/^\/pr\s+(\d+)$/i)
+    if (text === '/pr' || pullRequestDetailMatch) {
+      appendSlashCommand(text)
+      const githubRepo = requireGithubRepo('Pull request lookup')
+      if (!githubRepo) return
+
+      try {
+        if (pullRequestDetailMatch) {
+          const number = Number.parseInt(pullRequestDetailMatch[1], 10)
+          appendStatusMessage(`Loading PR #${number}...`)
+          const pr = await fetchPullRequest(githubRepo.repoFullName, number)
+          const [reviews, checks] = await Promise.all([
+            fetchPRReviews(githubRepo.repoFullName, number),
+            fetchPRChecks(githubRepo.repoFullName, pr.headSha),
+          ])
+          appendStatusMessage(
+            formatPullRequestDetails(pr, reviews.length, summarizeChecks(checks)),
+          )
+        } else {
+          const prs = await fetchPullRequests(githubRepo.repoFullName, 'open', 20)
+          appendStatusMessage(formatPullRequestList(githubRepo.repoFullName, prs, githubRepo.branch))
+        }
+      } catch (err) {
+        appendErrorMessage(
+          `Pull request lookup failed: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }
+      return
+    }
+
+    const mergeMatch = text.match(/^\/merge(?:\s+(\d+))(?:\s+(merge|squash|rebase))?$/i)
+    if (mergeMatch) {
+      appendSlashCommand(text)
+      const githubRepo = requireGithubRepo('Merge pull request', true)
+      if (!githubRepo) return
+
+      const prNumber = Number.parseInt(mergeMatch[1], 10)
+      const mergeMethod = (mergeMatch[2]?.toLowerCase() ??
+        'merge') as 'merge' | 'squash' | 'rebase'
+
+      try {
+        appendStatusMessage(`Merging PR #${prNumber} with ${mergeMethod}...`)
+        const result = await mergePullRequest(githubRepo.repoFullName, prNumber, mergeMethod)
+        const shaLine = result.sha ? `\nCommit: ${result.sha.slice(0, 7)}` : ''
+        appendStatusMessage(`Merged PR #${prNumber}. ${result.message}${shaLine}`)
+      } catch (err) {
+        appendErrorMessage(
+          `Merge failed: ${err instanceof Error ? err.message : String(err)}`,
+        )
       }
       return
     }
@@ -1309,17 +1462,7 @@ export function AgentPanel() {
           return
         }
 
-        const attachLabels: string[] = []
-        for (const att of contextAttachments) {
-          attachLabels.push(
-            att.type === 'selection'
-              ? `📝 ${att.path.split('/').pop()}:${att.startLine}-${att.endLine}`
-              : `📄 ${att.path.split('/').pop()}`,
-          )
-        }
-        for (const img of imageAttachments) {
-          attachLabels.push(`🖼 ${img.name}`)
-        }
+        const attachLabels = buildAttachmentLabels()
         const request = parsedSkillCommand.request?.trim() || skill.starterPrompt
         const envelope = buildSkillUseEnvelope({
           skill,
@@ -1417,17 +1560,7 @@ export function AgentPanel() {
     streamStateRef.current.isSending = true
 
     // Build visual label for attachments
-    const attachLabels: string[] = []
-    for (const att of contextAttachments) {
-      attachLabels.push(
-        att.type === 'selection'
-          ? `📝 ${att.path.split('/').pop()}:${att.startLine}-${att.endLine}`
-          : `📄 ${att.path.split('/').pop()}`,
-      )
-    }
-    for (const img of imageAttachments) {
-      attachLabels.push(`🖼 ${img.name}`)
-    }
+    const attachLabels = buildAttachmentLabels()
     const displayText = attachLabels.length > 0 ? `[${attachLabels.join(' · ')}]\n${text}` : text
     const messageImages =
       imageAttachments.length > 0
@@ -1463,8 +1596,6 @@ export function AgentPanel() {
     isConnected,
     status,
     sessionKey,
-    contextAttachments,
-    imageAttachments,
     local,
     repo,
     files,
@@ -1472,12 +1603,18 @@ export function AgentPanel() {
     onEvent,
     buildContext,
     buildSilentContext,
+    buildAttachmentLabels,
     appendMessage,
+    appendErrorMessage,
+    appendSlashCommand,
+    appendStatusMessage,
     ensureSessionInit,
     collectCommitChangesForGeneration,
     logChatDebug,
     enforceSkillFirstPolicy,
     modelInfo.current,
+    requireGithubRepo,
+    requireLocalGitRepo,
     sendStructuredGatewayMessage,
   ])
 
@@ -1707,13 +1844,16 @@ export function AgentPanel() {
       { cmd: '/changes', desc: 'Pre-commit review', icon: 'lucide:eye' },
       { cmd: '/unstage', desc: 'Unstage all staged files', icon: 'lucide:minus-circle' },
       { cmd: '/undo', desc: 'Undo last commit', icon: 'lucide:undo-2' },
+      { cmd: '/pull', desc: 'Pull latest changes', icon: 'lucide:arrow-down-circle' },
       { cmd: '/push', desc: 'Push to origin', icon: 'lucide:arrow-up-circle' },
+      { cmd: '/sync', desc: 'Pull and push current branch', icon: 'lucide:refresh-cw' },
       { cmd: '/pr', desc: 'View pull requests', icon: 'lucide:git-pull-request' },
       {
         cmd: '/pr create',
         desc: 'Create pull request',
         icon: 'lucide:git-pull-request-create-arrow',
       },
+      { cmd: '/merge', desc: 'Merge pull request', icon: 'lucide:git-merge' },
     ]
     const term = input.toLowerCase()
     return cmds.filter((c) => c.cmd.startsWith(term))
@@ -1813,14 +1953,15 @@ export function AgentPanel() {
     diffEngine.clear()
     sessionInitRef.current = false
     try {
-      localStorage.removeItem('code-editor:chat:main')
+      localStorage.removeItem(storageKey)
+      emit('threads-updated')
     } catch {}
     try {
       sessionStorage.removeItem(
         `${SESSION_INIT_STORAGE_KEY}:${sessionKey}:v${CODE_EDITOR_SYSTEM_PROMPT_VERSION}`,
       )
     } catch {}
-  }, [confirmClear, sessionKey])
+  }, [confirmClear, sessionKey, storageKey])
 
   // ─── Diff overlay ─────────────────────────────────────────────
   if (activeDiff) {

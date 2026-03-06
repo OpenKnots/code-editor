@@ -192,6 +192,31 @@ pub fn run() {
                     .ok(); // Don't panic if vibrancy fails
             }
 
+            // ── Wait for localhost server + reload ──────────────
+            // The localhost plugin starts its HTTP server in a spawned thread.
+            // If the webview loads before the server is ready, we get a blank page.
+            // Poll until the server responds, then reload the webview.
+            {
+                let window = app.get_webview_window("main").unwrap();
+                std::thread::spawn(move || {
+                    use std::net::TcpStream;
+                    let addr = format!("127.0.0.1:{}", LOCALHOST_PORT);
+                    for _ in 0..50 {
+                        if TcpStream::connect_timeout(
+                            &addr.parse().unwrap(),
+                            std::time::Duration::from_millis(50),
+                        ).is_ok() {
+                            // Server is ready — reload to ensure content loads
+                            let reload_url: url::Url =
+                                format!("http://{}/", addr).parse().unwrap();
+                            let _ = window.navigate(reload_url);
+                            return;
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -225,6 +250,7 @@ pub fn run() {
             local_fs::local_git_undo_commit,
             local_fs::local_git_remote_url,
             local_fs::local_git_push,
+            local_fs::local_git_pull,
             local_fs::local_git_sync,
             local_fs::local_git_save,
             local_fs::local_git_clean_branches,

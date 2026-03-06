@@ -89,7 +89,7 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   preview: { icon: 'lucide:eye', label: 'Preview' },
   diff: { icon: 'lucide:git-compare', label: 'Diff' },
   git: { icon: 'lucide:git-branch', label: 'Git' },
-  skills: { icon: 'lucide:sparkles', label: 'Skills' },
+  workshop: { icon: 'lucide:bot', label: 'Workshop' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
 }
 
@@ -145,7 +145,7 @@ export default function EditorLayout() {
   const [shortcutsVisible, setShortcutsVisible] = useState(false)
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [settingsTab, setSettingsTab] = useState<
-    'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | 'skills' | undefined
+    'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | undefined
   >(undefined)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
@@ -390,7 +390,10 @@ export default function EditorLayout() {
   // ─── Git panel navigation ───
   useEffect(() => {
     const unsubs = [
-      on('open-git-panel', () => setView('git')),
+      on('open-git-panel', () => {
+        setView('git')
+        layout.show('gitPanel')
+      }),
       on('open-changes-panel', () => setView('git')),
     ]
     return () => unsubs.forEach((u) => u())
@@ -774,6 +777,9 @@ export default function EditorLayout() {
             case 'toggle-plugins':
               layout.toggle('plugins')
               break
+            case 'toggle-git-panel':
+              layout.toggle('gitPanel')
+              break
             case 'collapse-editor':
               layout.setEditorCollapsed(true)
               break
@@ -795,8 +801,8 @@ export default function EditorLayout() {
             case 'view-settings':
               setView('settings')
               break
-            case 'view-skills':
-              setView('skills')
+            case 'view-workshop':
+              setView('workshop')
               break
             case 'find-files':
               setQuickOpenVisible(true)
@@ -806,6 +812,7 @@ export default function EditorLayout() {
               break
             case 'git-commit':
               setView('git')
+              layout.show('gitPanel')
               break
             case 'git-push':
               emit('agent-push')

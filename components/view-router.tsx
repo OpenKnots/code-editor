@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useView } from '@/context/view-context'
 import { ErrorBoundary } from '@/components/error-boundary'
-import { PreviewProvider } from '@/context/preview-context'
 
 const EditorView = dynamic(
   () => import('@/components/views/editor-view').then((m) => ({ default: m.EditorView })),
@@ -14,8 +13,8 @@ const GitView = dynamic(
   () => import('@/components/views/git-view').then((m) => ({ default: m.GitView })),
   { ssr: false },
 )
-const SkillsView = dynamic(
-  () => import('@/components/views/skills-view').then((m) => ({ default: m.SkillsView })),
+const WorkshopView = dynamic(
+  () => import('@/components/views/workshop-view').then((m) => ({ default: m.WorkshopView })),
   { ssr: false },
 )
 const SettingsPanel = dynamic(
@@ -36,7 +35,7 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   editor: { label: 'Editor' },
   preview: { label: 'Preview' },
   git: { label: 'Git' },
-  skills: { label: 'Skills' },
+  workshop: { label: 'Workshop' },
   settings: { label: 'Settings' },
 }
 
@@ -80,7 +79,7 @@ export function ViewRouter() {
             {activeView === 'editor' && <EditorView />}
             {activeView === 'preview' && <PreviewPanel />}
             {activeView === 'git' && <GitView />}
-            {activeView === 'skills' && <SkillsView />}
+            {activeView === 'workshop' && <WorkshopView />}
             {activeView === 'settings' && (
               <div className="flex-1 flex items-center justify-center">
                 <SettingsPanel open={true} onClose={() => setView('editor')} />

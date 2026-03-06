@@ -8,13 +8,19 @@ import { useAppMode } from '@/context/app-mode-context'
 import { cn } from '@/lib/utils'
 import { emit } from '@/lib/events'
 import { isTauri } from '@/lib/tauri'
+import { useThread } from '@/context/thread-context'
 import {
   CODE_EDITOR_SESSION_KEY,
   CODE_EDITOR_SYSTEM_PROMPT_VERSION,
   SESSION_INIT_STORAGE_KEY,
   getEffectiveSystemPrompt,
 } from '@/lib/agent-session'
-import { SKILL_DISCOVERY_SUGGESTIONS, SKILLS_CATALOG, getSkillById } from '@/lib/skills/catalog'
+import {
+  SKILL_DISCOVERY_SUGGESTIONS,
+  SKILLS_CATALOG,
+  getSkillById,
+  getSkillDisplayIcon,
+} from '@/lib/skills/catalog'
 import { buildSkillUseEnvelope } from '@/lib/skills/provider-adapter'
 import type { SkillCatalogItem, SkillsRuntimeMap } from '@/lib/skills/types'
 import {
@@ -45,10 +51,12 @@ function loadStoredRuntimeState(): SkillsRuntimeMap | null {
 
 export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
   const { sendRequest, status } = useGateway()
+  const { activeThreadId } = useThread()
   const { setView } = useView()
   const { mode } = useAppMode()
   const isDesktop = isTauri()
   const preferTerminal = isDesktop && mode !== 'tui'
+  const codeEditorSessionKey = `${CODE_EDITOR_SESSION_KEY}:${activeThreadId}`
 
   const [query, setQuery] = useState('')
   const [modelName, setModelName] = useState('')
@@ -68,9 +76,9 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
     } catch {}
   }, [runtimeState])
 
-  const refreshState = useCallback(() => {
+  const refreshState = useCallback((note: string | null = 'Refreshed local skill state.') => {
     setRuntimeState(mergeRuntimeState(SKILL_IDS, loadStoredRuntimeState()))
-    setActionNote('Refreshed local skill state.')
+    if (note !== null) setActionNote(note)
   }, [])
 
   useEffect(() => {
@@ -79,7 +87,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
     ;(async () => {
       try {
         const session = (await sendRequest('sessions.status', {
-          sessionKey: CODE_EDITOR_SESSION_KEY,
+          sessionKey: codeEditorSessionKey,
         })) as Record<string, unknown> | undefined
         if (cancelled) return
         const nextModel =
@@ -92,24 +100,27 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
     return () => {
       cancelled = true
     }
-  }, [sendRequest, status])
+  }, [sendRequest, status, codeEditorSessionKey])
 
-  const ensureCodeEditorSessionInit = useCallback(async () => {
-    if (typeof window === 'undefined') return
-    const initKey = `${SESSION_INIT_STORAGE_KEY}:${CODE_EDITOR_SESSION_KEY}:v${CODE_EDITOR_SYSTEM_PROMPT_VERSION}`
-    if (sessionStorage.getItem(initKey)) return
+  const ensureCodeEditorSessionInit = useCallback(
+    async (sessionKey: string) => {
+      if (typeof window === 'undefined') return
+      const initKey = `${SESSION_INIT_STORAGE_KEY}:${sessionKey}:v${CODE_EDITOR_SYSTEM_PROMPT_VERSION}`
+      if (sessionStorage.getItem(initKey)) return
 
-    await sendRequest('chat.inject', {
-      sessionKey: CODE_EDITOR_SESSION_KEY,
-      message: getEffectiveSystemPrompt(),
-      label: 'KnotCode system prompt',
-    })
-    sessionStorage.setItem(initKey, 'true')
-    sendRequest('sessions.patch', {
-      key: CODE_EDITOR_SESSION_KEY,
-      label: 'KnotCode',
-    }).catch(() => {})
-  }, [sendRequest])
+      await sendRequest('chat.inject', {
+        sessionKey,
+        message: getEffectiveSystemPrompt(),
+        label: 'KnotCode system prompt',
+      })
+      sessionStorage.setItem(initKey, 'true')
+      sendRequest('sessions.patch', {
+        key: sessionKey,
+        label: 'KnotCode',
+      }).catch(() => {})
+    },
+    [sendRequest],
+  )
 
   const sendGatewayMessage = useCallback(
     async (message: string, label: string) => {
@@ -118,9 +129,9 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
         return
       }
 
-      const sessionKey = mode === 'tui' ? 'main' : CODE_EDITOR_SESSION_KEY
-      if (sessionKey === CODE_EDITOR_SESSION_KEY) {
-        await ensureCodeEditorSessionInit()
+      const sessionKey = mode === 'tui' ? 'main' : codeEditorSessionKey
+      if (sessionKey === codeEditorSessionKey) {
+        await ensureCodeEditorSessionInit(sessionKey)
       }
 
       await sendRequest('chat.send', {
@@ -132,7 +143,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
       setView(mode === 'tui' ? 'editor' : 'chat')
       setActionNote(label)
     },
-    [ensureCodeEditorSessionInit, mode, sendRequest, setView, status],
+    [ensureCodeEditorSessionInit, mode, sendRequest, setView, status, codeEditorSessionKey],
   )
 
   const updateRuntime = useCallback(
@@ -205,12 +216,15 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
 
   const handleToggleEnabled = useCallback(
     (skillId: string) => {
+      const wasEnabled = runtimeState[skillId]?.enabled ?? true
+      const skill = getSkillById(skillId)
       updateRuntime(skillId, (previous) => ({
         ...previous,
         enabled: !previous.enabled,
       }))
+      setActionNote(`${skill?.title ?? 'Skill'} ${wasEnabled ? 'disabled' : 'enabled'}.`)
     },
-    [updateRuntime],
+    [runtimeState, updateRuntime],
   )
 
   const handleSyncSkill = useCallback(
@@ -281,8 +295,12 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
   }, [executeParsedCommand])
 
   const handleUpdate = useCallback(async () => {
-    await executeParsedCommand('/skill update', 'Skill update command dispatched.')
-  }, [executeParsedCommand])
+    try {
+      await executeParsedCommand('/skill update', 'Skill update command dispatched.')
+    } finally {
+      refreshState(null)
+    }
+  }, [executeParsedCommand, refreshState])
 
   const handleSuggestion = useCallback(
     async (suggestionQuery: string) => {
@@ -337,14 +355,8 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={refreshState}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer"
-            >
-              <Icon icon="lucide:refresh-cw" width={12} height={12} />
-              Refresh
-            </button>
-            <button
               onClick={handleCheck}
+              type="button"
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer"
             >
               <Icon icon="lucide:shield-check" width={12} height={12} />
@@ -352,13 +364,15 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
             </button>
             <button
               onClick={handleUpdate}
+              type="button"
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer"
             >
-              <Icon icon="lucide:download" width={12} height={12} />
+              <Icon icon="lucide:refresh-cw" width={12} height={12} />
               Update
             </button>
             <button
               onClick={handleNewSkill}
+              type="button"
               className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-3 py-1.5 text-[11px] font-medium text-[var(--brand-contrast)] hover:opacity-90 transition-opacity cursor-pointer"
             >
               <Icon icon="lucide:plus" width={12} height={12} />
@@ -399,8 +413,8 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
           <div>
             <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">Installed</h3>
             <p className="text-[10px] text-[var(--text-disabled)]">
-              Bundled skill collection. Toggle availability, sync to your local skill runner, or
-              send a skill directly to chat.
+              Bundled skill collection. Toggle availability, update local installs, or send a skill
+              directly to chat.
             </p>
           </div>
           {busyAction && (
@@ -426,7 +440,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
               >
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
-                    <Icon icon={skill.icon} width={18} height={18} />
+                    <Icon icon={getSkillDisplayIcon(skill)} width={18} height={18} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
@@ -440,16 +454,23 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
                       </div>
                       <button
                         onClick={() => handleToggleEnabled(skill.id)}
+                        type="button"
+                        role="switch"
+                        aria-checked={state?.enabled ?? false}
+                        aria-label={`${state?.enabled ? 'Disable' : 'Enable'} ${skill.title}`}
+                        disabled={state?.syncState === 'running'}
                         className={cn(
-                          'relative h-5 w-9 rounded-full transition-colors cursor-pointer',
-                          state?.enabled ? 'bg-[var(--brand)]' : 'bg-[var(--bg-tertiary)]',
+                          'relative h-5 w-9 rounded-full transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60',
+                          state?.enabled
+                            ? 'bg-[var(--brand)]'
+                            : 'bg-[color-mix(in_srgb,var(--text-disabled)_22%,transparent)]',
                         )}
                         title={state?.enabled ? 'Disable skill' : 'Enable skill'}
                       >
                         <span
                           className={cn(
-                            'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform',
-                            state?.enabled ? 'translate-x-4' : 'translate-x-0.5',
+                            'absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[var(--bg-elevated)] shadow-sm transition-transform',
+                            state?.enabled ? 'translate-x-4' : 'translate-x-0',
                           )}
                         />
                       </button>
@@ -469,6 +490,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         onClick={() => handleOpenComposer(skill)}
+                        type="button"
                         disabled={!state?.enabled}
                         className={cn(
                           'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-colors cursor-pointer',
@@ -482,14 +504,27 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
                       </button>
                       <button
                         onClick={() => handleSyncSkill(skill)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer"
+                        type="button"
+                        disabled={state?.syncState === 'running'}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60"
                       >
                         <Icon
-                          icon={state?.synced ? 'lucide:rotate-cw' : 'lucide:download'}
+                          icon={
+                            state?.syncState === 'running'
+                              ? 'lucide:loader-2'
+                              : state?.synced
+                                ? 'lucide:rotate-cw'
+                                : 'lucide:download'
+                          }
                           width={11}
                           height={11}
+                          className={state?.syncState === 'running' ? 'animate-spin' : undefined}
                         />
-                        {state?.synced ? 'Resync' : 'Sync'}
+                        {state?.syncState === 'running'
+                          ? 'Syncing...'
+                          : state?.synced
+                            ? 'Resync'
+                            : 'Sync'}
                       </button>
                       <a
                         href={skill.skillPageUrl}
@@ -550,6 +585,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
               </div>
               <button
                 onClick={() => handleSuggestion(suggestion.query)}
+                type="button"
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer"
               >
                 <Icon icon="lucide:plus" width={11} height={11} />
@@ -574,6 +610,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
               </div>
               <button
                 onClick={() => setComposer({ skillId: null, request: '' })}
+                type="button"
                 className="rounded-lg p-1.5 text-[var(--text-disabled)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-secondary)] cursor-pointer"
               >
                 <Icon icon="lucide:x" width={14} height={14} />
@@ -604,12 +641,14 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
                 onClick={() => setComposer({ skillId: null, request: '' })}
+                type="button"
                 className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void handleUseSkill()}
+                type="button"
                 disabled={!composer.request.trim()}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-[11px] font-medium transition-colors cursor-pointer',

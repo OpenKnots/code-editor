@@ -81,6 +81,12 @@ export async function fetchUserRepos(): Promise<Repo[]> {
   return all
 }
 
+export async function fetchRepoByName(repoFullName: string): Promise<Repo> {
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}`)
+  if (!res.ok) throw new Error(`Failed to fetch repo: ${res.status}`)
+  return (await res.json()) as Repo
+}
+
 // ─── Tree ──────────────────────────────────────────────────────
 
 export async function fetchRepoTree(
@@ -605,39 +611,6 @@ export async function submitPRReview(
     throw new Error(err.message || `Failed to submit review: ${res.status}`)
   }
   return (await res.json()) as PRReview
-}
-
-// ─── OAuth Device Flow (direct, no proxy) ──────────────────────
-
-export async function requestDeviceCode(clientId: string): Promise<{
-  device_code: string
-  user_code: string
-  verification_uri: string
-  verification_uri_complete?: string
-  interval: number
-}> {
-  const res = await fetch('https://github.com/login/device/code', {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ client_id: clientId, scope: 'repo read:user checks:read' }),
-  })
-  return res.json()
-}
-
-export async function pollDeviceToken(clientId: string, deviceCode: string): Promise<{
-  access_token?: string
-  error?: string
-}> {
-  const res = await fetch('https://github.com/login/oauth/access_token', {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: clientId,
-      device_code: deviceCode,
-      grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-    }),
-  })
-  return res.json()
 }
 
 // ─── Create/Update single file (used by save) ─────────────────

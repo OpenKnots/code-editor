@@ -214,6 +214,10 @@ export const SKILL_DISCOVERY_SUGGESTIONS: SkillDiscoverySuggestion[] = [
   },
 ]
 
+export function getSkillDisplayIcon(skill: SkillCatalogItem): string {
+  return skill.sourceId === 'vercel-labs/skills' ? 'simple-icons:vercel' : skill.icon
+}
+
 export function getSkillById(skillId: string): SkillCatalogItem | undefined {
   return SKILLS_CATALOG.find((skill) => skill.id === skillId)
 }
