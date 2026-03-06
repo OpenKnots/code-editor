@@ -23,15 +23,18 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.10.0", features = [] }
 tauri-plugin-log = "2"
+base64 = "0.22.1"
+tauri-plugin-dialog = "2.6.0"
+tauri-plugin-clipboard-manager = "2.3.2"
+tauri-plugin-localhost = "2"
+
+# Desktop-only dependencies
+[target.'cfg(not(target_os = "ios"))'.dependencies]
 portable-pty = "0.8"
 tauri-plugin-window-state = "2.4.1"
 window-vibrancy = "0.7.1"
-tauri-plugin-dialog = "2.6.0"
 tauri-plugin-shell = "2.3.5"
-base64 = "0.22.1"
-tauri-plugin-clipboard-manager = "2.3.2"
 keyring = "3"
-tauri-plugin-localhost = "2"
 
 [profile.release]
 opt-level = "s"

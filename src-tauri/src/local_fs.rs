@@ -1,3 +1,4 @@
+#[cfg(not(target_os = "ios"))]
 use keyring::{Entry, Error as KeyringError};
 use serde::Serialize;
 use std::fs;
@@ -449,6 +450,7 @@ pub fn local_git_ahead_behind(root: String, branch: String) -> Result<(u32, u32)
     }
 }
 
+#[cfg(not(target_os = "ios"))]
 #[tauri::command]
 pub fn local_secret_set(service: String, account: String, secret: String) -> Result<(), String> {
     let entry = Entry::new(&service, &account)
@@ -458,6 +460,7 @@ pub fn local_secret_set(service: String, account: String, secret: String) -> Res
         .map_err(|e| format!("Failed to store secret: {}", e))
 }
 
+#[cfg(not(target_os = "ios"))]
 #[tauri::command]
 pub fn local_secret_get(service: String, account: String) -> Result<Option<String>, String> {
     let entry = Entry::new(&service, &account)
@@ -469,6 +472,7 @@ pub fn local_secret_get(service: String, account: String) -> Result<Option<Strin
     }
 }
 
+#[cfg(not(target_os = "ios"))]
 #[tauri::command]
 pub fn local_secret_delete(service: String, account: String) -> Result<(), String> {
     let entry = Entry::new(&service, &account)

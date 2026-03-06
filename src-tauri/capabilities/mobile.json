@@ -1,0 +1,25 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "Mobile permissions — gateway chat, engine control, clipboard",
+  "windows": ["main"],
+  "platforms": ["iOS", "android"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:webview:default",
+    "core:event:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "log:default",
+    "allow-engine-status",
+    "allow-engine-start",
+    "allow-engine-stop",
+    "allow-engine-restart",
+    "allow-engine-gateway-config",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-write-html",
+    "clipboard-manager:allow-read-text"
+  ]
+}
