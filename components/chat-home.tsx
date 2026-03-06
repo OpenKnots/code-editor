@@ -18,20 +18,20 @@ import { getAgentConfig } from '@/lib/agent-session'
 
 const STATIC_SUGGESTIONS = [
   {
-    icon: 'lucide:box',
-    label: 'Build a classic Snake game in this repo.',
+    icon: 'lucide:layout-template',
+    label: 'Scaffold a production-ready feature with UI, state, and tests.',
     color: 'var(--text-secondary)',
     bg: 'color-mix(in srgb, var(--text-primary) 6%, transparent)',
   },
   {
-    icon: 'lucide:file-text',
-    label: 'Create a one-page PDF that summarizes this app.',
+    icon: 'lucide:bug',
+    label: 'Debug a React or TypeScript issue and explain the root cause.',
     color: '#ef4444',
     bg: 'color-mix(in srgb, #ef4444 8%, transparent)',
   },
   {
-    icon: 'lucide:pencil',
-    label: 'Create a plan to refactor the main module.',
+    icon: 'lucide:git-pull-request',
+    label: 'Review a set of code changes for bugs, regressions, and missing tests.',
     color: '#22c55e',
     bg: 'color-mix(in srgb, #22c55e 8%, transparent)',
   },
@@ -149,38 +149,38 @@ export const ChatHome = memo(function ChatHome({
       const recent = openFiles[openFiles.length - 1]
       const name = recent.path.split('/').pop() || recent.path
       contextCards.push({
-        icon: 'lucide:sparkles',
-        label: `Refactor ${name} — simplify and clean up.`,
+        icon: 'lucide:file-search',
+        label: `Explain how ${name} fits into the app and suggest the safest next edit.`,
         color: 'var(--brand)',
         bg: 'color-mix(in srgb, var(--brand) 8%, transparent)',
       })
     } else {
       contextCards.push({
-        icon: 'lucide:box',
-        label: `Build a classic Snake game in this repo.`,
+        icon: 'lucide:compass',
+        label: `Inspect this codebase and explain the main architecture and entry points.`,
         color: 'var(--text-secondary)',
         bg: 'color-mix(in srgb, var(--text-primary) 6%, transparent)',
       })
     }
 
     contextCards.push({
-      icon: 'lucide:file-text',
-      label: `Create a one-page PDF that summarizes this app.`,
+      icon: 'lucide:shield-check',
+      label: `Review the current changes for bugs, regressions, and missing tests before I commit.`,
       color: '#ef4444',
       bg: 'color-mix(in srgb, #ef4444 8%, transparent)',
     })
 
     if (branchName) {
       contextCards.push({
-        icon: 'lucide:pencil',
-        label: `Create a plan to refactor the main module.`,
+        icon: 'lucide:git-compare-arrows',
+        label: `Summarize what changed on ${branchName} and list the highest-priority follow-ups.`,
         color: '#22c55e',
         bg: 'color-mix(in srgb, #22c55e 8%, transparent)',
       })
     } else {
       contextCards.push({
         icon: 'lucide:test-tubes',
-        label: `Add tests for the core modules in ${langLabel}.`,
+        label: `Add tests around the most critical paths in this ${langLabel} project.`,
         color: '#22c55e',
         bg: 'color-mix(in srgb, #22c55e 8%, transparent)',
       })
