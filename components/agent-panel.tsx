@@ -70,8 +70,9 @@ import {
 
 function AgentConnectPrompt() {
   const { status, error, connect } = useGateway()
-  const [showManual, setShowManual] = useState(false)
-  const [url, setUrl] = useState('ws://localhost:18789')
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth <= 768
+  const [showManual, setShowManual] = useState(isMobileDevice) // auto-expand on mobile
+  const [url, setUrl] = useState(isMobileDevice ? '' : 'ws://localhost:18789')
   const [password, setPassword] = useState('')
 
   const isConnecting = status === 'connecting' || status === 'authenticating'
@@ -111,19 +112,23 @@ function AgentConnectPrompt() {
           <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1.5">
             Gateway not found
           </h3>
-          <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-4 max-w-[280px]">
-            Make sure OpenClaw is running on this machine.
+          <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-4 max-w-[320px]">
+            {isMobileDevice
+              ? 'Enter your gateway URL and password to connect.'
+              : 'Make sure OpenClaw is running on this machine.'}
           </p>
 
-          <div className="space-y-2.5 w-full max-w-[280px]">
-            <button
-              onClick={() => connect('ws://localhost:18789', '')}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer"
-              style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-contrast, #fff)' }}
-            >
-              <Icon icon="lucide:refresh-cw" width={14} height={14} />
-              Retry connection
-            </button>
+          <div className="space-y-2.5 w-full max-w-[320px]">
+            {!isMobileDevice && (
+              <button
+                onClick={() => connect('ws://localhost:18789', '')}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer"
+                style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-contrast, #fff)' }}
+              >
+                <Icon icon="lucide:refresh-cw" width={14} height={14} />
+                Retry connection
+              </button>
+            )}
 
             <button
               onClick={() => setShowManual((v) => !v)}
@@ -142,8 +147,11 @@ function AgentConnectPrompt() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleConnect()
                   }}
-                  placeholder="ws://localhost:18789"
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
+                  placeholder="wss://your-gateway.ts.net"
+                  className="w-full px-3 py-3 sm:py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[14px] sm:text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
                 <input
                   type="password"
@@ -153,12 +161,12 @@ function AgentConnectPrompt() {
                     if (e.key === 'Enter') handleConnect()
                   }}
                   placeholder="Password (if set)"
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
+                  className="w-full px-3 py-3 sm:py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[14px] sm:text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
                 />
                 <button
                   onClick={handleConnect}
                   disabled={!url.trim()}
-                  className="w-full py-2 rounded-lg text-[12px] font-medium bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full py-3 sm:py-2 rounded-lg text-[14px] sm:text-[12px] font-medium bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Connect
                 </button>
@@ -173,13 +181,30 @@ function AgentConnectPrompt() {
             </div>
           )}
 
-          <p className="mt-5 text-[11px] text-[var(--text-disabled)]">
-            Run{' '}
-            <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
-              openclaw gateway start
-            </code>{' '}
-            to start
-          </p>
+          {isMobileDevice ? (
+            <div className="mt-5 text-[11px] text-[var(--text-disabled)] text-left max-w-[320px] space-y-1">
+              <p className="font-medium text-[var(--text-tertiary)]">Connection tips:</p>
+              <p>• Use your Tailscale Funnel or local network URL</p>
+              <p>
+                • Format:{' '}
+                <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
+                  wss://host:port
+                </code>{' '}
+                or{' '}
+                <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
+                  ws://ip:18789
+                </code>
+              </p>
+            </div>
+          ) : (
+            <p className="mt-5 text-[11px] text-[var(--text-disabled)]">
+              Run{' '}
+              <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
+                openclaw gateway start
+              </code>{' '}
+              to start
+            </p>
+          )}
         </>
       )}
     </div>
