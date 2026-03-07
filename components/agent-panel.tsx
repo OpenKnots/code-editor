@@ -175,7 +175,7 @@ function AgentConnectPrompt() {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 mt-3 text-[11px] text-[var(--color-deletions)] max-w-[280px] text-left">
+            <div className="flex items-start gap-2 mt-3 text-[13px] text-[var(--color-deletions)] max-w-[280px] text-left">
               <Icon icon="lucide:alert-circle" width={12} height={12} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>

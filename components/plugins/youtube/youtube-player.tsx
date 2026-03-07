@@ -400,7 +400,7 @@ export function YouTubePlayer() {
               </button>
             )}
           </div>
-          {error && <p className="px-2.5 pb-1.5 text-[9px] text-[var(--error)]">{error}</p>}
+          {error && <p className="px-2.5 pb-1.5 text-[12px] text-[var(--error)]">{error}</p>}
 
           {/* Curated playlists */}
           {!current && (
