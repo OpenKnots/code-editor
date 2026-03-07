@@ -73,5 +73,7 @@ export function parseEditProposals(text: string): EditProposal[] {
 }
 
 export function hasEditProposals(text: string): boolean {
+  EDIT_MARKER_RE.lastIndex = 0
+  FENCED_WITH_PATH_RE.lastIndex = 0
   return EDIT_MARKER_RE.test(text) || FENCED_WITH_PATH_RE.test(text)
 }

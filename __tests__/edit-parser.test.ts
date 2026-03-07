@@ -84,4 +84,11 @@ describe('hasEditProposals', () => {
   it('returns false for plain text', () => {
     expect(hasEditProposals('no code here')).toBe(false)
   })
+
+  it('returns consistent results on consecutive calls', () => {
+    const text = '[EDIT foo.ts]\n```\ncode\n```'
+    expect(hasEditProposals(text)).toBe(true)
+    expect(hasEditProposals(text)).toBe(true)
+    expect(hasEditProposals(text)).toBe(true)
+  })
 })
