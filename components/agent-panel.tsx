@@ -71,7 +71,6 @@ import {
 function AgentConnectPrompt() {
   const { status, error, connect } = useGateway()
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth <= 768
-  const [showManual, setShowManual] = useState(isMobileDevice) // auto-expand on mobile
   const [url, setUrl] = useState(isMobileDevice ? '' : 'ws://localhost:18789')
   const [password, setPassword] = useState('')
 
@@ -83,121 +82,135 @@ function AgentConnectPrompt() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center text-center py-8 px-4">
-      <div className="relative mb-5">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[color-mix(in_srgb,var(--brand)_20%,transparent)] to-[color-mix(in_srgb,var(--brand)_6%,transparent)] border border-[color-mix(in_srgb,var(--brand)_25%,transparent)] flex items-center justify-center shadow-lg">
+    <div className="flex flex-1 flex-col items-center justify-center text-center px-6">
+      {/* Animated connection icon */}
+      <div className="relative mb-6">
+        <div
+          className={`w-16 h-16 rounded-[20px] flex items-center justify-center transition-all duration-500 ${
+            isConnecting
+              ? 'bg-[color-mix(in_srgb,var(--warning,#eab308)_12%,transparent)] border border-[color-mix(in_srgb,var(--warning,#eab308)_30%,transparent)]'
+              : 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)]'
+          }`}
+        >
           <Icon
-            icon={isConnecting ? 'lucide:loader-2' : 'lucide:cpu'}
+            icon={isConnecting ? 'lucide:radio' : 'lucide:radio'}
             width={28}
             height={28}
-            className={`text-[var(--brand)] ${isConnecting ? 'animate-spin' : ''}`}
+            className={`transition-colors duration-500 ${
+              isConnecting ? 'text-[var(--warning,#eab308)] animate-pulse' : 'text-[var(--brand)]'
+            }`}
           />
         </div>
-        <span
-          className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--bg)] ${
-            isConnecting ? 'bg-[var(--warning,#eab308)] animate-pulse' : 'bg-[var(--text-disabled)]'
-          }`}
-        />
       </div>
 
       {isConnecting ? (
         <>
-          <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1.5">
+          <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">
             Connecting…
           </h3>
-          <p className="text-[13px] text-[var(--text-tertiary)]">Looking for OpenClaw gateway</p>
+          <p className="text-[13px] text-[var(--text-tertiary)]">Looking for your gateway</p>
         </>
       ) : (
         <>
-          <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1.5">
-            Gateway not found
+          <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">
+            Connect to Gateway
           </h3>
-          <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-4 max-w-[320px]">
+          <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-6 max-w-[280px]">
             {isMobileDevice
-              ? 'Enter your gateway URL and password to connect.'
+              ? 'Enter your gateway address to start chatting.'
               : 'Make sure OpenClaw is running on this machine.'}
           </p>
 
-          <div className="space-y-2.5 w-full max-w-[320px]">
+          <div className="w-full max-w-[340px] space-y-3">
+            {/* URL input */}
+            <div className="relative">
+              <Icon
+                icon="lucide:globe"
+                width={15}
+                height={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+              />
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConnect()
+                }}
+                placeholder={isMobileDevice ? 'wss://your-gateway.ts.net' : 'ws://localhost:18789'}
+                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Password input */}
+            <div className="relative">
+              <Icon
+                icon="lucide:lock"
+                width={15}
+                height={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConnect()
+                }}
+                placeholder="Password (optional)"
+                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
+              />
+            </div>
+
+            {/* Connect button */}
+            <button
+              onClick={handleConnect}
+              disabled={!url.trim()}
+              className="w-full py-3.5 rounded-xl text-[14px] font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: url.trim() ? 'var(--brand)' : 'var(--bg-subtle)',
+                color: url.trim() ? 'var(--brand-contrast, #fff)' : 'var(--text-disabled)',
+              }}
+            >
+              Connect
+            </button>
+
+            {/* Desktop retry */}
             {!isMobileDevice && (
               <button
                 onClick={() => connect('ws://localhost:18789', '')}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer"
-                style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-contrast, #fff)' }}
+                className="w-full flex items-center justify-center gap-2 py-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
               >
-                <Icon icon="lucide:refresh-cw" width={14} height={14} />
-                Retry connection
+                <Icon icon="lucide:refresh-cw" width={12} height={12} />
+                Retry localhost
               </button>
-            )}
-
-            <button
-              onClick={() => setShowManual((v) => !v)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-            >
-              <Icon icon="lucide:settings-2" width={12} height={12} />
-              {showManual ? 'Hide' : 'Manual connection'}
-            </button>
-
-            {showManual && (
-              <div className="space-y-2 pt-1">
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleConnect()
-                  }}
-                  placeholder="wss://your-gateway.ts.net"
-                  className="w-full px-3 py-3 sm:py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[14px] sm:text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleConnect()
-                  }}
-                  placeholder="Password (if set)"
-                  className="w-full px-3 py-3 sm:py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[14px] sm:text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--border-focus)]"
-                />
-                <button
-                  onClick={handleConnect}
-                  disabled={!url.trim()}
-                  className="w-full py-3 sm:py-2 rounded-lg text-[14px] sm:text-[12px] font-medium bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  Connect
-                </button>
-              </div>
             )}
           </div>
 
+          {/* Error message */}
           {error && (
-            <div className="flex items-start gap-2 mt-3 text-[11px] text-[var(--color-deletions)] max-w-[280px] text-left">
-              <Icon icon="lucide:alert-circle" width={12} height={12} className="shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 mt-4 py-2.5 px-3.5 rounded-lg bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)] border border-[color-mix(in_srgb,var(--color-deletions)_15%,transparent)] text-[12px] text-[var(--color-deletions)] max-w-[340px] text-left">
+              <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
-          {isMobileDevice ? (
-            <div className="mt-5 text-[11px] text-[var(--text-disabled)] text-left max-w-[320px] space-y-1">
-              <p className="font-medium text-[var(--text-tertiary)]">Connection tips:</p>
-              <p>• Use your Tailscale Funnel or local network URL</p>
+          {/* Tips */}
+          {isMobileDevice && (
+            <div className="mt-5 text-[11px] text-[var(--text-disabled)] max-w-[340px] space-y-0.5">
               <p>
-                • Format:{' '}
-                <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
-                  wss://host:port
-                </code>{' '}
-                or{' '}
+                Use your Tailscale Funnel URL or{' '}
                 <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
                   ws://ip:18789
                 </code>
               </p>
             </div>
-          ) : (
-            <p className="mt-5 text-[11px] text-[var(--text-disabled)]">
+          )}
+          {!isMobileDevice && (
+            <p className="mt-4 text-[11px] text-[var(--text-disabled)]">
               Run{' '}
               <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
                 openclaw gateway start
@@ -2146,8 +2159,8 @@ export function AgentPanel() {
         />
       )}
 
-      {/* Input section — hidden when ChatHome is showing */}
-      {(messages.length > 0 || !isConnected) && (
+      {/* Input section — hidden when disconnected on mobile, hidden when ChatHome is showing on desktop */}
+      {(messages.length > 0 || (!isConnected && !(typeof window !== 'undefined' && window.innerWidth <= 768))) && (
         <ChatInputBar
           input={input}
           setInput={setInput}
@@ -2181,13 +2194,13 @@ export function AgentPanel() {
         />
       )}
 
-      {/* Branded footer */}
-      <div className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-0.5 border-t border-[var(--border)] bg-[var(--bg-elevated)]">
+      {/* Branded footer — hidden on mobile to save space */}
+      <div className="shrink-0 hidden sm:flex items-center justify-center gap-1.5 px-3 py-0.5 border-t border-[var(--border)] bg-[var(--bg-elevated)]">
         <KnotLogo size={9} className="opacity-40" />
         <span className="text-[8px] text-[var(--text-disabled)] font-medium tracking-wide">
           KnotCode
         </span>
-        <span className="text-[7px] text-[var(--text-disabled)] opacity-50">v1.0.0</span>
+        <span className="text-[7px] text-[var(--text-disabled)] opacity-50">v1.4.0</span>
       </div>
     </div>
   )
