@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.4.0] — 2026-03-07
+
+### Added
+
+- **iOS support** — Tauri iOS builds for iPhone simulator (arm64)
+- **Edge-to-edge display** — Native WKWebView configuration via Rust objc2 FFI (`contentInsetAdjustmentBehavior = .never`, `edgesForExtendedLayout = .all`)
+- **Mobile-first defaults** — Fresh installs on small screens default to Chat mode instead of Classic/Editor
+- **CSS safe area handling** — Content respects notch and home indicator via `env(safe-area-inset-*)`
+- **Mobile layout** — Borderless, full-bleed shell frame on screens ≤768px
+- **Mobile features** — QR connect, agent approval cards, session presence, caffeinate toggle
+- **Settings panel** — Redesigned with Connect + General tabs, device list, QR code
+
+### Fixed
+
+- **iOS bottom gap** — WKWebView no longer constrained to safe area bounds
+- **Dev mode URL** — `devUrl` corrected to Next.js dev server port (3000)
+
+### Changed
+
+- Added `objc2` v0.6.4 as direct Cargo dependency for iOS native interop
+- iOS capabilities separated from desktop (`capabilities/mobile.json`)
+- Desktop-only crates (`portable-pty`, `window-vibrancy`, `keyring`, etc.) gated with `#[cfg(not(target_os = "ios"))]`
+
 ## [1.1.0] — 2026-03-05
 
 ### Added

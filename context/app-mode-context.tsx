@@ -36,11 +36,16 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     activeViewRef.current = activeView
   }, [activeView])
 
-  // Hydrate from localStorage after mount to avoid SSR mismatch
+  // Hydrate from localStorage after mount to avoid SSR mismatch.
+  // On mobile (no saved preference), default to chat mode.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY) as AppMode | null
-      if (raw && raw in MODE_REGISTRY) setModeState(raw)
+      if (raw && raw in MODE_REGISTRY) {
+        setModeState(raw)
+      } else if (window.innerWidth <= 768) {
+        setModeState('chat')
+      }
     } catch {}
   }, [])
 

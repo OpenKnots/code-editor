@@ -1067,22 +1067,14 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
-/* iOS: fill entire viewport including behind safe areas.
-   html background covers the home indicator region;
-   app-shell pads content away from notch/indicator. */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  html,
-  body {
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-  }
+/* Mobile edge-to-edge: safe-area padding keeps content clear of
+   notch/home indicator while the native WebView fills the screen. */
+@media (max-width: 768px) {
   .app-shell {
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 }
 

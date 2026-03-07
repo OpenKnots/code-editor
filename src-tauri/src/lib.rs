@@ -84,18 +84,37 @@ pub fn run() {
             setup_desktop_menu(app)?;
         }
 
-        // iOS: extend WebView edge-to-edge behind safe areas
+        // iOS: make WKWebView fill the entire screen edge-to-edge
         #[cfg(target_os = "ios")]
         {
             use tauri::Manager;
             if let Some(ww) = app.get_webview_window("main") {
-                let _ = ww.with_webview(|wv| {
-                    #[allow(deprecated)]
+                let _ = ww.with_webview(move |wv| {
                     unsafe {
-                        let inner = wv.inner();
-                        let sv: *mut std::ffi::c_void = objc2::msg_send![inner, scrollView];
-                        // UIScrollViewContentInsetAdjustmentNever = 2
-                        let _: () = objc2::msg_send![sv as *mut objc2::runtime::AnyObject, setContentInsetAdjustmentBehavior: 2_isize];
+                        let wk_ptr = wv.inner() as *mut objc2::runtime::AnyObject;
+                        // Get the scrollView from WKWebView
+                        let scroll_view: *mut objc2::runtime::AnyObject =
+                            objc2::msg_send![wk_ptr, scrollView];
+                        // contentInsetAdjustmentBehavior = .never (2)
+                        let _: () = objc2::msg_send![
+                            scroll_view,
+                            setContentInsetAdjustmentBehavior: 2_isize
+                        ];
+
+                        // Also configure the view controller to extend layout under all bars
+                        let vc_ptr = wv.view_controller() as *mut objc2::runtime::AnyObject;
+                        if !vc_ptr.is_null() {
+                            // edgesForExtendedLayout = UIRectEdgeAll (15)
+                            let _: () = objc2::msg_send![
+                                vc_ptr,
+                                setEdgesForExtendedLayout: 15_usize
+                            ];
+                            // extendedLayoutIncludesOpaqueBars = YES
+                            let _: () = objc2::msg_send![
+                                vc_ptr,
+                                setExtendedLayoutIncludesOpaqueBars: true
+                            ];
+                        }
                     }
                 });
             }

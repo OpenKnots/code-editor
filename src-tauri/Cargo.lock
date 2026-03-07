@@ -82,6 +82,7 @@ dependencies = [
  "base64 0.22.1",
  "keyring",
  "log",
+ "objc2",
  "portable-pty",
  "serde",
  "serde_json",
