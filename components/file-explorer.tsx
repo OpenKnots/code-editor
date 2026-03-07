@@ -715,7 +715,7 @@ export function FileExplorer() {
           </div>
         )}
         {treeError && !local.localMode && (
-          <div className="px-3 py-2 text-[11px] text-[var(--color-deletions)]">{treeError}</div>
+          <div className="px-3 py-2 text-[13px] text-[var(--color-deletions)]">{treeError}</div>
         )}
         {filteredTree.map((node) =>
           node.type === 'dir' ? (

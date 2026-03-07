@@ -98,7 +98,7 @@ export function SpotifySettings() {
             )}
             {loggingIn ? 'Connecting...' : 'Connect Spotify'}
           </button>
-          {error && <p className="text-[9px] text-[var(--error)]">{error}</p>}
+          {error && <p className="text-[12px] text-[var(--error)]">{error}</p>}
         </div>
       )}
     </div>

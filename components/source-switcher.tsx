@@ -48,7 +48,7 @@ function BranchDropdown({ current, branches, onSwitch }: {
             <div className="px-3 py-2 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)]">
               <div className="flex items-start gap-1.5">
                 <Icon icon="lucide:alert-triangle" width={11} height={11} className="text-[var(--color-deletions)] shrink-0 mt-0.5" />
-                <span className="text-[10px] text-[var(--color-deletions)] leading-snug">{error}</span>
+                <span className="text-[12px] text-[var(--color-deletions)] leading-snug">{error}</span>
               </div>
             </div>
           )}
