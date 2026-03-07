@@ -96,28 +96,16 @@ function SectionFrame({
   eyebrow,
   description,
   children,
-  active = false,
 }: {
   title: string
   eyebrow: string
   description: string
   children: React.ReactNode
-  active?: boolean
 }) {
   return (
-    <section
-      className={`min-w-0 rounded-3xl border p-5 shadow-[var(--shadow-sm)] transition ${
-        active
-          ? 'border-[var(--info)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--info)_14%,var(--bg-elevated)),var(--bg-elevated)_44%,color-mix(in_srgb,var(--info)_5%,transparent))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--info)_24%,transparent),var(--shadow-sm)]'
-          : 'border-[var(--border)] bg-[var(--bg-elevated)]'
-      }`}
-    >
+    <section className="min-w-0 rounded-3xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
       <div className="mb-5">
-        <div
-          className={`text-[11px] font-medium uppercase tracking-[0.18em] ${
-            active ? 'text-[var(--info)]' : 'text-[var(--text-disabled)]'
-          }`}
-        >
+        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-disabled)]">
           {eyebrow}
         </div>
         <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
@@ -473,15 +461,13 @@ export function WorkshopView() {
           <div className="grid min-w-0 gap-6">
             <div
               ref={setStageRef('identity')}
-              onFocusCapture={() => setActiveStage('identity')}
-              onClickCapture={() => setActiveStage('identity')}
+              onFocus={() => setActiveStage('identity')}
               className="min-w-0"
             >
               <SectionFrame
                 eyebrow="Guided Build"
                 title="Identity and Intent"
                 description="Define who the agent is, what it should optimize for, and how it should feel when it speaks."
-                active={activeStage === 'identity'}
               >
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
@@ -597,17 +583,11 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div
-              ref={setStageRef('skills')}
-              onFocusCapture={() => setActiveStage('skills')}
-              onClickCapture={() => setActiveStage('skills')}
-              className="min-w-0"
-            >
+            <div ref={setStageRef('skills')} className="min-w-0">
               <SectionFrame
                 eyebrow="Modules"
                 title="Skills"
                 description="Equip workflows that change how the agent approaches problems before it ever answers."
-                active={activeStage === 'skills'}
               >
                 <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-4">
@@ -727,17 +707,11 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div
-              ref={setStageRef('tools')}
-              onFocusCapture={() => setActiveStage('tools')}
-              onClickCapture={() => setActiveStage('tools')}
-              className="min-w-0"
-            >
+            <div ref={setStageRef('tools')} className="min-w-0">
               <SectionFrame
                 eyebrow="Capabilities"
                 title="Tools"
                 description="Enable only the surfaces the agent truly needs. Power without clarity becomes risk."
-                active={activeStage === 'tools'}
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   {WORKSHOP_TOOL_CATALOG.map((tool) => (
@@ -755,17 +729,11 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div
-              ref={setStageRef('workflow')}
-              onFocusCapture={() => setActiveStage('workflow')}
-              onClickCapture={() => setActiveStage('workflow')}
-              className="min-w-0"
-            >
+            <div ref={setStageRef('workflow')} className="min-w-0">
               <SectionFrame
                 eyebrow="Orchestration"
                 title="Workflow Spine"
                 description="Decide how the agent should move through discovery, planning, execution, review, and handoff."
-                active={activeStage === 'workflow'}
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   {WORKSHOP_WORKFLOW_CATALOG.map((workflow) => (
@@ -782,17 +750,11 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div
-              ref={setStageRef('automation')}
-              onFocusCapture={() => setActiveStage('automation')}
-              onClickCapture={() => setActiveStage('automation')}
-              className="min-w-0"
-            >
+            <div ref={setStageRef('automation')} className="min-w-0">
               <SectionFrame
                 eyebrow="Momentum"
                 title="Automations"
                 description="Set up the quality pulses and reminders that keep the agent aligned before and after each move."
-                active={activeStage === 'automation'}
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   {WORKSHOP_AUTOMATION_CATALOG.map((automation) => (
@@ -809,17 +771,11 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div
-              ref={setStageRef('guardrails')}
-              onFocusCapture={() => setActiveStage('guardrails')}
-              onClickCapture={() => setActiveStage('guardrails')}
-              className="min-w-0"
-            >
+            <div ref={setStageRef('guardrails')} className="min-w-0">
               <SectionFrame
                 eyebrow="Safety"
                 title="Guardrails"
                 description="Make security, review, and execution posture visible so the agent earns trust instead of assuming it."
-                active={activeStage === 'guardrails'}
               >
                 <div className="grid gap-3 md:grid-cols-3">
                   {WORKSHOP_GUARDRAIL_PROFILES.map((profile) => {
@@ -917,17 +873,11 @@ export function WorkshopView() {
               </SectionFrame>
             </div>
 
-            <div
-              ref={setStageRef('evaluation')}
-              onFocusCapture={() => setActiveStage('evaluation')}
-              onClickCapture={() => setActiveStage('evaluation')}
-              className="min-w-0"
-            >
+            <div ref={setStageRef('evaluation')} className="min-w-0">
               <SectionFrame
                 eyebrow="Verification"
                 title="Evaluation Posture"
                 description="Choose a test scenario now so the workshop closes with evidence, not vibes."
-                active={activeStage === 'evaluation'}
               >
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">

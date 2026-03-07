@@ -141,33 +141,29 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
       initial={false}
       animate={{ width: collapsed ? 56 : sidebarWidth }}
       transition={SIDEBAR_SPRING}
-      className={`codex-sidebar relative flex flex-col shrink-0 overflow-hidden ${
+      className={`codex-sidebar shell-sidebar relative flex flex-col shrink-0 overflow-hidden ${
         collapsed
-          ? `items-center gap-2 ${isTauriDesktop ? 'pt-8' : 'pt-3'} pb-3`
-          : 'h-full bg-[var(--sidebar-bg)] border border-[var(--border)] rounded-xl shadow-[var(--shadow-xs)]'
+          ? `shell-sidebar--collapsed items-center gap-2 ${isTauriDesktop ? 'pt-8' : 'pt-3'} pb-3`
+          : 'shell-sidebar--expanded h-full'
       }`}
     >
       {collapsed ? (
         <>
           <button
             onClick={onToggle}
-            className="p-2.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-all cursor-pointer hover:scale-110"
+            className="codex-sidebar-icon-btn"
             title="Expand sidebar (⌘\\)"
           >
             <Icon icon="lucide:panel-left" width={20} height={20} />
           </button>
 
-          <button
-            onClick={handleNewThread}
-            className="p-2.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-all cursor-pointer hover:scale-110"
-            title="New thread"
-          >
+          <button onClick={handleNewThread} className="codex-sidebar-icon-btn" title="New thread">
             <Icon icon="lucide:plus" width={20} height={20} />
           </button>
 
           <button
             onClick={() => emit('open-folder')}
-            className="p-2.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-all cursor-pointer hover:scale-110"
+            className="codex-sidebar-icon-btn"
             title="Open Folder"
           >
             <Icon icon="lucide:folder-open" width={20} height={20} />
@@ -175,7 +171,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
 
           <button
             onClick={() => emit('open-git-panel')}
-            className="p-2.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-all cursor-pointer hover:scale-110"
+            className="codex-sidebar-icon-btn"
             title="Source Control"
           >
             <Icon icon="lucide:git-branch" width={20} height={20} />
@@ -185,7 +181,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
 
           <button
             onClick={() => emit('open-settings')}
-            className="p-2.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-all cursor-pointer hover:scale-110"
+            className="codex-sidebar-icon-btn mt-auto"
             title="Settings"
           >
             <Icon icon="lucide:settings" width={18} height={18} />
@@ -194,10 +190,36 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
       ) : (
         <>
           <div className={`flex flex-col ${isTauriDesktop ? 'pt-7' : 'pt-3'} px-3`}>
+            <div className="codex-sidebar-hero">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="codex-sidebar-hero__icon">
+                  <Icon icon="lucide:command" width={16} height={16} />
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-semibold text-[var(--text-primary)]">
+                    {workspaceLabel || 'KnotCode'}
+                  </div>
+                  <div className="truncate text-[11px] text-[var(--text-secondary)]">
+                    {workspaceLabel ? 'Agent-ready workspace' : 'Sleek command center'}
+                  </div>
+                </div>
+              </div>
+              {onToggle && (
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  className="codex-sidebar-hero__action"
+                  title="Collapse sidebar (⌘\\)"
+                >
+                  <Icon icon="lucide:panel-left-close" width={15} height={15} />
+                </button>
+              )}
+            </div>
+
             {/* New thread button */}
             <button
               onClick={handleNewThread}
-              className="codex-sidebar-new-thread flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] font-medium text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--text-primary)_12%,transparent)] transition-all cursor-pointer w-full"
+              className="codex-sidebar-new-thread flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] font-medium text-[var(--text-primary)] transition-all cursor-pointer w-full"
             >
               <Icon
                 icon="lucide:plus"
@@ -260,7 +282,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
               <div className="mb-3">
                 <button
                   onClick={() => emit('open-folder')}
-                  className="flex items-center gap-2 px-2 py-1.5 text-[11px] text-[var(--text-tertiary)] font-medium cursor-pointer hover:text-[var(--text-secondary)] transition-colors w-full"
+                  className="codex-sidebar-workspace flex items-center gap-2 px-2 py-1.5 text-[11px] text-[var(--text-tertiary)] font-medium cursor-pointer transition-colors w-full"
                 >
                   <Icon icon="lucide:folder" width={12} height={12} />
                   <span className="truncate">{workspaceLabel}</span>
@@ -334,7 +356,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <div className="px-3 pb-3 pt-2 border-t border-[var(--border)] shrink-0">
             <button
               onClick={() => emit('open-settings')}
-              className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
+              className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] transition-all cursor-pointer w-full"
             >
               <Icon
                 icon="lucide:settings"

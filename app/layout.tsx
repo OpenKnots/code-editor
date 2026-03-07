@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/context/theme-context'
 import { GatewayProvider } from '@/context/gateway-context'
@@ -27,9 +27,17 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="obsidian" className="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="supreme" className="dark" suppressHydrationWarning>
       <body className="antialiased">
         <ErrorBoundary fallbackLabel="KnotCode encountered an error">
           <ThemeProvider>
@@ -41,15 +49,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       <ViewProvider>
                         <LayoutProvider>
                           <ThreadProvider>
-                          <AppModeProvider>
-                            <PreviewProvider>
-                              <ChatAppearanceProvider>
-                                <PluginProvider>
-                                  <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
-                                </PluginProvider>
-                              </ChatAppearanceProvider>
-                            </PreviewProvider>
-                          </AppModeProvider>
+                            <AppModeProvider>
+                              <PreviewProvider>
+                                <ChatAppearanceProvider>
+                                  <PluginProvider>
+                                    <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
+                                  </PluginProvider>
+                                </ChatAppearanceProvider>
+                              </PreviewProvider>
+                            </AppModeProvider>
                           </ThreadProvider>
                         </LayoutProvider>
                       </ViewProvider>

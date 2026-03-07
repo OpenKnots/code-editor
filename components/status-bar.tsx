@@ -85,22 +85,26 @@ export function StatusBar({ agentActive }: StatusBarProps) {
   const dirtyCount = useMemo(() => files.filter((f) => f.dirty).length, [files])
 
   return (
-    <footer className="flex items-center justify-between px-4 h-[28px] border-t border-[var(--border)] bg-[var(--bg-elevated)] text-[11px] text-[var(--text-tertiary)] shrink-0">
+    <footer className="shell-statusbar flex items-center justify-between px-4 h-[34px] text-[11px] text-[var(--text-tertiary)] shrink-0">
       <div className="flex items-center gap-3.5">
         {/* Mode indicator dot */}
-        <span className="flex items-center gap-2" title={`${modeSpec.label} mode`}>
+        <span className="shell-status-chip" title={`${modeSpec.label} mode`}>
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{ backgroundColor: 'var(--mode-accent, var(--brand))' }}
           />
           <span className="text-[var(--text-disabled)] font-medium">{modeSpec.label}</span>
         </span>
-        <FolderIndicator />
-        <BranchPicker />
+        <div className="shell-status-chip shell-status-chip--compact">
+          <FolderIndicator />
+        </div>
+        <div className="shell-status-chip shell-status-chip--compact">
+          <BranchPicker />
+        </div>
         {dirtyCount > 0 && (
           <span
             key={dirtyCount}
-            className="flex items-center gap-1.5 text-[var(--warning,#eab308)] animate-badge-pop"
+            className="shell-status-chip shell-status-chip--attention animate-badge-pop"
           >
             <Icon icon="lucide:circle-dot" width={10} height={10} />
             {dirtyCount} unsaved
@@ -109,7 +113,7 @@ export function StatusBar({ agentActive }: StatusBarProps) {
         {/* Active file path */}
         {activeFile && (
           <span
-            className="text-[var(--text-disabled)] font-mono truncate max-w-[200px]"
+            className="shell-status-path text-[var(--text-disabled)] font-mono truncate max-w-[240px]"
             title={activeFile}
           >
             {activeFile}
@@ -117,24 +121,24 @@ export function StatusBar({ agentActive }: StatusBarProps) {
         )}
       </div>
       <div className="flex items-center gap-3.5">
-        <SessionPresence compact />
-        <CaffeinateToggle compact />
+        <div className="shell-status-chip shell-status-chip--compact">
+          <SessionPresence compact />
+        </div>
+        <div className="shell-status-chip shell-status-chip--compact">
+          <CaffeinateToggle compact />
+        </div>
         <PluginSlotRenderer slot="status-bar-right" />
         {/* Terminal toggle */}
         <button
           onClick={() => layout.toggle('terminal')}
-          className={`flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-all cursor-pointer hover:scale-110 ${
-            terminalVisible
-              ? 'text-[var(--brand)]'
-              : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
-          }`}
+          className={`shell-status-icon-btn ${terminalVisible ? 'shell-status-icon-btn--active' : ''}`}
           title={`${terminalVisible ? 'Hide' : 'Show'} Terminal (⌘J)`}
         >
           <Icon icon="lucide:terminal" width={13} height={13} />
         </button>
         {/* Connection status */}
         <span
-          className="flex items-center gap-1.5"
+          className="shell-status-chip shell-status-chip--connection"
           title={
             status === 'connected'
               ? 'Gateway connected'
@@ -152,9 +156,18 @@ export function StatusBar({ agentActive }: StatusBarProps) {
                   : 'bg-red-400'
             }`}
           />
+          <span className="text-[var(--text-secondary)]">
+            {status === 'connected'
+              ? 'Gateway'
+              : status === 'connecting'
+                ? 'Connecting'
+                : 'Offline'}
+          </span>
         </span>
-        <span className="text-[var(--text-disabled)] font-semibold">KnotCode</span>
-        <ActivityPulseRing status={status} agentActive={agentActive} />
+        <span className="shell-status-brand">KnotCode</span>
+        <span className="shell-status-chip shell-status-chip--signal">
+          <ActivityPulseRing status={status} agentActive={agentActive} />
+        </span>
       </div>
     </footer>
   )

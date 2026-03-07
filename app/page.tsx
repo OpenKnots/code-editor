@@ -90,8 +90,15 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   diff: { icon: 'lucide:git-compare', label: 'Diff' },
   git: { icon: 'lucide:git-branch', label: 'Git' },
   workshop: { icon: 'lucide:bot', label: 'Workshop' },
+  prism: { icon: 'lucide:file-text', label: 'Prism' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
 }
+
+const MODE_BUTTONS: Array<{ id: AppMode; icon: string; label: string }> = [
+  { id: 'classic', icon: 'lucide:code-2', label: 'Classic' },
+  { id: 'chat', icon: 'lucide:message-square', label: 'Chat' },
+  { id: 'tui', icon: 'lucide:terminal', label: 'TUI' },
+]
 
 const TERMINAL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
 
@@ -123,6 +130,21 @@ export default function EditorLayout() {
   const viewportHeight = layout.viewport.height
   const terminalRefreshToken = mode
   const terminalStartupCommand = modeSpec.terminalCenter ? 'openclaw tui' : undefined
+  const usePrismShell = activeView === 'prism'
+  const mobileViewTabs = useMemo(() => visibleViews.slice(0, 5), [visibleViews])
+  const activeViewMeta = VIEW_ICONS[activeView] ?? {
+    icon: 'lucide:layout-panel-top',
+    label: 'Workspace',
+  }
+  const workspaceLabel = useMemo(
+    () => repo?.fullName?.split('/').pop() ?? localRootPath?.split('/').pop() ?? 'KnotCode',
+    [repo?.fullName, localRootPath],
+  )
+  const showMobileBottomTabs = isMobile && !modeSpec.terminalCenter
+  const showMobileSidebarButton = isMobile && mode !== 'tui' && !usePrismShell
+  const mobileTerminalOffset = showMobileBottomTabs
+    ? 'calc(env(safe-area-inset-bottom) + 5.75rem)'
+    : 'calc(env(safe-area-inset-bottom) + 0.5rem)'
 
   // ─── Minimal state ──────────────────────────────────
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
@@ -147,6 +169,7 @@ export default function EditorLayout() {
   const [settingsTab, setSettingsTab] = useState<
     'general' | 'editor' | 'agent' | 'keybindings' | 'plugins' | undefined
   >(undefined)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
   const dirtyCount = useMemo(() => files.filter((f) => f.dirty).length, [files])
@@ -166,6 +189,12 @@ export default function EditorLayout() {
     setIsTauriDesktop(isTauri())
     setIsMacTauri(isTauri() && navigator.platform?.includes('Mac'))
   }, [])
+
+  useEffect(() => {
+    if (!isMobile || mode === 'tui' || usePrismShell) {
+      setMobileSidebarOpen(false)
+    }
+  }, [isMobile, mode, usePrismShell])
 
   // ─── Onboarding ────────────────────────────────────────
   useEffect(() => {
@@ -415,7 +444,11 @@ export default function EditorLayout() {
   }, [local])
 
   return (
-    <div className="flex h-full w-full bg-[var(--bg)] text-[var(--text-primary)] overflow-hidden gap-1.5 p-1.5">
+    <div
+      className={`app-shell flex h-full w-full overflow-hidden bg-[var(--bg)] text-[var(--text-primary)] ${
+        isMobile ? 'gap-0 p-0' : 'gap-1.5 p-1.5'
+      }`}
+    >
       {/* Tauri drag region */}
       {isTauriDesktop && (
         <div
@@ -425,7 +458,7 @@ export default function EditorLayout() {
       )}
 
       {/* Workspace Sidebar — always visible in chat mode, toggleable otherwise */}
-      {mode !== 'tui' && (
+      {!isMobile && mode !== 'tui' && !usePrismShell && (
         <WorkspaceSidebar
           collapsed={mode !== 'chat' && sidebarCollapsed}
           onToggle={() => layout.toggle('sidebar')}
@@ -434,7 +467,13 @@ export default function EditorLayout() {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-[var(--shadow-sm)]">
+      <div
+        className={`shell-frame flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
+          isMobile
+            ? 'rounded-none border-0 shadow-none'
+            : 'border border-[var(--border)] shadow-[var(--shadow-sm)] rounded-xl'
+        }`}
+      >
         {/* Mode accent line */}
         <div
           className="h-[2px] shrink-0 transition-colors duration-500"
@@ -445,133 +484,226 @@ export default function EditorLayout() {
         />
 
         {/* View navigation bar — folder tabs */}
-        <div
-          data-tauri-drag-region
-          className={`flex items-center h-12 bg-[var(--bg-elevated)] shrink-0 px-4 gap-2 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}
-        >
-          {/* Folder-style tab strip — hidden in TUI mode */}
-          {!modeSpec.hideTabs && (
-            <div ref={tabContainerRef} className="folder-tab-strip tauri-no-drag">
-              {visibleViews.map((v, i) => {
-                const isActive = activeView === v
-                return (
-                  <motion.button
-                    key={v}
-                    ref={(el) => {
-                      tabRefs.current[i] = el
-                    }}
-                    onClick={() => setView(v)}
-                    className={`folder-tab ${isActive ? 'folder-tab--active' : ''} ${flashedTab === v ? 'folder-tab--flash' : ''}`}
-                    style={
-                      {
-                        '--color': isActive ? 'var(--text-primary)' : 'var(--text-disabled)',
-                      } as React.CSSProperties
-                    }
-                    title={`${VIEW_ICONS[v].label} (\u2318${i + 1})`}
-                    whileTap={{ scale: 0.95 }}
-                    layout
-                  >
-                    <span className="flex items-center gap-2">
-                      <Icon
-                        icon={VIEW_ICONS[v].icon}
-                        width={17}
-                        height={17}
-                        className="folder-tab__icon"
-                      />
-                      <span className="hidden sm:inline">{VIEW_ICONS[v].label}</span>
-                      {v === 'git' && dirtyCount > 0 && (
-                        <span className="px-2 min-w-[22px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[11px] leading-[22px] font-bold animate-badge-pop">
-                          {dirtyCount}
-                        </span>
-                      )}
-                    </span>
-                  </motion.button>
-                )
-              })}
-              <motion.span
-                className="folder-tab-strip__slider"
-                animate={{
-                  left: indicatorStyle.left + 6,
-                  width: Math.max(0, indicatorStyle.width - 12),
-                }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                style={{ '--opacity': indicatorStyle.width > 0 ? 1 : 0 } as React.CSSProperties}
-              />
-            </div>
-          )}
-
-          {/* Codex-style header with Open + Commit dropdowns when tabs are hidden */}
-          {modeSpec.hideTabs && (
-            <div className="flex items-center gap-1.5 tauri-no-drag">
-              {/* Open dropdown */}
-              <button
-                onClick={() => emit('open-folder')}
-                className="codex-header-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-              >
-                <Icon icon="lucide:folder-open" width={14} height={14} />
-                Open
-                <Icon icon="lucide:chevron-down" width={10} height={10} className="opacity-50" />
-              </button>
-
-              <span className="text-[var(--text-disabled)] text-[11px]">&middot;</span>
-
-              {/* Commit dropdown */}
-              <button
-                onClick={() => setView('git')}
-                className="codex-header-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-              >
-                <Icon icon="lucide:git-commit-horizontal" width={14} height={14} />
-                Commit
-                <Icon icon="lucide:chevron-down" width={10} height={10} className="opacity-50" />
-              </button>
-            </div>
-          )}
-
-          <div className="flex-1 tauri-drag-region" data-tauri-drag-region />
-
-          {/* Mode switcher — 3D pill group */}
-          <div className="tauri-no-drag flex items-center rounded-full bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] p-[3px] gap-[2px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)]">
-            {[
-              { id: 'classic' as AppMode, icon: 'lucide:code-2', label: 'Classic' },
-              { id: 'chat' as AppMode, icon: 'lucide:message-square', label: 'Chat' },
-              { id: 'tui' as AppMode, icon: 'lucide:terminal', label: 'TUI' },
-            ].map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                className={`relative h-7 w-7 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer ${
-                  mode === m.id
-                    ? 'bg-[var(--bg)] text-[var(--text-primary)] shadow-[0_2px_6px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.08)_inset]'
-                    : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] hover:scale-105'
-                }`}
-                title={`${m.label} mode (⌘⇧${['classic', 'chat', 'tui'].indexOf(m.id) + 1})`}
-              >
-                <Icon icon={m.icon} width={15} height={15} />
-              </button>
-            ))}
-          </div>
-
-          {/* Change count badges */}
-          {dirtyCount > 0 && (
-            <div className="tauri-no-drag flex items-center gap-1.5 mr-1">
-              <span className="codex-header-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--color-additions,#22c55e)] bg-[color-mix(in_srgb,var(--color-additions,#22c55e)_10%,transparent)]">
-                +{dirtyCount}
-              </span>
-              <span className="codex-header-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--color-deletions,#ef4444)] bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_10%,transparent)]">
-                -{dirtyCount}
-              </span>
-            </div>
-          )}
-
-          {/* Settings */}
-          <button
-            onClick={() => setSettingsVisible(true)}
-            className="tauri-no-drag p-2 rounded-xl hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer transition-all hover:scale-110"
-            title="Settings"
+        {isMobile ? (
+          <div
+            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-3 pb-3"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
           >
-            <Icon icon="lucide:settings" width={18} height={18} className="animate-gear-sway" />
-          </button>
-        </div>
+            <div className="flex items-start gap-2">
+              {showMobileSidebarButton ? (
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(true)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                  title="Open workspace"
+                >
+                  <Icon icon="lucide:panel-left-open" width={18} height={18} />
+                </button>
+              ) : (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--brand)]">
+                  <Icon icon={activeViewMeta.icon} width={18} height={18} />
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-disabled)]">
+                  {workspaceLabel}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="truncate text-[15px] font-semibold text-[var(--text-primary)]">
+                    {activeViewMeta.label}
+                  </span>
+                  {dirtyCount > 0 && (
+                    <span className="rounded-full bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)]">
+                      {dirtyCount} dirty
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {!modeSpec.terminalCenter && (
+                <button
+                  type="button"
+                  onClick={() => layout.toggle('terminal')}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
+                    terminalVisible
+                      ? 'border-[color-mix(in_srgb,var(--brand)_36%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
+                      : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                  }`}
+                  title={`${terminalVisible ? 'Hide' : 'Show'} terminal`}
+                >
+                  <Icon icon="lucide:terminal" width={18} height={18} />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsTab(undefined)
+                  setSettingsVisible(true)
+                }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                title="Settings"
+              >
+                <Icon icon="lucide:settings-2" width={18} height={18} />
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    status === 'connected'
+                      ? 'bg-emerald-400'
+                      : status === 'connecting'
+                        ? 'bg-amber-400 animate-pulse'
+                        : 'bg-red-400'
+                  }`}
+                />
+                <span className="truncate">
+                  {status === 'connected'
+                    ? 'Gateway active'
+                    : status === 'connecting'
+                      ? 'Connecting'
+                      : 'Disconnected'}
+                </span>
+              </div>
+
+              <div className="shell-mode-switcher shrink-0">
+                {MODE_BUTTONS.map((m, index) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setMode(m.id)}
+                    className={`shell-mode-button ${mode === m.id ? 'shell-mode-button--active' : ''}`}
+                    title={`${m.label} mode (⌘⇧${index + 1})`}
+                  >
+                    <Icon icon={m.icon} width={15} height={15} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            data-tauri-drag-region
+            className={`shell-topbar flex items-center h-12 shrink-0 px-4 gap-2 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}
+          >
+            {/* Folder-style tab strip — hidden in TUI mode */}
+            {!modeSpec.hideTabs && (
+              <div ref={tabContainerRef} className="folder-tab-strip tauri-no-drag">
+                {visibleViews.map((v, i) => {
+                  const isActive = activeView === v
+                  return (
+                    <motion.button
+                      key={v}
+                      ref={(el) => {
+                        tabRefs.current[i] = el
+                      }}
+                      onClick={() => setView(v)}
+                      className={`folder-tab ${isActive ? 'folder-tab--active' : ''} ${flashedTab === v ? 'folder-tab--flash' : ''}`}
+                      style={
+                        {
+                          '--color': isActive ? 'var(--text-primary)' : 'var(--text-disabled)',
+                        } as React.CSSProperties
+                      }
+                      title={`${VIEW_ICONS[v].label} (\u2318${i + 1})`}
+                      whileTap={{ scale: 0.95 }}
+                      layout
+                    >
+                      <span className="flex items-center gap-2">
+                        <Icon
+                          icon={VIEW_ICONS[v].icon}
+                          width={17}
+                          height={17}
+                          className="folder-tab__icon"
+                        />
+                        <span className="hidden sm:inline">{VIEW_ICONS[v].label}</span>
+                        {v === 'git' && dirtyCount > 0 && (
+                          <span className="px-2 min-w-[22px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[11px] leading-[22px] font-bold animate-badge-pop">
+                            {dirtyCount}
+                          </span>
+                        )}
+                      </span>
+                    </motion.button>
+                  )
+                })}
+                <motion.span
+                  className="folder-tab-strip__slider"
+                  animate={{
+                    left: indicatorStyle.left + 6,
+                    width: Math.max(0, indicatorStyle.width - 12),
+                  }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  style={{ '--opacity': indicatorStyle.width > 0 ? 1 : 0 } as React.CSSProperties}
+                />
+              </div>
+            )}
+
+            {/* Codex-style header with Open + Commit dropdowns when tabs are hidden */}
+            {modeSpec.hideTabs && (
+              <div className="flex items-center gap-1.5 tauri-no-drag">
+                {/* Open dropdown */}
+                <button
+                  onClick={() => emit('open-folder')}
+                  className="codex-header-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                >
+                  <Icon icon="lucide:folder-open" width={14} height={14} />
+                  Open
+                  <Icon icon="lucide:chevron-down" width={10} height={10} className="opacity-50" />
+                </button>
+
+                <span className="text-[var(--text-disabled)] text-[11px]">&middot;</span>
+
+                {/* Commit dropdown */}
+                <button
+                  onClick={() => setView('git')}
+                  className="codex-header-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                >
+                  <Icon icon="lucide:git-commit-horizontal" width={14} height={14} />
+                  Commit
+                  <Icon icon="lucide:chevron-down" width={10} height={10} className="opacity-50" />
+                </button>
+              </div>
+            )}
+
+            <div className="flex-1 tauri-drag-region" data-tauri-drag-region />
+
+            {/* Mode switcher — 3D pill group */}
+            <div className="shell-mode-switcher tauri-no-drag">
+              {MODE_BUTTONS.map((m, index) => (
+                <button
+                  key={m.id}
+                  onClick={() => setMode(m.id)}
+                  className={`shell-mode-button ${mode === m.id ? 'shell-mode-button--active' : ''}`}
+                  title={`${m.label} mode (⌘⇧${index + 1})`}
+                >
+                  <Icon icon={m.icon} width={15} height={15} />
+                </button>
+              ))}
+            </div>
+
+            {/* Change count badges */}
+            {dirtyCount > 0 && (
+              <div className="tauri-no-drag flex items-center gap-1.5 mr-1">
+                <span className="codex-header-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--color-additions,#22c55e)] bg-[color-mix(in_srgb,var(--color-additions,#22c55e)_10%,transparent)]">
+                  +{dirtyCount}
+                </span>
+                <span className="codex-header-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--color-deletions,#ef4444)] bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_10%,transparent)]">
+                  -{dirtyCount}
+                </span>
+              </div>
+            )}
+
+            {/* Settings */}
+            <button
+              onClick={() => setSettingsVisible(true)}
+              className="shell-utility-button tauri-no-drag"
+              title="Settings"
+            >
+              <Icon icon="lucide:settings" width={18} height={18} className="animate-gear-sway" />
+            </button>
+          </div>
+        )}
 
         {/* Mode transition wrapper */}
         <AnimatePresence mode="wait" initial={false}>
@@ -656,9 +788,10 @@ export default function EditorLayout() {
                   animate={{ y: 0 }}
                   exit={{ y: 520 }}
                   transition={TERMINAL_SPRING}
-                  className="fixed left-1.5 right-1.5 bottom-1.5 z-[80] rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden"
+                  className="fixed left-1.5 right-1.5 z-[80] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
                   style={
                     {
+                      bottom: mobileTerminalOffset,
                       '--height': Math.min(
                         Math.max(terminalHeight, 260),
                         Math.floor(viewportHeight * 0.72),
@@ -728,12 +861,62 @@ export default function EditorLayout() {
           </FloatingPanel>
         )}
 
+        {showMobileBottomTabs && (
+          <div
+            className="shrink-0 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-2 pt-2"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
+          >
+            <div
+              className="grid gap-1.5"
+              style={{
+                gridTemplateColumns: `repeat(${mobileViewTabs.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {mobileViewTabs.map((v) => {
+                const isActive = activeView === v
+                return (
+                  <motion.button
+                    key={v}
+                    type="button"
+                    onClick={() => setView(v)}
+                    whileTap={{ scale: 0.97 }}
+                    className={`flex min-w-0 flex-col items-center gap-1 rounded-[20px] px-2 py-2 text-[10px] font-medium transition ${
+                      isActive
+                        ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]'
+                        : 'text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                    } ${flashedTab === v ? 'animate-badge-pop' : ''}`}
+                    title={VIEW_ICONS[v].label}
+                  >
+                    <span
+                      className={`relative flex h-10 w-10 items-center justify-center rounded-2xl border ${
+                        isActive
+                          ? 'border-[color-mix(in_srgb,var(--brand)_35%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
+                          : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      <Icon icon={VIEW_ICONS[v].icon} width={18} height={18} />
+                      {v === 'git' && dirtyCount > 0 && (
+                        <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[var(--brand)] px-1 text-center text-[9px] font-bold leading-[18px] text-[var(--brand-contrast)]">
+                          {dirtyCount > 9 ? '9+' : dirtyCount}
+                        </span>
+                      )}
+                    </span>
+                    <span className="max-w-full truncate">{VIEW_ICONS[v].label}</span>
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Status bar */}
-        <StatusBar agentActive={agentActive} />
+        {!isMobile && <StatusBar agentActive={agentActive} />}
       </div>
 
       {/* Git sidebar panel — Codex-style always-visible right panel */}
-      {mode !== 'tui' && layout.isVisible('gitPanel') && <GitSidebarPanel />}
+      {!isMobile && mode !== 'tui' && !usePrismShell && layout.isVisible('gitPanel') && (
+        <GitSidebarPanel />
+      )}
 
       {/* Plugins */}
       <SpotifyPlugin />
@@ -741,6 +924,58 @@ export default function EditorLayout() {
       <PipWindow />
       <WidgetPipWindow />
       <PluginSlotRenderer slot="floating" />
+
+      <AnimatePresence initial={false}>
+        {showMobileSidebarButton && mobileSidebarOpen && (
+          <>
+            <motion.button
+              key="mobile-sidebar-backdrop"
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[85] bg-black/50 backdrop-blur-sm"
+              onClick={() => setMobileSidebarOpen(false)}
+              aria-label="Close workspace drawer"
+            />
+            <motion.div
+              key="mobile-sidebar-drawer"
+              initial={{ x: -32, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -32, opacity: 0 }}
+              transition={TERMINAL_SPRING}
+              className="fixed left-2 z-[90]"
+              style={{
+                top: 'calc(env(safe-area-inset-top) + 0.5rem)',
+                bottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)',
+              }}
+            >
+              <div
+                className="relative h-full"
+                onClickCapture={(event) => {
+                  const target = event.target as HTMLElement
+                  if (target.closest('button')) {
+                    requestAnimationFrame(() => setMobileSidebarOpen(false))
+                  }
+                }}
+              >
+                <WorkspaceSidebar
+                  collapsed={false}
+                  repoName={repo?.fullName || localRootPath?.split('/').pop()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] shadow-[var(--shadow-xs)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                  aria-label="Close workspace drawer"
+                >
+                  <Icon icon="lucide:x" width={16} height={16} />
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Modal overlays */}
       <QuickOpen

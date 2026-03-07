@@ -102,9 +102,9 @@ export const PANEL_DEFS: Record<PanelId, PanelDef> = {
   chat: {
     key: 'chat',
     defaultVisible: true,
-    defaultSize: 420,
+    defaultSize: 500,
     minSize: 320,
-    maxSize: 600,
+    maxSize: 720,
     axis: 'horizontal',
     resizable: true,
   },

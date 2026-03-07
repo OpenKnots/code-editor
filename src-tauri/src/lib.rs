@@ -83,7 +83,25 @@ pub fn run() {
         {
             setup_desktop_menu(app)?;
         }
-        let _ = app; // suppress unused warning on iOS
+
+        // iOS: extend WebView edge-to-edge behind safe areas
+        #[cfg(target_os = "ios")]
+        {
+            use tauri::Manager;
+            if let Some(ww) = app.get_webview_window("main") {
+                let _ = ww.with_webview(|wv| {
+                    #[allow(deprecated)]
+                    unsafe {
+                        let inner = wv.inner();
+                        let sv: *mut std::ffi::c_void = objc2::msg_send![inner, scrollView];
+                        // UIScrollViewContentInsetAdjustmentNever = 2
+                        let _: () = objc2::msg_send![sv as *mut objc2::runtime::AnyObject, setContentInsetAdjustmentBehavior: 2_isize];
+                    }
+                });
+            }
+        }
+
+        let _ = app;
         Ok(())
     });
 

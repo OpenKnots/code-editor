@@ -141,6 +141,8 @@ export function SidebarPluginSlot() {
                 <button
                   key={e.id}
                   onClick={() => togglePlugin(e.id)}
+                  aria-pressed={enabled}
+                  aria-label={`${enabled ? 'Disable' : 'Enable'} ${meta?.label ?? e.id}`}
                   className="flex items-center gap-2 px-1.5 py-1 rounded-md hover:bg-[var(--bg-subtle)] cursor-pointer group transition-colors"
                 >
                   <Icon
@@ -158,13 +160,16 @@ export function SidebarPluginSlot() {
                   >
                     {meta?.label ?? e.id}
                   </span>
-                  <div
-                    className={`relative w-7 h-4 rounded-full transition-colors ${enabled ? 'bg-[var(--brand)]' : 'bg-[var(--border)]'}`}
+                  <span
+                    className={`inline-flex min-w-[48px] items-center justify-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
+                      enabled
+                        ? 'border-[color-mix(in_srgb,var(--brand)_28%,transparent)] bg-[color-mix(in_srgb,var(--brand)_14%,transparent)] text-[var(--brand)]'
+                        : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-disabled)]'
+                    }`}
                   >
-                    <div
-                      className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${enabled ? 'translate-x-3.5' : 'translate-x-0.5'}`}
-                    />
-                  </div>
+                    <Icon icon={enabled ? 'lucide:check' : 'lucide:x'} width={10} height={10} />
+                    {enabled ? 'On' : 'Off'}
+                  </span>
                 </button>
               )
             })}

@@ -17,6 +17,10 @@ const WorkshopView = dynamic(
   () => import('@/components/views/workshop-view').then((m) => ({ default: m.WorkshopView })),
   { ssr: false },
 )
+const PrismView = dynamic(
+  () => import('@/components/views/prism-view').then((m) => ({ default: m.PrismView })),
+  { ssr: false },
+)
 const SettingsPanel = dynamic(
   () => import('@/components/settings-panel').then((m) => ({ default: m.SettingsPanel })),
   { ssr: false },
@@ -36,6 +40,7 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   preview: { label: 'Preview' },
   git: { label: 'Git' },
   workshop: { label: 'Workshop' },
+  prism: { label: 'Prism' },
   settings: { label: 'Settings' },
 }
 
@@ -80,6 +85,7 @@ export function ViewRouter() {
             {activeView === 'preview' && <PreviewPanel />}
             {activeView === 'git' && <GitView />}
             {activeView === 'workshop' && <WorkshopView />}
+            {activeView === 'prism' && <PrismView />}
             {activeView === 'settings' && (
               <div className="flex-1 flex items-center justify-center">
                 <SettingsPanel open={true} onClose={() => setView('editor')} />
