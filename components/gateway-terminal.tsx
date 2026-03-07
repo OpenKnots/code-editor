@@ -314,7 +314,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
             : 'rgba(239, 68, 68, 0.06)',
         }}
       >
-        <span className="text-red-300">{entry.text}</span>
+        <span className="text-red-400">{entry.text}</span>
       </div>
     )
   }
