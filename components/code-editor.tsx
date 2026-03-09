@@ -16,6 +16,7 @@ import { registerEditorTheme } from '@/lib/monaco-theme'
 import { useGateway } from '@/context/gateway-context'
 import { createInlineCompletionsProvider } from '@/lib/inline-completions'
 import { showInlineDiff } from '@/lib/inline-diff'
+import { formatShortcut } from '@/lib/platform'
 import { InlineEdit } from '@/components/inline-edit'
 import { MarkdownPreview } from '@/components/markdown-preview'
 import { MarkdownModeToggle, type MarkdownViewMode } from '@/components/markdown-mode-toggle'
@@ -84,19 +85,19 @@ function WelcomeView() {
     {
       icon: 'lucide:folder-open',
       label: 'Open Folder',
-      hint: '⌘O',
+      hint: formatShortcut('meta+O'),
       action: () => emit('open-folder'),
     },
     {
       icon: 'lucide:file-plus',
       label: 'New File',
-      hint: '⌘N',
+      hint: formatShortcut('meta+N'),
       action: () => emit('file-select', { path: 'untitled', sha: '' }),
     },
     {
       icon: 'lucide:search',
       label: 'Quick Open',
-      hint: '⌘P',
+      hint: formatShortcut('meta+P'),
       action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', metaKey: true })),
     },
     ...(isDesktop
@@ -104,7 +105,7 @@ function WelcomeView() {
           {
             icon: 'lucide:terminal',
             label: 'Open Terminal',
-            hint: '⌘\`',
+            hint: formatShortcut('meta+`'),
             action: () => emit('toggle-terminal'),
           },
         ]
@@ -208,7 +209,7 @@ function WelcomeView() {
             />
             <span className="flex-1">Open Agent Panel</span>
             <span className="text-[10px] font-mono text-[var(--text-disabled)] group-hover:text-[var(--text-tertiary)]">
-              ⌘J
+              {formatShortcut('meta+J')}
             </span>
           </button>
           <div className="flex gap-1.5 mt-2 px-2.5">
@@ -230,18 +231,18 @@ function WelcomeView() {
           </h2>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
             {[
-              ['⌘P', 'Quick Open'],
-              ['⌘B', 'Toggle Explorer'],
-              ['⌘J', 'Toggle Agent'],
-              ['⌘K', 'Inline Edit'],
-              ['⌘S', 'Save'],
-              ['⌘⇧F', 'Search Files'],
-              ['⌘\`', 'Terminal'],
+              ['meta+P', 'Quick Open'],
+              ['meta+B', 'Toggle Explorer'],
+              ['meta+J', 'Toggle Agent'],
+              ['meta+K', 'Inline Edit'],
+              ['meta+S', 'Save'],
+              ['meta+shift+F', 'Search Files'],
+              ['meta+`', 'Terminal'],
               ['?', 'All Shortcuts'],
-            ].map(([key, label]) => (
-              <div key={key} className="flex items-center gap-2 py-0.5">
+            ].map(([combo, label]) => (
+              <div key={combo} className="flex items-center gap-2 py-0.5">
                 <kbd className="inline-flex items-center justify-center min-w-[28px] px-1 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-subtle)] text-[9px] font-mono text-[var(--text-tertiary)] shrink-0">
-                  {key}
+                  {formatShortcut(combo)}
                 </kbd>
                 <span className="text-[var(--text-disabled)]">{label}</span>
               </div>
@@ -1149,7 +1150,7 @@ export function CodeEditor() {
             Reject
           </button>
           <span className="text-[8px] text-[var(--text-disabled)] ml-1">
-            ⌘⏎ accept · Esc reject
+            {formatShortcut('meta+Enter')} accept · Esc reject
           </span>
         </div>
       )}
@@ -1164,7 +1165,7 @@ export function CodeEditor() {
           {[
             {
               icon: 'lucide:message-square',
-              tip: 'Add to Chat (⌘L)',
+              tip: `Add to Chat (${formatShortcut('meta+L')})`,
               ev: 'add-to-chat',
               detail: {
                 path: activeFile || 'untitled',
@@ -1175,7 +1176,7 @@ export function CodeEditor() {
             },
             {
               icon: 'lucide:pencil',
-              tip: 'Edit (⌘K)',
+              tip: `Edit (${formatShortcut('meta+K')})`,
               ev: 'inline-edit-request',
               detail: { text: selToolbar.text },
             },

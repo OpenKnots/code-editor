@@ -38,6 +38,7 @@ import { MessageList } from '@/components/chat/message-list'
 import { ChatInputBar } from '@/components/chat/chat-input-bar'
 import { emit, on } from '@/lib/events'
 import { copyToClipboard } from '@/lib/clipboard'
+import { formatShortcut } from '@/lib/platform'
 import type { PlanStep } from '@/components/plan-view'
 import { navigateToLine } from '@/lib/line-links'
 import { useChatAppearance, FONT_OPTIONS } from '@/context/chat-appearance-context'
@@ -106,9 +107,7 @@ function AgentConnectPrompt() {
 
       {isConnecting ? (
         <>
-          <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">
-            Connecting…
-          </h3>
+          <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">Connecting…</h3>
           <p className="text-[13px] text-[var(--text-tertiary)]">Looking for your gateway</p>
         </>
       ) : (
@@ -387,7 +386,9 @@ export function AgentPanel() {
   const [sending, setSending] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [thinkingTrail, setThinkingTrail] = useState<string[]>([])
-  const [agentActivities, setAgentActivities] = useState<import('@/lib/agent-activity').AgentActivity[]>([])
+  const [agentActivities, setAgentActivities] = useState<
+    import('@/lib/agent-activity').AgentActivity[]
+  >([])
   const [turnStartTime, setTurnStartTime] = useState<number | null>(null)
   const [turnElapsedMs, setTurnElapsedMs] = useState(0)
   const [activeDiff, setActiveDiff] = useState<{
@@ -557,7 +558,9 @@ export function AgentPanel() {
   }, [isStreaming, sending, turnStartTime])
 
   // ─── Load chat input history ─────────────────────────────────
-  useEffect(() => { historyNav.current.load() }, [])
+  useEffect(() => {
+    historyNav.current.load()
+  }, [])
 
   // ─── Listen for chat events (streaming replies) ───────────────
   useEffect(() => {
@@ -1214,479 +1217,500 @@ export function AgentPanel() {
   }, [appendErrorMessage, appendStatusMessage])
 
   // ─── Send message ─────────────────────────────────────────────
-  const sendMessage = useCallback(async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim()
-    if (!text || sending) return
+  const sendMessage = useCallback(
+    async (overrideText?: string) => {
+      const text = (overrideText ?? input).trim()
+      if (!text || sending) return
 
-    // Handle slash commands locally
-    if (text === '/ask') { setAgentMode('ask'); setInput(''); return }
-    if (text === '/agent') { setAgentMode('agent'); setInput(''); return }
-    if (text === '/plan') { setAgentMode('plan'); setInput(''); return }
-    if (text === '/clear') {
-      setMessages([])
-      setAgentActivities([])
-      setInput('')
-      return
-    }
-
-    // Save to cross-session history
-    addChatHistory(text)
-    historyNav.current.reset()
-
-    logChatDebug('send attempt', {
-      textLength: text.length,
-      mode: agentMode,
-      connected: isConnected,
-      gatewayStatus: status,
-      sessionKey,
-      attachmentCount: contextAttachments.length,
-      imageCount: imageAttachments.length,
-    })
-    setInput('')
-
-    // ─── Slash command interception ───────────────────────────
-    if (text.startsWith('/commit')) {
-      const commitMsg = text.replace(/^\/commit\s*/, '').trim()
-      appendSlashCommand(text)
-
-      if (commitMsg) {
-        emit('agent-commit', { message: commitMsg })
-        appendStatusMessage('Committing...')
+      // Handle slash commands locally
+      if (text === '/ask') {
+        setAgentMode('ask')
+        setInput('')
+        return
+      }
+      if (text === '/agent') {
+        setAgentMode('agent')
+        setInput('')
+        return
+      }
+      if (text === '/plan') {
+        setAgentMode('plan')
+        setInput('')
+        return
+      }
+      if (text === '/clear') {
+        setMessages([])
+        setAgentActivities([])
+        setInput('')
         return
       }
 
-      if (!isConnected) {
-        appendErrorMessage('Gateway disconnected — cannot generate commit message.')
-        return
-      }
+      // Save to cross-session history
+      addChatHistory(text)
+      historyNav.current.reset()
 
-      appendStatusMessage('Generating commit message with gateway AI...')
-
-      try {
-        await ensureSessionInit()
-        const changes = await collectCommitChangesForGeneration()
-        if (changes.length === 0) {
-          appendStatusMessage('No changes detected to commit.')
-          return
-        }
-
-        const generatedCommitMsg = await generateCommitMessageWithGateway({
-          sendRequest,
-          onEvent,
-          sessionKey,
-          repoFullName: repo?.fullName ?? local.remoteRepo ?? undefined,
-          branch: repo?.branch ?? local.gitInfo?.branch ?? undefined,
-          changes,
-        })
-
-        appendStatusMessage(`Generated commit message: ${generatedCommitMsg}`)
-        emit('agent-commit', { message: generatedCommitMsg })
-        appendStatusMessage('Committing...')
-      } catch (err) {
-        appendErrorMessage(
-          `Generate commit message failed: ${err instanceof Error ? err.message : String(err)}`,
-        )
-      }
-      return
-    }
-    if (text === '/changes') {
-      appendSlashCommand(text)
-      emit('open-changes-panel')
-      appendStatusMessage('Opening pre-commit review...')
-      return
-    }
-    if (text === '/diff') {
-      appendSlashCommand(text)
-      const changes = diffEngine.getChanges()
-      if (changes.length > 0) {
-        const summary = diffEngine.getSummary()
-        appendStatusMessage(
-          `${summary.fileCount} file(s) changed: +${summary.additions} -${summary.deletions}\nFiles: ${changes.map((c) => c.path).join(', ')}`,
-        )
-      } else {
-        const dirtyFiles = files.filter((f) => f.dirty)
-        if (dirtyFiles.length > 0) {
-          appendStatusMessage(
-            `${dirtyFiles.length} unsaved file(s): ${dirtyFiles.map((f) => f.path).join(', ')}`,
-          )
-        } else {
-          appendStatusMessage('No changes detected.')
-        }
-      }
-      return
-    }
-    if (text === '/unstage') {
-      appendSlashCommand(text)
-      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
-        appendErrorMessage('Unstage requires a local git repository.')
-        return
-      }
-      const staged = local.gitInfo.status?.filter((s) => s.status !== '??').map((s) => s.path) ?? []
-      if (staged.length === 0) {
-        appendStatusMessage('No staged files to unstage.')
-        return
-      }
-      try {
-        await local.unstageFiles(staged)
-        appendStatusMessage(`Unstaged ${staged.length} file(s).`)
-      } catch (err) {
-        appendErrorMessage(`Unstage failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-      return
-    }
-    if (text === '/undo') {
-      appendSlashCommand(text)
-      if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
-        appendErrorMessage('Undo commit requires a local git repository.')
-        return
-      }
-      try {
-        await local.undoLastCommit()
-        appendStatusMessage('Undid last commit. Changes are back in the working tree.')
-      } catch (err) {
-        appendErrorMessage(`Undo failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-      return
-    }
-    if (text === '/push') {
-      appendSlashCommand(text)
-      const localRepo = requireLocalGitRepo('Push')
-      if (!localRepo) return
-      appendStatusMessage(`Pushing ${localRepo.branch} to origin...`)
-      try {
-        await local.push()
-        appendStatusMessage(`Pushed ${localRepo.branch} to origin.`)
-      } catch (err) {
-        appendErrorMessage(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-      return
-    }
-    if (text === '/pull') {
-      appendSlashCommand(text)
-      const localRepo = requireLocalGitRepo('Pull')
-      if (!localRepo) return
-      appendStatusMessage(`Pulling ${localRepo.branch} from origin with rebase...`)
-      try {
-        const result = await local.pull()
-        appendStatusMessage(result || `Pulled ${localRepo.branch} from origin.`)
-      } catch (err) {
-        appendErrorMessage(`Pull failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-      return
-    }
-    if (text === '/sync') {
-      appendSlashCommand(text)
-      const localRepo = requireLocalGitRepo('Sync')
-      if (!localRepo) return
-      appendStatusMessage(`Syncing ${localRepo.branch} with origin...`)
-      try {
-        const result = await local.gitSync()
-        appendStatusMessage(result || `Synced ${localRepo.branch}.`)
-      } catch (err) {
-        appendErrorMessage(`Sync failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-      return
-    }
-
-    const pullRequestCreateMatch = text.match(/^\/pr\s+create(?:\s+(.*))?$/i)
-    if (pullRequestCreateMatch) {
-      appendSlashCommand(text)
-      const githubRepo = requireGithubRepo('Create pull request', true)
-      if (!githubRepo) return
-      const currentBranch = githubRepo.branch
-      if (!currentBranch) {
-        appendErrorMessage('Create pull request requires an active branch.')
-        return
-      }
-
-      try {
-        const { title, body, base } = parsePullRequestCreateArgs(pullRequestCreateMatch[1] ?? '')
-        const repoInfo = await fetchRepoByName(githubRepo.repoFullName)
-        const baseBranch = base || repoInfo.default_branch
-
-        if (currentBranch === baseBranch) {
-          appendErrorMessage(
-            `Current branch \`${currentBranch}\` matches the base branch. Switch to a feature branch first.`,
-          )
-          return
-        }
-
-        if (local.localMode && local.rootPath && local.gitInfo?.is_repo) {
-          appendStatusMessage(`Pushing ${currentBranch} to origin before creating the PR...`)
-          await local.push(currentBranch)
-        }
-
-        appendStatusMessage(`Creating pull request from ${currentBranch} to ${baseBranch}...`)
-        const created = await createPullRequest(
-          githubRepo.repoFullName,
-          title || titleFromBranchName(currentBranch),
-          body || buildDefaultPullRequestBody(currentBranch, baseBranch),
-          currentBranch,
-          baseBranch,
-        )
-        appendStatusMessage(`Created PR #${created.number}: ${created.title}\n${created.url}`)
-      } catch (err) {
-        appendErrorMessage(
-          `Create pull request failed: ${err instanceof Error ? err.message : String(err)}`,
-        )
-      }
-      return
-    }
-
-    const pullRequestDetailMatch = text.match(/^\/pr\s+(\d+)$/i)
-    if (text === '/pr' || pullRequestDetailMatch) {
-      appendSlashCommand(text)
-      const githubRepo = requireGithubRepo('Pull request lookup')
-      if (!githubRepo) return
-
-      try {
-        if (pullRequestDetailMatch) {
-          const number = Number.parseInt(pullRequestDetailMatch[1], 10)
-          appendStatusMessage(`Loading PR #${number}...`)
-          const pr = await fetchPullRequest(githubRepo.repoFullName, number)
-          const [reviews, checks] = await Promise.all([
-            fetchPRReviews(githubRepo.repoFullName, number),
-            fetchPRChecks(githubRepo.repoFullName, pr.headSha),
-          ])
-          appendStatusMessage(formatPullRequestDetails(pr, reviews.length, summarizeChecks(checks)))
-        } else {
-          const prs = await fetchPullRequests(githubRepo.repoFullName, 'open', 20)
-          appendStatusMessage(
-            formatPullRequestList(githubRepo.repoFullName, prs, githubRepo.branch),
-          )
-        }
-      } catch (err) {
-        appendErrorMessage(
-          `Pull request lookup failed: ${err instanceof Error ? err.message : String(err)}`,
-        )
-      }
-      return
-    }
-
-    const mergeMatch = text.match(/^\/merge(?:\s+(\d+))(?:\s+(merge|squash|rebase))?$/i)
-    if (mergeMatch) {
-      appendSlashCommand(text)
-      const githubRepo = requireGithubRepo('Merge pull request', true)
-      if (!githubRepo) return
-
-      const prNumber = Number.parseInt(mergeMatch[1], 10)
-      const mergeMethod = (mergeMatch[2]?.toLowerCase() ?? 'merge') as 'merge' | 'squash' | 'rebase'
-
-      try {
-        appendStatusMessage(`Merging PR #${prNumber} with ${mergeMethod}...`)
-        const result = await mergePullRequest(githubRepo.repoFullName, prNumber, mergeMethod)
-        const shaLine = result.sha ? `\nCommit: ${result.sha.slice(0, 7)}` : ''
-        appendStatusMessage(`Merged PR #${prNumber}. ${result.message}${shaLine}`)
-      } catch (err) {
-        appendErrorMessage(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
-      }
-      return
-    }
-
-    const parsedSkillCommand = parseSkillSlashCommand(text)
-    if (parsedSkillCommand) {
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        type: 'text',
-        content: text,
-        timestamp: Date.now(),
+      logChatDebug('send attempt', {
+        textLength: text.length,
+        mode: agentMode,
+        connected: isConnected,
+        gatewayStatus: status,
+        sessionKey,
+        attachmentCount: contextAttachments.length,
+        imageCount: imageAttachments.length,
       })
+      setInput('')
 
-      if (parsedSkillCommand.kind === 'help') {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: buildSkillCommandHelp(),
-          timestamp: Date.now(),
-        })
+      // ─── Slash command interception ───────────────────────────
+      if (text.startsWith('/commit')) {
+        const commitMsg = text.replace(/^\/commit\s*/, '').trim()
+        appendSlashCommand(text)
+
+        if (commitMsg) {
+          emit('agent-commit', { message: commitMsg })
+          appendStatusMessage('Committing...')
+          return
+        }
+
+        if (!isConnected) {
+          appendErrorMessage('Gateway disconnected — cannot generate commit message.')
+          return
+        }
+
+        appendStatusMessage('Generating commit message with gateway AI...')
+
+        try {
+          await ensureSessionInit()
+          const changes = await collectCommitChangesForGeneration()
+          if (changes.length === 0) {
+            appendStatusMessage('No changes detected to commit.')
+            return
+          }
+
+          const generatedCommitMsg = await generateCommitMessageWithGateway({
+            sendRequest,
+            onEvent,
+            sessionKey,
+            repoFullName: repo?.fullName ?? local.remoteRepo ?? undefined,
+            branch: repo?.branch ?? local.gitInfo?.branch ?? undefined,
+            changes,
+          })
+
+          appendStatusMessage(`Generated commit message: ${generatedCommitMsg}`)
+          emit('agent-commit', { message: generatedCommitMsg })
+          appendStatusMessage('Committing...')
+        } catch (err) {
+          appendErrorMessage(
+            `Generate commit message failed: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }
+        return
+      }
+      if (text === '/changes') {
+        appendSlashCommand(text)
+        emit('open-changes-panel')
+        appendStatusMessage('Opening pre-commit review...')
+        return
+      }
+      if (text === '/diff') {
+        appendSlashCommand(text)
+        const changes = diffEngine.getChanges()
+        if (changes.length > 0) {
+          const summary = diffEngine.getSummary()
+          appendStatusMessage(
+            `${summary.fileCount} file(s) changed: +${summary.additions} -${summary.deletions}\nFiles: ${changes.map((c) => c.path).join(', ')}`,
+          )
+        } else {
+          const dirtyFiles = files.filter((f) => f.dirty)
+          if (dirtyFiles.length > 0) {
+            appendStatusMessage(
+              `${dirtyFiles.length} unsaved file(s): ${dirtyFiles.map((f) => f.path).join(', ')}`,
+            )
+          } else {
+            appendStatusMessage('No changes detected.')
+          }
+        }
+        return
+      }
+      if (text === '/unstage') {
+        appendSlashCommand(text)
+        if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
+          appendErrorMessage('Unstage requires a local git repository.')
+          return
+        }
+        const staged =
+          local.gitInfo.status?.filter((s) => s.status !== '??').map((s) => s.path) ?? []
+        if (staged.length === 0) {
+          appendStatusMessage('No staged files to unstage.')
+          return
+        }
+        try {
+          await local.unstageFiles(staged)
+          appendStatusMessage(`Unstaged ${staged.length} file(s).`)
+        } catch (err) {
+          appendErrorMessage(`Unstage failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        return
+      }
+      if (text === '/undo') {
+        appendSlashCommand(text)
+        if (!local.localMode || !local.rootPath || !local.gitInfo?.is_repo) {
+          appendErrorMessage('Undo commit requires a local git repository.')
+          return
+        }
+        try {
+          await local.undoLastCommit()
+          appendStatusMessage('Undid last commit. Changes are back in the working tree.')
+        } catch (err) {
+          appendErrorMessage(`Undo failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        return
+      }
+      if (text === '/push') {
+        appendSlashCommand(text)
+        const localRepo = requireLocalGitRepo('Push')
+        if (!localRepo) return
+        appendStatusMessage(`Pushing ${localRepo.branch} to origin...`)
+        try {
+          await local.push()
+          appendStatusMessage(`Pushed ${localRepo.branch} to origin.`)
+        } catch (err) {
+          appendErrorMessage(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        return
+      }
+      if (text === '/pull') {
+        appendSlashCommand(text)
+        const localRepo = requireLocalGitRepo('Pull')
+        if (!localRepo) return
+        appendStatusMessage(`Pulling ${localRepo.branch} from origin with rebase...`)
+        try {
+          const result = await local.pull()
+          appendStatusMessage(result || `Pulled ${localRepo.branch} from origin.`)
+        } catch (err) {
+          appendErrorMessage(`Pull failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        return
+      }
+      if (text === '/sync') {
+        appendSlashCommand(text)
+        const localRepo = requireLocalGitRepo('Sync')
+        if (!localRepo) return
+        appendStatusMessage(`Syncing ${localRepo.branch} with origin...`)
+        try {
+          const result = await local.gitSync()
+          appendStatusMessage(result || `Synced ${localRepo.branch}.`)
+        } catch (err) {
+          appendErrorMessage(`Sync failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
         return
       }
 
-      if (parsedSkillCommand.kind === 'list') {
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: buildCatalogSummary(SKILLS_CATALOG),
-          timestamp: Date.now(),
-        })
+      const pullRequestCreateMatch = text.match(/^\/pr\s+create(?:\s+(.*))?$/i)
+      if (pullRequestCreateMatch) {
+        appendSlashCommand(text)
+        const githubRepo = requireGithubRepo('Create pull request', true)
+        if (!githubRepo) return
+        const currentBranch = githubRepo.branch
+        if (!currentBranch) {
+          appendErrorMessage('Create pull request requires an active branch.')
+          return
+        }
+
+        try {
+          const { title, body, base } = parsePullRequestCreateArgs(pullRequestCreateMatch[1] ?? '')
+          const repoInfo = await fetchRepoByName(githubRepo.repoFullName)
+          const baseBranch = base || repoInfo.default_branch
+
+          if (currentBranch === baseBranch) {
+            appendErrorMessage(
+              `Current branch \`${currentBranch}\` matches the base branch. Switch to a feature branch first.`,
+            )
+            return
+          }
+
+          if (local.localMode && local.rootPath && local.gitInfo?.is_repo) {
+            appendStatusMessage(`Pushing ${currentBranch} to origin before creating the PR...`)
+            await local.push(currentBranch)
+          }
+
+          appendStatusMessage(`Creating pull request from ${currentBranch} to ${baseBranch}...`)
+          const created = await createPullRequest(
+            githubRepo.repoFullName,
+            title || titleFromBranchName(currentBranch),
+            body || buildDefaultPullRequestBody(currentBranch, baseBranch),
+            currentBranch,
+            baseBranch,
+          )
+          appendStatusMessage(`Created PR #${created.number}: ${created.title}\n${created.url}`)
+        } catch (err) {
+          appendErrorMessage(
+            `Create pull request failed: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }
         return
       }
 
-      if (parsedSkillCommand.kind === 'use') {
-        const skill = parsedSkillCommand.skillSlug
-          ? getSkillBySlug(parsedSkillCommand.skillSlug)
-          : undefined
-        if (!skill) {
+      const pullRequestDetailMatch = text.match(/^\/pr\s+(\d+)$/i)
+      if (text === '/pr' || pullRequestDetailMatch) {
+        appendSlashCommand(text)
+        const githubRepo = requireGithubRepo('Pull request lookup')
+        if (!githubRepo) return
+
+        try {
+          if (pullRequestDetailMatch) {
+            const number = Number.parseInt(pullRequestDetailMatch[1], 10)
+            appendStatusMessage(`Loading PR #${number}...`)
+            const pr = await fetchPullRequest(githubRepo.repoFullName, number)
+            const [reviews, checks] = await Promise.all([
+              fetchPRReviews(githubRepo.repoFullName, number),
+              fetchPRChecks(githubRepo.repoFullName, pr.headSha),
+            ])
+            appendStatusMessage(
+              formatPullRequestDetails(pr, reviews.length, summarizeChecks(checks)),
+            )
+          } else {
+            const prs = await fetchPullRequests(githubRepo.repoFullName, 'open', 20)
+            appendStatusMessage(
+              formatPullRequestList(githubRepo.repoFullName, prs, githubRepo.branch),
+            )
+          }
+        } catch (err) {
+          appendErrorMessage(
+            `Pull request lookup failed: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }
+        return
+      }
+
+      const mergeMatch = text.match(/^\/merge(?:\s+(\d+))(?:\s+(merge|squash|rebase))?$/i)
+      if (mergeMatch) {
+        appendSlashCommand(text)
+        const githubRepo = requireGithubRepo('Merge pull request', true)
+        if (!githubRepo) return
+
+        const prNumber = Number.parseInt(mergeMatch[1], 10)
+        const mergeMethod = (mergeMatch[2]?.toLowerCase() ?? 'merge') as
+          | 'merge'
+          | 'squash'
+          | 'rebase'
+
+        try {
+          appendStatusMessage(`Merging PR #${prNumber} with ${mergeMethod}...`)
+          const result = await mergePullRequest(githubRepo.repoFullName, prNumber, mergeMethod)
+          const shaLine = result.sha ? `\nCommit: ${result.sha.slice(0, 7)}` : ''
+          appendStatusMessage(`Merged PR #${prNumber}. ${result.message}${shaLine}`)
+        } catch (err) {
+          appendErrorMessage(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        return
+      }
+
+      const parsedSkillCommand = parseSkillSlashCommand(text)
+      if (parsedSkillCommand) {
+        appendMessage({
+          id: crypto.randomUUID(),
+          role: 'user',
+          type: 'text',
+          content: text,
+          timestamp: Date.now(),
+        })
+
+        if (parsedSkillCommand.kind === 'help') {
           appendMessage({
             id: crypto.randomUUID(),
             role: 'system',
-            type: 'error',
-            content: `Unknown skill: ${parsedSkillCommand.skillSlug ?? 'unknown'}`,
+            type: 'status',
+            content: buildSkillCommandHelp(),
             timestamp: Date.now(),
           })
           return
         }
 
-        const attachLabels = buildAttachmentLabels()
-        const request = parsedSkillCommand.request?.trim() || skill.starterPrompt
-        const envelope = buildSkillUseEnvelope({
-          skill,
-          request,
-          modelName: modelInfo.current,
-        })
-        const displayText =
-          attachLabels.length > 0
-            ? `[${attachLabels.join(' · ')}]\n/skill use ${skill.slug} ${request}`
-            : `/skill use ${skill.slug} ${request}`
-        const outboundMessage = buildGatewayMessage(envelope.prompt, buildSilentContext())
-        const messageImages =
-          imageAttachments.length > 0
-            ? imageAttachments.map((img) => ({ name: img.name, dataUrl: img.dataUrl }))
-            : undefined
-
-        setSending(true)
-        streamStateRef.current.isSending = true
-        try {
-          await sendStructuredGatewayMessage({
-            displayText,
-            outboundMessage,
-            images: messageImages,
+        if (parsedSkillCommand.kind === 'list') {
+          appendMessage({
+            id: crypto.randomUUID(),
+            role: 'system',
+            type: 'status',
+            content: buildCatalogSummary(SKILLS_CATALOG),
+            timestamp: Date.now(),
           })
-        } catch (err) {
+          return
+        }
+
+        if (parsedSkillCommand.kind === 'use') {
+          const skill = parsedSkillCommand.skillSlug
+            ? getSkillBySlug(parsedSkillCommand.skillSlug)
+            : undefined
+          if (!skill) {
+            appendMessage({
+              id: crypto.randomUUID(),
+              role: 'system',
+              type: 'error',
+              content: `Unknown skill: ${parsedSkillCommand.skillSlug ?? 'unknown'}`,
+              timestamp: Date.now(),
+            })
+            return
+          }
+
+          const attachLabels = buildAttachmentLabels()
+          const request = parsedSkillCommand.request?.trim() || skill.starterPrompt
+          const envelope = buildSkillUseEnvelope({
+            skill,
+            request,
+            modelName: modelInfo.current,
+          })
+          const displayText =
+            attachLabels.length > 0
+              ? `[${attachLabels.join(' · ')}]\n/skill use ${skill.slug} ${request}`
+              : `/skill use ${skill.slug} ${request}`
+          const outboundMessage = buildGatewayMessage(envelope.prompt, buildSilentContext())
+          const messageImages =
+            imageAttachments.length > 0
+              ? imageAttachments.map((img) => ({ name: img.name, dataUrl: img.dataUrl }))
+              : undefined
+
+          setSending(true)
+          streamStateRef.current.isSending = true
+          try {
+            await sendStructuredGatewayMessage({
+              displayText,
+              outboundMessage,
+              images: messageImages,
+            })
+          } catch (err) {
+            appendMessage({
+              id: crypto.randomUUID(),
+              role: 'system',
+              type: 'error',
+              content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+              timestamp: Date.now(),
+            })
+            setIsStreaming(false)
+            setSending(false)
+            streamStateRef.current.isSending = false
+          }
+          return
+        }
+
+        const plan = buildExecutionPlan(parsedSkillCommand, { preferTerminal: isTauri() })
+        if (!plan) {
           appendMessage({
             id: crypto.randomUUID(),
             role: 'system',
             type: 'error',
-            content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            content: 'Could not build a skill workflow for that request.',
             timestamp: Date.now(),
           })
-          setIsStreaming(false)
-          setSending(false)
-          streamStateRef.current.isSending = false
+          return
+        }
+
+        if (plan.target === 'terminal' && plan.command) {
+          emit('show-terminal')
+          emit('run-command-in-terminal', { command: plan.command })
+          appendMessage({
+            id: crypto.randomUUID(),
+            role: 'system',
+            type: 'status',
+            content: `${plan.label} started in the desktop terminal.`,
+            timestamp: Date.now(),
+          })
+          return
+        }
+
+        if (plan.message) {
+          setSending(true)
+          streamStateRef.current.isSending = true
+          try {
+            await sendStructuredGatewayMessage({
+              displayText: text,
+              outboundMessage: plan.message,
+              preserveAttachments: true,
+            })
+          } catch (err) {
+            appendMessage({
+              id: crypto.randomUUID(),
+              role: 'system',
+              type: 'error',
+              content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+              timestamp: Date.now(),
+            })
+            setIsStreaming(false)
+            setSending(false)
+            streamStateRef.current.isSending = false
+          }
         }
         return
       }
 
-      const plan = buildExecutionPlan(parsedSkillCommand, { preferTerminal: isTauri() })
-      if (!plan) {
+      if (!enforceSkillFirstPolicy(text)) {
+        return
+      }
+
+      setSending(true)
+      streamStateRef.current.isSending = true
+      setAgentActivities([])
+      setThinkingTrail([])
+
+      // Build visual label for attachments
+      const attachLabels = buildAttachmentLabels()
+      const displayText = attachLabels.length > 0 ? `[${attachLabels.join(' · ')}]\n${text}` : text
+      const messageImages =
+        imageAttachments.length > 0
+          ? imageAttachments.map((img) => ({ name: img.name, dataUrl: img.dataUrl }))
+          : undefined
+      try {
+        const outboundMessage = buildGatewayMessage(text, buildSilentContext())
+        await sendStructuredGatewayMessage({
+          displayText,
+          outboundMessage,
+          images: messageImages,
+        })
+      } catch (err) {
+        logChatDebug('chat.send failed', {
+          error: err instanceof Error ? err.message : String(err),
+          sessionKey,
+        })
         appendMessage({
           id: crypto.randomUUID(),
           role: 'system',
           type: 'error',
-          content: 'Could not build a skill workflow for that request.',
+          content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
           timestamp: Date.now(),
         })
-        return
+        setIsStreaming(false)
+        setSending(false)
+        streamStateRef.current.isSending = false
       }
-
-      if (plan.target === 'terminal' && plan.command) {
-        emit('show-terminal')
-        emit('run-command-in-terminal', { command: plan.command })
-        appendMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          type: 'status',
-          content: `${plan.label} started in the desktop terminal.`,
-          timestamp: Date.now(),
-        })
-        return
-      }
-
-      if (plan.message) {
-        setSending(true)
-        streamStateRef.current.isSending = true
-        try {
-          await sendStructuredGatewayMessage({
-            displayText: text,
-            outboundMessage: plan.message,
-            preserveAttachments: true,
-          })
-        } catch (err) {
-          appendMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            type: 'error',
-            content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-            timestamp: Date.now(),
-          })
-          setIsStreaming(false)
-          setSending(false)
-          streamStateRef.current.isSending = false
-        }
-      }
-      return
-    }
-
-    if (!enforceSkillFirstPolicy(text)) {
-      return
-    }
-
-    setSending(true)
-    streamStateRef.current.isSending = true
-    setAgentActivities([])
-    setThinkingTrail([])
-
-    // Build visual label for attachments
-    const attachLabels = buildAttachmentLabels()
-    const displayText = attachLabels.length > 0 ? `[${attachLabels.join(' · ')}]\n${text}` : text
-    const messageImages =
-      imageAttachments.length > 0
-        ? imageAttachments.map((img) => ({ name: img.name, dataUrl: img.dataUrl }))
-        : undefined
-    try {
-      const outboundMessage = buildGatewayMessage(text, buildSilentContext())
-      await sendStructuredGatewayMessage({
-        displayText,
-        outboundMessage,
-        images: messageImages,
-      })
-    } catch (err) {
-      logChatDebug('chat.send failed', {
-        error: err instanceof Error ? err.message : String(err),
-        sessionKey,
-      })
-      appendMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        type: 'error',
-        content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        timestamp: Date.now(),
-      })
-      setIsStreaming(false)
-      setSending(false)
-      streamStateRef.current.isSending = false
-    }
-  }, [
-    input,
-    sending,
-    agentMode,
-    isConnected,
-    status,
-    sessionKey,
-    local,
-    repo,
-    files,
-    sendRequest,
-    onEvent,
-    buildContext,
-    buildSilentContext,
-    buildAttachmentLabels,
-    appendMessage,
-    appendErrorMessage,
-    appendSlashCommand,
-    appendStatusMessage,
-    ensureSessionInit,
-    collectCommitChangesForGeneration,
-    logChatDebug,
-    enforceSkillFirstPolicy,
-    modelInfo.current,
-    requireGithubRepo,
-    requireLocalGitRepo,
-    sendStructuredGatewayMessage,
-  ])
+    },
+    [
+      input,
+      sending,
+      agentMode,
+      isConnected,
+      status,
+      sessionKey,
+      local,
+      repo,
+      files,
+      sendRequest,
+      onEvent,
+      buildContext,
+      buildSilentContext,
+      buildAttachmentLabels,
+      appendMessage,
+      appendErrorMessage,
+      appendSlashCommand,
+      appendStatusMessage,
+      ensureSessionInit,
+      collectCommitChangesForGeneration,
+      logChatDebug,
+      enforceSkillFirstPolicy,
+      modelInfo.current,
+      requireGithubRepo,
+      requireLocalGitRepo,
+      sendStructuredGatewayMessage,
+    ],
+  )
 
   // ─── Handle ⌘K inline edit requests ────────────────────────────
   useEffect(() => {
@@ -1729,7 +1753,7 @@ export function AgentPanel() {
         id: crypto.randomUUID(),
         role: 'user',
         type: 'text',
-        content: `⌘K: ${instruction}`,
+        content: `${formatShortcut('meta+K')}: ${instruction}`,
         timestamp: Date.now(),
       })
 
@@ -1870,7 +1894,11 @@ export function AgentPanel() {
   // ─── Auto-apply when full access or approval tier allows ──────
   const autoAppliedRef = useRef(new Set<string>())
   const currentApprovalTier = useMemo(() => {
-    try { return getAgentConfig()?.approvalTier ?? 'ask-all' } catch { return 'ask-all' as const }
+    try {
+      return getAgentConfig()?.approvalTier ?? 'ask-all'
+    } catch {
+      return 'ask-all' as const
+    }
   }, [messages.length]) // re-check when messages change
   useEffect(() => {
     const tierAllows = currentApprovalTier === 'auto-edits' || currentApprovalTier === 'auto-all'
@@ -1920,7 +1948,11 @@ export function AgentPanel() {
       { cmd: '/push', desc: 'Push to origin', icon: 'lucide:arrow-up-circle' },
       { cmd: '/sync', desc: 'Pull and push current branch', icon: 'lucide:refresh-cw' },
       { cmd: '/pr', desc: 'View pull requests', icon: 'lucide:git-pull-request' },
-      { cmd: '/pr create', desc: 'Create pull request', icon: 'lucide:git-pull-request-create-arrow' },
+      {
+        cmd: '/pr create',
+        desc: 'Create pull request',
+        icon: 'lucide:git-pull-request-create-arrow',
+      },
       { cmd: '/merge', desc: 'Merge pull request', icon: 'lucide:git-merge' },
       // Modes
       { cmd: '/ask', desc: 'Switch to Ask mode', icon: 'lucide:message-circle' },
@@ -2140,7 +2172,14 @@ export function AgentPanel() {
         modelName={modelInfo.current || undefined}
         contextTokens={contextTokens}
         activityCount={agentActivities.length}
-        filesChanged={agentActivities.filter(a => a.type === 'edit' || a.type === 'write' || a.type === 'create').reduce((acc, a) => { if (a.file) acc.add(a.file); return acc }, new Set<string>()).size}
+        filesChanged={
+          agentActivities
+            .filter((a) => a.type === 'edit' || a.type === 'write' || a.type === 'create')
+            .reduce((acc, a) => {
+              if (a.file) acc.add(a.file)
+              return acc
+            }, new Set<string>()).size
+        }
       />
       {messages.length > 0 && (
         <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-0.5 shrink-0">
@@ -2150,7 +2189,7 @@ export function AgentPanel() {
               <button
                 onClick={decreaseFontSize}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                title="Decrease text size (⌘-)"
+                title={`Decrease text size (${formatShortcut('meta+-')})`}
               >
                 <Icon icon="lucide:minus" width={12} height={12} />
               </button>
@@ -2160,7 +2199,7 @@ export function AgentPanel() {
               <button
                 onClick={increaseFontSize}
                 className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                title="Increase text size (⌘+)"
+                title={`Increase text size (${formatShortcut('meta+=')})`}
               >
                 <Icon icon="lucide:plus" width={12} height={12} />
               </button>
@@ -2249,7 +2288,8 @@ export function AgentPanel() {
       )}
 
       {/* Input section — hidden when disconnected on mobile, hidden when ChatHome is showing on desktop */}
-      {(messages.length > 0 || (!isConnected && !(typeof window !== 'undefined' && window.innerWidth <= 768))) && (
+      {(messages.length > 0 ||
+        (!isConnected && !(typeof window !== 'undefined' && window.innerWidth <= 768))) && (
         <ChatInputBar
           input={input}
           setInput={setInput}
@@ -2282,7 +2322,6 @@ export function AgentPanel() {
           onImageAttach={handleImageAttach}
         />
       )}
-
     </div>
   )
 }

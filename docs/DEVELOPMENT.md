@@ -25,13 +25,13 @@ pnpm dev
 
 ## Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `pnpm dev` | Next.js dev server (port 3080) |
-| `pnpm build` | Production build (Vercel) |
-| `pnpm build --webpack` | Production build with webpack bundler |
-| `pnpm tauri:dev` | Desktop dev (Next.js + native window) |
-| `pnpm tauri:build` | Desktop production build (.app + .dmg) |
+| Script                 | Purpose                                |
+| ---------------------- | -------------------------------------- |
+| `pnpm dev`             | Next.js dev server (port 3080)         |
+| `pnpm build`           | Production build (Vercel)              |
+| `pnpm build --webpack` | Production build with webpack bundler  |
+| `pnpm tauri:dev`       | Desktop dev (Next.js + native window)  |
+| `pnpm tauri:build`     | Desktop production build (.app + .dmg) |
 
 ## Code Style
 
@@ -76,9 +76,11 @@ Components communicate via `CustomEvent` on `window`:
 
 ```typescript
 // Dispatch
-window.dispatchEvent(new CustomEvent('file-select', {
-  detail: { path: 'src/app.tsx', sha: 'abc123' }
-}))
+window.dispatchEvent(
+  new CustomEvent('file-select', {
+    detail: { path: 'src/app.tsx', sha: 'abc123' },
+  }),
+)
 
 // Listen
 useEffect(() => {
@@ -96,14 +98,15 @@ Events in use:
 |-------|---------|---------|
 | `file-select` | `{ path, sha }` | Open a file in editor |
 | `editor-navigate` | `{ startLine, endLine? }` | Scroll to line |
-| `inline-edit-request` | `{ filePath, instruction, selectedText, startLine, endLine }` | ⌘K edit |
-| `quick-open-prefill` | `{ query }` | Prefill ⌘P search |
+| `inline-edit-request` | `{ filePath, instruction, selectedText, startLine, endLine }` | Cmd/Ctrl+K edit |
+| `quick-open-prefill` | `{ query }` | Prefill Cmd/Ctrl+P search |
 
 ## Adding a Theme
 
 1. Add CSS variables in `app/globals.css`:
+
    ```css
-   .dark[data-theme="my-theme"] {
+   .dark[data-theme='my-theme'] {
      --bg: #0a0a0a;
      --brand: #ff6b6b;
      /* ... all variables ... */
@@ -111,6 +114,7 @@ Events in use:
    ```
 
 2. Add to `THEMES` array in `components/theme-switcher.tsx`:
+
    ```typescript
    { id: 'my-theme', label: 'My Theme', color: '#ff6b6b' },
    ```
@@ -120,6 +124,7 @@ Events in use:
 ## Adding a Slash Command
 
 1. Add to the `cmds` array in `components/agent-panel.tsx`:
+
    ```typescript
    { cmd: '/mycommand', desc: 'Description', icon: 'lucide:star' },
    ```
@@ -135,6 +140,7 @@ pnpm build --webpack
 ```
 
 Check for:
+
 - TypeScript errors
 - Missing imports
 - CSS syntax errors (Tailwind)

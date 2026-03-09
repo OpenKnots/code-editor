@@ -14,6 +14,7 @@ import { useAppMode } from '@/context/app-mode-context'
 import { WorkspaceSidebar } from '@/components/workspace-sidebar'
 import { FloatingPanel } from '@/components/floating-panel'
 import { EditorTabs } from '@/components/editor-tabs'
+import { formatShortcut } from '@/lib/platform'
 import { isTauri } from '@/lib/tauri'
 import {
   fetchFileContentsByName as fetchFileContents,
@@ -668,7 +669,7 @@ export default function EditorLayout() {
                   key={m.id}
                   onClick={() => setMode(m.id)}
                   className={`shell-mode-button ${mode === m.id ? 'shell-mode-button--active' : ''}`}
-                  title={`${m.label} mode (⌘⇧${index + 1})`}
+                  title={`${m.label} mode (${formatShortcut(`meta+shift+${index + 1}`)})`}
                 >
                   <Icon icon={m.icon} width={13} height={13} />
                 </button>

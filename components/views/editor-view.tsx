@@ -10,6 +10,7 @@ import { useRepo } from '@/context/repo-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { EditorTabs } from '@/components/editor-tabs'
 import { FloatingPanel } from '@/components/floating-panel'
+import { formatShortcut } from '@/lib/platform'
 import { isTauri } from '@/lib/tauri'
 import { emit } from '@/lib/events'
 
@@ -17,14 +18,12 @@ const FileExplorer = dynamic(
   () => import('@/components/file-explorer').then((m) => m.FileExplorer),
   { ssr: false },
 )
-const CodeEditor = dynamic(
-  () => import('@/components/code-editor').then((m) => m.CodeEditor),
-  { ssr: false },
-)
-const AgentPanel = dynamic(
-  () => import('@/components/agent-panel').then((m) => m.AgentPanel),
-  { ssr: false },
-)
+const CodeEditor = dynamic(() => import('@/components/code-editor').then((m) => m.CodeEditor), {
+  ssr: false,
+})
+const AgentPanel = dynamic(() => import('@/components/agent-panel').then((m) => m.AgentPanel), {
+  ssr: false,
+})
 
 const PANEL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
 
@@ -51,7 +50,8 @@ function NoCodebasePane({
             No codebase selected
           </p>
           <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
-            Open a folder{!isDesktop ? ' or connect a GitHub repo' : ''} to start editing, browsing files, and using the agent.
+            Open a folder{!isDesktop ? ' or connect a GitHub repo' : ''} to start editing, browsing
+            files, and using the agent.
           </p>
         </div>
         <div className="flex flex-col items-center gap-2 w-full mt-1">
@@ -65,8 +65,8 @@ function NoCodebasePane({
           <div className="flex items-center gap-3 text-[11px] text-[var(--text-disabled)] mt-1">
             <span className="flex items-center gap-1">
               <Icon icon="lucide:command" width={10} height={10} />
-              <Icon icon="lucide:letter-text" width={10} height={10} className="opacity-60" />
-              P for commands
+              <Icon icon="lucide:letter-text" width={10} height={10} className="opacity-60" />P for
+              commands
             </span>
           </div>
         </div>
@@ -114,7 +114,7 @@ function MainEditorPane({
           <button
             onClick={() => emit('toggle-terminal')}
             className="h-6 px-2 rounded text-[11px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Terminal (⌘J)"
+            title={`Terminal (${formatShortcut('meta+J')})`}
           >
             <Icon icon="lucide:terminal" width={12} height={12} />
             {!isNarrow && <span>Terminal</span>}
@@ -218,13 +218,14 @@ export function EditorView() {
                     className="text-[var(--brand)] shrink-0 group-hover:scale-110 transition-transform"
                   />
                   <span className="text-[11px] font-bold text-[var(--text-disabled)] group-hover:text-[var(--text-secondary)] truncate uppercase tracking-wider transition-colors">
-                    {local.rootPath?.split('/').pop() || (repo ? repo.repo.split('/').pop() : 'Explorer')}
+                    {local.rootPath?.split('/').pop() ||
+                      (repo ? repo.repo.split('/').pop() : 'Explorer')}
                   </span>
                 </button>
                 <button
                   onClick={() => layout.hide('tree')}
                   className="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer shrink-0"
-                  title="Hide (⌘B)"
+                  title={`Hide (${formatShortcut('meta+B')})`}
                 >
                   <Icon icon="lucide:panel-left-close" width={15} height={15} />
                 </button>
@@ -252,7 +253,7 @@ export function EditorView() {
           <button
             onClick={() => layout.show('tree')}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-5 h-12 flex items-center justify-center bg-[var(--bg-elevated)] border border-l-0 border-[var(--border)] rounded-r-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer"
-            title="Show explorer (⌘B)"
+            title={`Show explorer (${formatShortcut('meta+B')})`}
           >
             <Icon icon="lucide:chevron-right" width={14} height={14} />
           </button>
@@ -261,7 +262,7 @@ export function EditorView() {
           <button
             onClick={() => layout.show('tree')}
             className="absolute left-2 top-2 z-30 h-9 w-9 flex items-center justify-center rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] cursor-pointer"
-            title="Files (⌘B)"
+            title={`Files (${formatShortcut('meta+B')})`}
           >
             <Icon icon="lucide:folder" width={16} height={16} />
           </button>
@@ -315,7 +316,7 @@ export function EditorView() {
         <button
           onClick={() => layout.show('chat')}
           className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-5 h-12 flex items-center justify-center bg-[var(--bg-elevated)] border border-r-0 border-[var(--border)] rounded-l-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] cursor-pointer"
-          title="Show chat (⌘I)"
+          title={`Show chat (${formatShortcut('meta+I')})`}
         >
           <Icon icon="lucide:chevron-left" width={14} height={14} />
         </button>
@@ -354,7 +355,8 @@ export function EditorView() {
                     className="text-[var(--brand)] shrink-0 group-hover:scale-110 transition-transform"
                   />
                   <span className="text-[11px] font-bold text-[var(--text-disabled)] group-hover:text-[var(--text-secondary)] truncate uppercase tracking-wider transition-colors">
-                    {local.rootPath?.split('/').pop() || (repo ? repo.repo.split('/').pop() : 'Explorer')}
+                    {local.rootPath?.split('/').pop() ||
+                      (repo ? repo.repo.split('/').pop() : 'Explorer')}
                   </span>
                 </button>
                 <button

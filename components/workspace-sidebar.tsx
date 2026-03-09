@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { useThread, THREAD_IDS, type ThreadId } from '@/context/thread-context'
 import { useView } from '@/context/view-context'
+import { formatShortcut } from '@/lib/platform'
 import { isTauri } from '@/lib/tauri'
 import { emit, on } from '@/lib/events'
 
@@ -152,7 +153,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={onToggle}
             className="codex-sidebar-icon-btn"
-            title="Expand sidebar (⌘\\)"
+            title={`Expand sidebar (${formatShortcut('meta+\\')})`}
           >
             <Icon icon="lucide:panel-left" width={20} height={20} />
           </button>
@@ -209,7 +210,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                   type="button"
                   onClick={onToggle}
                   className="codex-sidebar-hero__action"
-                  title="Collapse sidebar (⌘\\)"
+                  title={`Collapse sidebar (${formatShortcut('meta+\\')})`}
                 >
                   <Icon icon="lucide:panel-left-close" width={15} height={15} />
                 </button>

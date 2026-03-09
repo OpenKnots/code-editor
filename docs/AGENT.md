@@ -95,11 +95,11 @@ User: "/edit add error handling to the fetch call"
 
 ```
 
-### Via Inline Edit (⌘K)
+### Via Inline Edit (Cmd/Ctrl+K)
 
 ```
 
-User selects code → ⌘K → types "add null check"
+User selects code → Cmd/Ctrl+K → types "add null check"
 → InlineEdit component appears at cursor position
 → Submit dispatches CustomEvent('inline-edit-request')
 → AgentPanel handles event: - Includes selected text + line range - Sends to gateway with full context

@@ -35,7 +35,7 @@ code-editor/
 │   │   ├── device-carousel # Multi-device preview
 │   │   ├── pip-window      # Picture-in-Picture floating preview
 │   │   ├── agent-annotations # AI change highlights
-│   │   └── component-isolator # Component isolation (⌘⇧I)
+│   │   └── component-isolator # Component isolation (Cmd/Ctrl+Shift+I)
 │   ├── workspace-sidebar   # Chat list + navigation
 │   ├── agent-panel         # Chat/agent interface
 │   ├── settings-panel      # Settings (themes, GitHub, editor)
@@ -101,9 +101,9 @@ Launches a native macOS window with the web app inside. Both the web frontend an
 
 Copy `.env.example` → `.env` and fill in:
 
-| Variable                        | Required | Description                                                                                                                                                                                           |
-| ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` | Optional | Spotify PKCE OAuth Client ID for the music plugin. Create at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard).                                                              |
+| Variable                        | Required | Description                                                                                                                              |
+| ------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` | Optional | Spotify PKCE OAuth Client ID for the music plugin. Create at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard). |
 
 > **Note:** `NEXT_PUBLIC_` variables are embedded in the client bundle. Only put public client IDs here, never secrets.
 
@@ -198,19 +198,19 @@ The `release.yml` workflow:
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action                      |
-| -------- | --------------------------- |
-| `⌘B`     | Toggle file explorer        |
-| `⌘J`     | Toggle terminal             |
-| `⌘\`     | Toggle sidebar              |
-| `⌘P`     | Quick open file             |
-| `⌘⇧I`    | Isolate component (preview) |
-| `⌘K`     | Inline edit                 |
-| `⌘L`     | Send selection to chat      |
-| `⌘S`     | Save file                   |
-| `⌘⇧F`    | Global search               |
-| `⌘⇧P`    | Command palette             |
-| `Esc`    | Close overlays              |
+| Shortcut           | Action                      |
+| ------------------ | --------------------------- |
+| `Cmd/Ctrl+B`       | Toggle file explorer        |
+| `Cmd/Ctrl+J`       | Toggle terminal             |
+| `Cmd/Ctrl+\`       | Toggle sidebar              |
+| `Cmd/Ctrl+P`       | Quick open file             |
+| `Cmd/Ctrl+Shift+I` | Isolate component (preview) |
+| `Cmd/Ctrl+K`       | Inline edit                 |
+| `Cmd/Ctrl+L`       | Send selection to chat      |
+| `Cmd/Ctrl+S`       | Save file                   |
+| `Cmd/Ctrl+Shift+F` | Global search               |
+| `Cmd/Ctrl+Shift+P` | Command palette             |
+| `Esc`              | Close overlays              |
 
 ---
 
@@ -236,11 +236,11 @@ To add a new theme:
 
 ## Preview System
 
-The preview panel (`⌘3` or click Preview tab) connects to any local dev server:
+The preview panel (`Cmd/Ctrl+3` or click Preview tab) connects to any local dev server:
 
 - **URL bar** — type `localhost:5173` or any dev server URL
 - **Device Carousel** — see your app on iPhone, Pixel, iPad, MacBook, Desktop simultaneously
-- **Component Isolation** (`⌘⇧I`) — isolate a React component from the active file
+- **Component Isolation** (`Cmd/Ctrl+Shift+I`) — isolate a React component from the active file
 - **Picture-in-Picture** — float the preview over your code while editing
 - **Agent Annotations** — when the AI makes changes, glowing highlights show what changed
 
