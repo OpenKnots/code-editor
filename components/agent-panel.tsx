@@ -386,6 +386,7 @@ export function AgentPanel() {
   const [sending, setSending] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [thinkingTrail, setThinkingTrail] = useState<string[]>([])
+  const [agentActivities, setAgentActivities] = useState<import('@/lib/agent-activity').AgentActivity[]>([])
   const [activeDiff, setActiveDiff] = useState<{
     proposal: EditProposal
     messageId: string
@@ -542,6 +543,7 @@ export function AgentPanel() {
       setIsStreaming,
       setSending,
       setThinkingTrail,
+      setAgentActivities,
       setMessages,
       getFile,
     }
@@ -885,7 +887,7 @@ export function AgentPanel() {
         ? '[Mode: Ask — discuss and answer questions. Do not make code changes unless explicitly asked.]\n'
         : agentMode === 'plan'
           ? '[Mode: Plan — You MUST respond with a structured plan before making any changes. Format your response as a numbered list where each step has a **bold title** followed by a description and affected files in backticks. Example:\n1. **Update auth module** — Add token refresh logic\n   `lib/auth.ts`, `lib/api.ts`\n2. **Add tests** — Cover the new refresh flow\n   `tests/auth.test.ts`\nAfter the user approves, execute each step sequentially. Do NOT make changes until approved.]\n'
-          : '[Mode: Agent — make direct code changes and edits autonomously.]\n'
+          : '[Mode: Agent — You are an autonomous coding agent. Make direct code changes without asking for permission. Read files to understand context, edit them to implement changes, run commands to verify your work. After making changes, briefly summarize what you did and which files were modified. If a change fails, diagnose and fix it automatically.]\n'
     return [modePrefix, context || '', attachCtx].filter(Boolean).join('\n\n')
   }, [agentMode, buildAttachmentContext, buildContext])
 
@@ -1586,6 +1588,8 @@ export function AgentPanel() {
 
     setSending(true)
     streamStateRef.current.isSending = true
+    setAgentActivities([])
+    setThinkingTrail([])
 
     // Build visual label for attachments
     const attachLabels = buildAttachmentLabels()
@@ -1828,7 +1832,7 @@ export function AgentPanel() {
   // ─── Auto-apply when full access is enabled ──────────────────
   const autoAppliedRef = useRef(new Set<string>())
   useEffect(() => {
-    if (permissions !== 'full') return
+    if (permissions !== 'full' && agentMode !== 'agent') return
     const last = messages[messages.length - 1]
     if (!last || last.role !== 'assistant' || !last.editProposals?.length) return
     if (autoAppliedRef.current.has(last.id)) return
@@ -1846,10 +1850,10 @@ export function AgentPanel() {
       id: crypto.randomUUID(),
       role: 'system',
       type: 'tool',
-      content: `Auto-applied edits to ${fileNames} (full access mode).`,
+      content: `Auto-applied edits to ${fileNames}${agentMode === 'agent' ? ' (agent mode)' : ' (full access mode)'}.`,
       timestamp: Date.now(),
     })
-  }, [messages, permissions, getFile, updateFileContent, openFile, appendMessage])
+  }, [messages, permissions, agentMode, getFile, updateFileContent, openFile, appendMessage])
 
   // ─── Slash command suggestions ────────────────────────────────
   const suggestions = useMemo(() => {
@@ -1971,6 +1975,7 @@ export function AgentPanel() {
     streamStateRef.current.isSending = false
     setIsStreaming(false)
     setThinkingTrail([])
+    setAgentActivities([])
     setInput('')
     setContextAttachments([])
     setImageAttachments([])
@@ -2052,6 +2057,8 @@ export function AgentPanel() {
         isStreaming={isStreaming}
         modelName={modelInfo.current || undefined}
         contextTokens={contextTokens}
+        activityCount={agentActivities.length}
+        filesChanged={agentActivities.filter(a => a.type === 'edit' || a.type === 'write' || a.type === 'create').reduce((acc, a) => { if (a.file) acc.add(a.file); return acc }, new Set<string>()).size}
       />
       {messages.length > 0 && (
         <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-1 shrink-0">
@@ -2145,6 +2152,7 @@ export function AgentPanel() {
           streamBuffer={streamBuffer}
           isStreaming={isStreaming}
           thinkingTrail={thinkingTrail}
+          agentActivities={agentActivities}
           agentMode={agentMode}
           onShowDiff={handleShowDiff}
           onQuickApply={handleQuickApply}

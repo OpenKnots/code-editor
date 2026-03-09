@@ -11,12 +11,14 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { useChatAppearance } from '@/context/chat-appearance-context'
 import type { ChatMessage } from '@/lib/chat-stream'
 import type { EditProposal } from '@/lib/edit-parser'
+import { AgentActivityFeed } from '@/components/chat/agent-activity-feed'
 
 interface MessageListProps {
   messages: ChatMessage[]
   streamBuffer: string
   isStreaming: boolean
   thinkingTrail: string[]
+  agentActivities?: import('@/lib/agent-activity').AgentActivity[]
   agentMode: string
   onShowDiff: (proposal: EditProposal, messageId: string) => void
   onQuickApply: (proposal: EditProposal) => void
@@ -182,6 +184,7 @@ export function MessageList({
   streamBuffer,
   isStreaming,
   thinkingTrail,
+  agentActivities = [],
   agentMode,
   onShowDiff,
   onQuickApply,
@@ -599,8 +602,13 @@ export function MessageList({
             className="flex flex-col items-start animate-fade-in"
             style={{ animationDuration: '0.15s' }}
           >
-            {/* Inline tool badges (compact) */}
-            {thinkingTrail.length > 0 && !streamBuffer && (
+            {/* Agent activity feed (structured) or inline tool badges (fallback) */}
+            {agentActivities.length > 0 && !streamBuffer && (
+              <div className="w-full mb-1.5">
+                <AgentActivityFeed activities={agentActivities} isRunning={isStreaming} />
+              </div>
+            )}
+            {agentActivities.length === 0 && thinkingTrail.length > 0 && !streamBuffer && (
               <div className="flex flex-wrap gap-1 mb-1.5">
                 {thinkingTrail.map((step, i) => {
                   const isLast = i === thinkingTrail.length - 1

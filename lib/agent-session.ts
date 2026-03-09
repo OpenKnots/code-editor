@@ -9,12 +9,21 @@ export const CODE_EDITOR_SYSTEM_PROMPT_VERSION = 3
 
 // ─── Agent Config ────────────────────────────────────────────────
 
+export type ApprovalTier = 'ask-all' | 'auto-edits' | 'auto-all'
+
 export interface AgentConfig {
   persona: string
   systemPrompt: string
   behaviors: Record<string, boolean>
   modelPreference: string
+  approvalTier?: ApprovalTier
 }
+
+export const APPROVAL_TIERS: { id: ApprovalTier; label: string; description: string }[] = [
+  { id: 'ask-all', label: 'Ask for everything', description: 'Confirm all file edits and commands' },
+  { id: 'auto-edits', label: 'Auto-approve edits', description: 'File changes auto-applied, commands require approval' },
+  { id: 'auto-all', label: 'Full autonomy', description: 'Agent runs without interruption' },
+]
 
 const STORAGE_KEY_PROMPT = 'code-editor:agent:system-prompt'
 const STORAGE_KEY_CONFIG = 'code-editor:agent:config'

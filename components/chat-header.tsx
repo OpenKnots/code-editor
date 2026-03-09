@@ -11,6 +11,8 @@ interface Props {
   modelName?: string
   contextTokens?: number
   maxContextTokens?: number
+  activityCount?: number
+  filesChanged?: number
 }
 
 export function ChatHeader({
@@ -20,6 +22,8 @@ export function ChatHeader({
   modelName,
   contextTokens = 0,
   maxContextTokens = 128000,
+  activityCount = 0,
+  filesChanged = 0,
 }: Props) {
   const { repo } = useRepo()
   const local = useLocal()
@@ -90,6 +94,15 @@ export function ChatHeader({
                   .replace(/(claude-|gpt-)/, '')
                   .slice(0, 16)}
               </span>
+            </span>
+          )}
+          {isStreaming && activityCount > 0 && (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--bg-subtle)] px-1.5 py-0.5 text-[9px] text-[var(--text-disabled)]">
+              <Icon icon="lucide:activity" width={9} height={9} className="text-[var(--brand)]" />
+              {activityCount} ops
+              {filesChanged > 0 && (
+                <span className="text-amber-400">· {filesChanged} files</span>
+              )}
             </span>
           )}
           <span className="whitespace-nowrap text-[11px] text-[var(--text-disabled)]">

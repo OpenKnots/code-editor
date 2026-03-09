@@ -33,6 +33,7 @@ interface StreamCallbacks {
   setSending: (v: boolean) => void
   setThinkingTrail: React.Dispatch<React.SetStateAction<string[]>>
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>
+  setAgentActivities?: React.Dispatch<React.SetStateAction<import('@/lib/agent-activity').AgentActivity[]>>
   getFile: (path: string) => { content: string } | undefined
 }
 
@@ -136,6 +137,13 @@ export function handleChatEvent(
       }
       callbacks.setThinkingTrail((prev) => [...prev.slice(-5), step])
       callbacks.setIsStreaming(true)
+      // Track structured activity
+      if (callbacks.setAgentActivities) {
+        import('@/lib/agent-activity').then(({ parseToolActivity }) => {
+          const activity = parseToolActivity(toolName, toolInput as Record<string, unknown> | undefined)
+          callbacks.setAgentActivities!((prev) => [...prev, activity])
+        })
+      }
     }
     return
   }

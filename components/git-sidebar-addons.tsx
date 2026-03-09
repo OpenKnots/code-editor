@@ -16,7 +16,7 @@ const PLUGIN_META: Record<string, { label: string; icon: string; color: string; 
     label: 'YouTube',
     icon: 'mdi:youtube',
     color: '#FF0000',
-    hint: 'Jump playlists or videos without leaving source control.',
+    hint: 'Jump playlists or videos without leaving.',
   },
 }
 
@@ -393,7 +393,7 @@ export function GitSidebarAddons() {
             Widgets
           </div>
           <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">
-            Switch between media tools without leaving the git panel.
+            Switch between media tools without leaving.
           </p>
         </div>
         <button
@@ -509,7 +509,7 @@ export function GitSidebarAddons() {
                 <Icon icon={activeMeta?.icon ?? 'lucide:puzzle'} width={16} height={16} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2"> */}
                   <h3 className="truncate text-[12px] font-semibold text-[var(--text-primary)]">
                     {label}
                   </h3>
@@ -522,10 +522,10 @@ export function GitSidebarAddons() {
                   >
                     {enabled ? 'On' : 'Off'}
                   </span>
-                </div>
-                <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">
+                {/* </div> */}
+                {/* <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">
                   {enabled ? activeMeta?.hint : `Enable ${label} to pin it beneath your changes.`}
-                </p>
+                </p> */}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 {enabled ? (

@@ -860,6 +860,8 @@ export function CodeEditor() {
         onMount={handleMount}
         options={{
           fontSize: 13,
+          lineHeight: 22,
+          letterSpacing: 0.2,
           fontFamily:
             (typeof window !== 'undefined'
               ? getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()
@@ -867,17 +869,24 @@ export function CodeEditor() {
           fontLigatures: true,
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
-          padding: { top: 12 },
+          padding: { top: 12, bottom: 12 },
           lineNumbers: 'on',
           renderLineHighlight: 'line',
-          bracketPairColorization: { enabled: true },
-          guides: { indentation: true, bracketPairs: true },
+          renderWhitespace: 'selection',
+          bracketPairColorization: { enabled: true, independentColorPoolPerBracketType: true },
+          guides: { indentation: true, bracketPairs: true, highlightActiveIndentation: true },
           smoothScrolling: true,
           cursorBlinking: 'smooth',
           cursorSmoothCaretAnimation: 'on',
+          cursorStyle: 'line',
+          cursorWidth: 2,
           tabSize: 2,
           wordWrap: 'on',
           automaticLayout: true,
+          colorDecorators: true,
+          linkedEditing: true,
+          showFoldingControls: 'mouseover',
+          foldingHighlight: true,
           readOnly,
           domReadOnly: readOnly,
         }}

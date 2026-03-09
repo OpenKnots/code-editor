@@ -127,7 +127,7 @@ export function PythonAgentLab() {
             Python Agent Lab
           </div>
           <h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
-            Prototype agent-training patterns without leaving the app.
+            Prototype agent-training patterns without leaving.
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
             Edit labeled data, tune the training goal, simulate the pattern locally, and generate a
