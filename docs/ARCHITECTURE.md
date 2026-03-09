@@ -75,9 +75,9 @@ code-editor/
 │   ├── editor-tabs.tsx         # Multi-file tab bar
 │   ├── file-explorer.tsx       # Tree view with search
 │   ├── glass-card.tsx          # Glassmorphic card primitive
-│   ├── inline-edit.tsx         # ⌘K inline edit prompt
+│   ├── inline-edit.tsx         # Cmd/Ctrl+K inline edit prompt
 │   ├── markdown-preview.tsx    # Agent response rendering
-│   ├── quick-open.tsx          # ⌘P fuzzy file search
+│   ├── quick-open.tsx          # Cmd/Ctrl+P fuzzy file search
 │   ├── repo-selector.tsx       # Repo + branch switcher
 │   ├── resize-handle.tsx       # Draggable panel resizer
 │   ├── shortcuts-overlay.tsx   # ? keyboard shortcuts modal
@@ -145,10 +145,10 @@ User types message + Enter
   → If [EDIT path] markers found → "Review diff" button shown
 ```
 
-### Edit Flow (⌘K or /edit)
+### Edit Flow (Cmd/Ctrl+K or /edit)
 
 ```
-User selects code → ⌘K → types instruction
+User selects code → Cmd/Ctrl+K → types instruction
   → CustomEvent('inline-edit-request', { filePath, instruction, selectedText })
   → AgentPanel handles event → sends to gateway with selection context
   → Agent responds with [EDIT path/to/file] + fenced code block

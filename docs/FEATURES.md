@@ -42,10 +42,10 @@
 
 ### Navigation
 
-- [x] **⌘P Quick File Open** — fuzzy search across entire repo, keyboard-driven
-- [x] **⌘K Inline Edit** — select code → type instruction → agent proposes diff
-- [x] **⌘B Toggle Explorer** — show/hide file tree
-- [x] **⌘J Toggle Agent** — show/hide agent panel
+- [x] **Cmd/Ctrl+P Quick File Open** — fuzzy search across entire repo, keyboard-driven
+- [x] **Cmd/Ctrl+K Inline Edit** — select code → type instruction → agent proposes diff
+- [x] **Cmd/Ctrl+B Toggle Explorer** — show/hide file tree
+- [x] **Cmd/Ctrl+J Toggle Agent** — show/hide agent panel
 - [x] **? Shortcuts Overlay** — modal showing all keyboard shortcuts
 - [x] **Chat bubble** — floating button when agent panel is hidden
 
@@ -103,7 +103,7 @@
 
 - [ ] **Git status in file tree** — green (new), orange (modified), red (deleted) indicators
 - [ ] **Modified files diff** — view all changes before committing
-- [ ] **⌘S Save shortcut** — quick commit current file
+- [ ] **Cmd/Ctrl+S Save shortcut** — quick commit current file
 - [ ] **Agent-initiated file navigation** — agent says "open file X" → editor opens it
 - [ ] **Selection-aware /explain** — explain selected code, not whole file
 - [ ] **Recent files** — quick access to recently opened files
@@ -118,8 +118,8 @@
 - [ ] **File deletion** — delete files with confirmation
 - [ ] **Rename/move** — rename files via context menu
 - [ ] **Go to definition** — click symbols to jump to definition
-- [ ] **Search and replace** — ⌘H across current file
-- [ ] **Global search** — ⌘⇧F across all repo files
+- [ ] **Search and replace** — Cmd/Ctrl+H across current file
+- [ ] **Global search** — Cmd/Ctrl+Shift+F across all repo files
 
 ### Long Term
 

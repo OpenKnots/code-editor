@@ -635,7 +635,8 @@ export function FileExplorer() {
               className="text-[var(--brand)] shrink-0 group-hover:scale-110 transition-transform"
             />
             <span className="text-[11px] font-semibold text-[var(--text-primary)] truncate">
-              {local.rootPath?.split('/').pop() || (repo ? repo.repo.split('/').pop() : 'Open Folder')}
+              {local.rootPath?.split('/').pop() ||
+                (repo ? repo.repo.split('/').pop() : 'Open Folder')}
             </span>
             {fileCount > 0 && (
               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--text-tertiary)] border border-[color-mix(in_srgb,var(--brand)_15%,transparent)] shrink-0">
@@ -715,7 +716,7 @@ export function FileExplorer() {
           </div>
         )}
         {treeError && !local.localMode && (
-          <div className="px-3 py-2 text-[11px] text-[var(--color-deletions)]">{treeError}</div>
+          <div className="px-3 py-2 text-[13px] text-[var(--color-deletions)]">{treeError}</div>
         )}
         {filteredTree.map((node) =>
           node.type === 'dir' ? (

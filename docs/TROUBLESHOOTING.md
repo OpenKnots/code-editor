@@ -7,6 +7,7 @@
 **Symptom:** Build fails with various webpack-related errors.
 
 **Fix:** Always use the webpack flag:
+
 ```bash
 pnpm build --webpack
 ```
@@ -20,11 +21,13 @@ The default Turbopack bundler can crash with port binding errors. Webpack is the
 **Symptom:** Missing dependency during build.
 
 **Fix:** Install the missing package:
+
 ```bash
 pnpm add <package-name>
 ```
 
 Common ones that may need manual installation:
+
 - `@workos-inc/authkit-nextjs`
 - `create-markdown`
 - `tw-animate-css`
@@ -39,6 +42,7 @@ Common ones that may need manual installation:
 **Context:** Monaco's TypeScript types are deprecated in newer versions.
 
 **Fix:** Use `beforeMount` callback with optional chaining:
+
 ```typescript
 const handleBeforeMount: BeforeMount = (monaco) => {
   monaco.languages.typescript?.typescriptDefaults?.setDiagnosticsOptions({
@@ -68,17 +72,20 @@ const handleBeforeMount: BeforeMount = (monaco) => {
 **Fix:**
 
 1. Ensure Rust is installed:
+
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
    ```
 
 2. Add to your shell profile (`~/.zshrc` for macOS):
+
    ```bash
    echo '. "$HOME/.cargo/env"' >> ~/.zshrc
    source ~/.zshrc
    ```
 
 3. Verify:
+
    ```bash
    cargo --version   # should print cargo 1.x.x
    rustc --version   # should print rustc 1.x.x
@@ -101,11 +108,13 @@ Subsequent builds only recompile changed code and are much faster (<30 seconds).
 **Symptom:** Compilation errors mentioning Xcode, SDK, or system frameworks.
 
 **Fix:** Ensure Xcode Command Line Tools are installed:
+
 ```bash
 xcode-select --install
 ```
 
 If already installed, try resetting:
+
 ```bash
 sudo xcode-select --reset
 ```
@@ -117,6 +126,7 @@ sudo xcode-select --reset
 **Possible causes:**
 
 1. **Dev server not running:** `pnpm tauri:dev` should start Next.js dev server automatically. Check that port 3080 is free:
+
    ```bash
    lsof -i :3080
    ```
@@ -140,6 +150,7 @@ sudo xcode-select --reset
 **Cause:** The code-editor's origin is not in the gateway's allowed origins list.
 
 **Fix:** Add the origin to `~/.openclaw/openclaw.json`:
+
 ```json
 {
   "gateway": {
@@ -155,6 +166,7 @@ sudo xcode-select --reset
 ```
 
 Then restart the gateway:
+
 ```bash
 openclaw gateway restart
 ```
@@ -168,6 +180,7 @@ openclaw gateway restart
 **Possible causes:**
 
 1. **Gateway not running:**
+
    ```bash
    openclaw gateway status
    # If stopped:
@@ -190,6 +203,7 @@ openclaw gateway restart
 **Symptom:** Login shows pairing instructions.
 
 **Fix:** On the gateway host machine:
+
 ```bash
 openclaw devices list        # find the pending request
 openclaw devices approve <request-id>
@@ -208,7 +222,8 @@ Then click Connect again in the editor.
 **Cause:** Monaco tries to type-check TypeScript/JavaScript files but has no `tsconfig` or type definitions.
 
 **Fix:** This is already handled — `beforeMount` disables semantic validation. If you still see red lines:
-1. Hard refresh the page (⌘⇧R)
+
+1. Hard refresh the page (Cmd/Ctrl+Shift+R)
 2. Check that the `handleBeforeMount` callback is being called
 
 ---
@@ -264,7 +279,7 @@ Then click Connect again in the editor.
 **Symptom:** Page keeps redirecting to WorkOS login and back.
 
 **Fix:** Check that `WORKOS_CLIENT_ID`, `WORKOS_API_KEY`, and `WORKOS_REDIRECT_URI` are set correctly in environment variables.
-   
+
 For local development, the redirect URI should be `http://localhost:3080/callback`.
 
 ---
@@ -276,6 +291,7 @@ For local development, the redirect URI should be `http://localhost:3080/callbac
 **Cause:** `ALLOWED_USER_EMAIL` or `ALLOWED_USER_ID` is set and your account doesn't match.
 
 **Fix:** Either:
+
 - Update the env var to match your email/user ID
 - Remove the env var to allow all authenticated users
 
@@ -288,6 +304,7 @@ For local development, the redirect URI should be `http://localhost:3080/callbac
 **Cause:** Large repos (10,000+ files) create a heavy tree in memory.
 
 **Workarounds:**
+
 - Use the search to filter before browsing
 - Tree rendering uses virtual-ish approach (dirs collapse by default)
 - Consider filtering tree API response server-side for very large repos
@@ -297,6 +314,7 @@ For local development, the redirect URI should be `http://localhost:3080/callbac
 ### Agent responses are slow
 
 **Possible causes:**
+
 1. **Model choice:** Larger models (Opus) take longer than smaller ones (Haiku)
 2. **Context size:** Files >8KB are truncated in context injection to prevent overload
 3. **Gateway load:** Multiple sessions competing for the same gateway
@@ -305,12 +323,12 @@ For local development, the redirect URI should be `http://localhost:3080/callbac
 
 ## Common Environment Variables
 
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `GITHUB_TOKEN` | GitHub API access | Yes |
-| `WORKOS_CLIENT_ID` | WorkOS OAuth | Yes (web) |
-| `WORKOS_API_KEY` | WorkOS server auth | Yes (web) |
-| `WORKOS_REDIRECT_URI` | OAuth callback URL | Yes (web) |
-| `ALLOWED_USER_EMAIL` | Restrict to one user | No |
-| `ALLOWED_USER_ID` | Restrict to one user | No |
-| `ALLOWED_IPS` | IP allowlist (CIDR) | No (`*` = disabled) |
+| Variable              | Purpose              | Required            |
+| --------------------- | -------------------- | ------------------- |
+| `GITHUB_TOKEN`        | GitHub API access    | Yes                 |
+| `WORKOS_CLIENT_ID`    | WorkOS OAuth         | Yes (web)           |
+| `WORKOS_API_KEY`      | WorkOS server auth   | Yes (web)           |
+| `WORKOS_REDIRECT_URI` | OAuth callback URL   | Yes (web)           |
+| `ALLOWED_USER_EMAIL`  | Restrict to one user | No                  |
+| `ALLOWED_USER_ID`     | Restrict to one user | No                  |
+| `ALLOWED_IPS`         | IP allowlist (CIDR)  | No (`*` = disabled) |

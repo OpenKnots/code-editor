@@ -4,7 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import { Icon } from '@iconify/react'
 import { useLocal, getRecentFolders } from '@/context/local-context'
 
-function BranchDropdown({ current, branches, onSwitch }: {
+function BranchDropdown({
+  current,
+  branches,
+  onSwitch,
+}: {
   current: string
   branches: string[]
   onSwitch: (branch: string) => Promise<void>
@@ -30,7 +34,7 @@ function BranchDropdown({ current, branches, onSwitch }: {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
         title="Switch branch"
       >
@@ -47,19 +51,29 @@ function BranchDropdown({ current, branches, onSwitch }: {
           {error && (
             <div className="px-3 py-2 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)]">
               <div className="flex items-start gap-1.5">
-                <Icon icon="lucide:alert-triangle" width={11} height={11} className="text-[var(--color-deletions)] shrink-0 mt-0.5" />
-                <span className="text-[10px] text-[var(--color-deletions)] leading-snug">{error}</span>
+                <Icon
+                  icon="lucide:alert-triangle"
+                  width={11}
+                  height={11}
+                  className="text-[var(--color-deletions)] shrink-0 mt-0.5"
+                />
+                <span className="text-[12px] text-[var(--color-deletions)] leading-snug">
+                  {error}
+                </span>
               </div>
             </div>
           )}
-          {branches.map(branch => {
+          {branches.map((branch) => {
             const isActive = branch === current
             return (
               <button
                 key={branch}
                 disabled={switching}
                 onClick={async () => {
-                  if (isActive) { setOpen(false); return }
+                  if (isActive) {
+                    setOpen(false)
+                    return
+                  }
                   setSwitching(true)
                   setError(null)
                   try {
@@ -67,9 +81,11 @@ function BranchDropdown({ current, branches, onSwitch }: {
                     setOpen(false)
                   } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err)
-                    setError(msg.includes('overwritten by checkout')
-                      ? 'Commit or stash your changes before switching branches.'
-                      : `Switch failed: ${msg}`)
+                    setError(
+                      msg.includes('overwritten by checkout')
+                        ? 'Commit or stash your changes before switching branches.'
+                        : `Switch failed: ${msg}`,
+                    )
                   }
                   setSwitching(false)
                 }}
@@ -81,7 +97,8 @@ function BranchDropdown({ current, branches, onSwitch }: {
               >
                 <Icon
                   icon={isActive ? 'lucide:check' : 'lucide:git-branch'}
-                  width={11} height={11}
+                  width={11}
+                  height={11}
                   className="shrink-0"
                 />
                 <span className="truncate flex-1 text-left">{branch}</span>
@@ -123,23 +140,41 @@ export function SourceSwitcher() {
       <div className="flex items-center gap-1">
         <div className="relative">
           <button
-            onClick={() => setDropdownOpen(v => !v)}
+            onClick={() => setDropdownOpen((v) => !v)}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
           >
-            <Icon icon="lucide:folder-open" width={13} height={13} className="text-[var(--brand)]" />
+            <Icon
+              icon="lucide:folder-open"
+              width={13}
+              height={13}
+              className="text-[var(--brand)]"
+            />
             <span className="text-[var(--text-primary)] font-medium max-w-[140px] truncate">
               {folderName || 'Open Folder'}
             </span>
-            <Icon icon="lucide:chevron-down" width={11} height={11} className="text-[var(--text-tertiary)]" />
+            <Icon
+              icon="lucide:chevron-down"
+              width={11}
+              height={11}
+              className="text-[var(--text-tertiary)]"
+            />
           </button>
 
           {dropdownOpen && (
             <div className="absolute left-0 top-[calc(100%+4px)] z-[91] w-[280px] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden">
               <button
-                onClick={() => { local.openFolder(); setDropdownOpen(false) }}
+                onClick={() => {
+                  local.openFolder()
+                  setDropdownOpen(false)
+                }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
               >
-                <Icon icon="lucide:folder-plus" width={13} height={13} className="text-[var(--brand)]" />
+                <Icon
+                  icon="lucide:folder-plus"
+                  width={13}
+                  height={13}
+                  className="text-[var(--brand)]"
+                />
                 Open Folder…
               </button>
 
@@ -155,13 +190,16 @@ export function SourceSwitcher() {
                   <div className="px-3 py-1 text-[10px] text-[var(--text-disabled)] uppercase tracking-wider border-t border-[var(--border)]">
                     Recent
                   </div>
-                  {recentFolders.map(path => {
+                  {recentFolders.map((path) => {
                     const name = path.split('/').pop() ?? path
                     const isActive = path === local.rootPath
                     return (
                       <button
                         key={path}
-                        onClick={() => { local.setRootPath(path); setDropdownOpen(false) }}
+                        onClick={() => {
+                          local.setRootPath(path)
+                          setDropdownOpen(false)
+                        }}
                         className={`flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
                           isActive
                             ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
@@ -214,7 +252,7 @@ export function FolderIndicator() {
   const folderName = local.rootPath?.split('/').pop() ?? null
 
   const toggle = () => {
-    setMenuOpen(v => {
+    setMenuOpen((v) => {
       if (!v && btnRef.current) {
         const rect = btnRef.current.getBoundingClientRect()
         setMenuPos({ left: rect.left, bottom: window.innerHeight - rect.top + 4 })
@@ -233,7 +271,12 @@ export function FolderIndicator() {
       >
         <Icon icon="lucide:folder-open" width={10} height={10} />
         <span className="max-w-[120px] truncate">{folderName ?? 'Open Folder'}</span>
-        <Icon icon="lucide:chevron-up" width={8} height={8} className="text-[var(--text-disabled)]" />
+        <Icon
+          icon="lucide:chevron-up"
+          width={8}
+          height={8}
+          className="text-[var(--text-disabled)]"
+        />
       </button>
 
       {menuOpen && menuPos && (
@@ -245,10 +288,18 @@ export function FolderIndicator() {
             style={{ left: menuPos.left, bottom: menuPos.bottom }}
           >
             <button
-              onClick={() => { local.openFolder(); setMenuOpen(false) }}
+              onClick={() => {
+                local.openFolder()
+                setMenuOpen(false)
+              }}
               className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
             >
-              <Icon icon="lucide:folder-plus" width={12} height={12} className="text-[var(--brand)]" />
+              <Icon
+                icon="lucide:folder-plus"
+                width={12}
+                height={12}
+                className="text-[var(--brand)]"
+              />
               Open Folder…
             </button>
 
@@ -257,13 +308,16 @@ export function FolderIndicator() {
                 <div className="px-3 py-1 text-[9px] text-[var(--text-disabled)] uppercase tracking-wider border-t border-[var(--border)]">
                   Recent
                 </div>
-                {recentFolders.map(path => {
+                {recentFolders.map((path) => {
                   const name = path.split('/').pop() ?? path
                   const isActive = path === local.rootPath
                   return (
                     <button
                       key={path}
-                      onClick={() => { local.setRootPath(path); setMenuOpen(false) }}
+                      onClick={() => {
+                        local.setRootPath(path)
+                        setMenuOpen(false)
+                      }}
                       className={`flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
                         isActive
                           ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'

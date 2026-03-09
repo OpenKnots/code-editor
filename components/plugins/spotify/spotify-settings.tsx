@@ -45,11 +45,20 @@ export function SpotifySettings() {
           <span className="text-[11px] font-medium text-[var(--text-primary)]">Spotify</span>
         </div>
         <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
-          Set <code className="font-mono text-[9px] px-1 py-0.5 rounded bg-[var(--bg-subtle)]">NEXT_PUBLIC_SPOTIFY_CLIENT_ID</code> in your environment to enable Spotify integration.
+          Set{' '}
+          <code className="font-mono text-[9px] px-1 py-0.5 rounded bg-[var(--bg-subtle)]">
+            NEXT_PUBLIC_SPOTIFY_CLIENT_ID
+          </code>{' '}
+          in your environment to enable Spotify integration.
         </p>
         <p className="text-[9px] text-[var(--text-disabled)]">
           Create an app at{' '}
-          <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] hover:underline">
+          <a
+            href="https://developer.spotify.com/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--brand)] hover:underline"
+          >
             developer.spotify.com
           </a>
           . No client secret needed — uses PKCE flow.
@@ -68,8 +77,15 @@ export function SpotifySettings() {
       {authenticated ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]">
-            <Icon icon="lucide:check-circle" width={12} height={12} className="text-[var(--color-additions)] shrink-0" />
-            <span className="text-[10px] text-[var(--text-secondary)] flex-1">Connected to Spotify</span>
+            <Icon
+              icon="lucide:check-circle"
+              width={12}
+              height={12}
+              className="text-[var(--color-additions)] shrink-0"
+            />
+            <span className="text-[10px] text-[var(--text-secondary)] flex-1">
+              Connected to Spotify
+            </span>
             <button
               onClick={handleLogout}
               className="text-[9px] text-[var(--text-disabled)] hover:text-[var(--error)] transition-colors cursor-pointer"
@@ -84,7 +100,8 @@ export function SpotifySettings() {
       ) : (
         <div className="space-y-2">
           <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
-            Connect your Spotify Premium account to play full songs, search, and control playback from the editor.
+            Connect your Spotify Premium account to play full songs, search, and control playback
+            from the editor.
           </p>
           <button
             onClick={handleLogin}
@@ -98,7 +115,7 @@ export function SpotifySettings() {
             )}
             {loggingIn ? 'Connecting...' : 'Connect Spotify'}
           </button>
-          {error && <p className="text-[9px] text-[var(--error)]">{error}</p>}
+          {error && <p className="text-[12px] text-[var(--error)]">{error}</p>}
         </div>
       )}
     </div>

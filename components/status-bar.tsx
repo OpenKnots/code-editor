@@ -12,6 +12,7 @@ import { BranchPicker } from '@/components/branch-picker'
 import { FolderIndicator } from '@/components/source-switcher'
 import { SessionPresence } from '@/components/session-presence'
 import { CaffeinateToggle } from '@/components/caffeinate-toggle'
+import { formatShortcut } from '@/lib/platform'
 
 function StatusIndicator({ status, agentActive }: { status: string; agentActive: boolean }) {
   const isConnected = status === 'connected'
@@ -149,7 +150,7 @@ export function StatusBar({ agentActive }: StatusBarProps) {
         <button
           onClick={() => layout.toggle('terminal')}
           className={`shell-status-icon-btn ${terminalVisible ? 'shell-status-icon-btn--active' : ''}`}
-          title={`${terminalVisible ? 'Hide' : 'Show'} Terminal (⌘J)`}
+          title={`${terminalVisible ? 'Hide' : 'Show'} Terminal (${formatShortcut('meta+J')})`}
         >
           <Icon icon="lucide:terminal" width={12} height={12} />
         </button>

@@ -12,6 +12,14 @@ resolve_gitleaks() {
     echo "$ROOT/.tools/bin/gitleaks"
     return 0
   fi
+  if [ -n "${LOCALAPPDATA:-}" ]; then
+    for candidate in "$LOCALAPPDATA"/Microsoft/WinGet/Packages/*/gitleaks.exe; do
+      if [ -x "$candidate" ]; then
+        echo "$candidate"
+        return 0
+      fi
+    done
+  fi
   if command -v gitleaks >/dev/null 2>&1; then
     command -v gitleaks
     return 0
