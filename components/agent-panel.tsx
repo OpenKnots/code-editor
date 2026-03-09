@@ -51,6 +51,7 @@ import {
   getEffectiveSystemPrompt,
   getAgentConfig,
 } from '@/lib/agent-session'
+import { addChatHistory, HistoryNavigator } from '@/lib/chat-history'
 import {
   SKILL_FIRST_OVERRIDE_TOKEN,
   buildSkillFirstBlockMessage,
@@ -396,6 +397,7 @@ export function AgentPanel() {
   } | null>(null)
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const historyNav = useRef(new HistoryNavigator())
   const sessionInitRef = useRef(false)
   const sentKeysRef = useRef(new Set<string>())
   const handledKeysRef = useRef(new Set<string>())
@@ -553,6 +555,9 @@ export function AgentPanel() {
       }
     }
   }, [isStreaming, sending, turnStartTime])
+
+  // ─── Load chat input history ─────────────────────────────────
+  useEffect(() => { historyNav.current.load() }, [])
 
   // ─── Listen for chat events (streaming replies) ───────────────
   useEffect(() => {
@@ -1212,6 +1217,21 @@ export function AgentPanel() {
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim()
     if (!text || sending) return
+
+    // Handle slash commands locally
+    if (text === '/ask') { setAgentMode('ask'); setInput(''); return }
+    if (text === '/agent') { setAgentMode('agent'); setInput(''); return }
+    if (text === '/plan') { setAgentMode('plan'); setInput(''); return }
+    if (text === '/clear') {
+      setMessages([])
+      setAgentActivities([])
+      setInput('')
+      return
+    }
+
+    // Save to cross-session history
+    addChatHistory(text)
+    historyNav.current.reset()
 
     logChatDebug('send attempt', {
       textLength: text.length,
@@ -1881,20 +1901,18 @@ export function AgentPanel() {
   const suggestions = useMemo(() => {
     if (!input.startsWith('/')) return []
     const cmds = [
+      // Coding
       { cmd: '/edit', desc: 'Edit current file', icon: 'lucide:pencil' },
       { cmd: '/explain', desc: 'Explain code', icon: 'lucide:book-open' },
       { cmd: '/refactor', desc: 'Refactor code', icon: 'lucide:refresh-cw' },
       { cmd: '/generate', desc: 'Generate new code', icon: 'lucide:plus' },
       { cmd: '/search', desc: 'Search across repo', icon: 'lucide:search' },
-      {
-        cmd: '/commit',
-        desc: 'Commit changes (AI if empty)',
-        icon: 'lucide:git-commit-horizontal',
-      },
+      { cmd: '/fix', desc: 'Fix errors in code', icon: 'lucide:wrench' },
+      { cmd: '/test', desc: 'Write tests for code', icon: 'lucide:flask-conical' },
+      { cmd: '/review', desc: 'Code review current changes', icon: 'lucide:scan-eye' },
+      // Git
+      { cmd: '/commit', desc: 'Commit changes (AI message)', icon: 'lucide:git-commit-horizontal' },
       { cmd: '/diff', desc: 'Show changes', icon: 'lucide:git-compare' },
-      { cmd: '/skill', desc: 'Open skill commands', icon: 'lucide:sparkles' },
-      { cmd: '/skill find', desc: 'Search for more skills', icon: 'lucide:search' },
-      { cmd: '/skill use', desc: 'Apply a bundled skill', icon: 'lucide:play' },
       { cmd: '/changes', desc: 'Pre-commit review', icon: 'lucide:eye' },
       { cmd: '/unstage', desc: 'Unstage all staged files', icon: 'lucide:minus-circle' },
       { cmd: '/undo', desc: 'Undo last commit', icon: 'lucide:undo-2' },
@@ -1902,12 +1920,20 @@ export function AgentPanel() {
       { cmd: '/push', desc: 'Push to origin', icon: 'lucide:arrow-up-circle' },
       { cmd: '/sync', desc: 'Pull and push current branch', icon: 'lucide:refresh-cw' },
       { cmd: '/pr', desc: 'View pull requests', icon: 'lucide:git-pull-request' },
-      {
-        cmd: '/pr create',
-        desc: 'Create pull request',
-        icon: 'lucide:git-pull-request-create-arrow',
-      },
+      { cmd: '/pr create', desc: 'Create pull request', icon: 'lucide:git-pull-request-create-arrow' },
       { cmd: '/merge', desc: 'Merge pull request', icon: 'lucide:git-merge' },
+      // Modes
+      { cmd: '/ask', desc: 'Switch to Ask mode', icon: 'lucide:message-circle' },
+      { cmd: '/agent', desc: 'Switch to Agent mode', icon: 'lucide:bot' },
+      { cmd: '/plan', desc: 'Switch to Plan mode', icon: 'lucide:list-checks' },
+      // Session
+      { cmd: '/clear', desc: 'Clear chat history', icon: 'lucide:trash-2' },
+      { cmd: '/compact', desc: 'Compact session context', icon: 'lucide:minimize-2' },
+      { cmd: '/model', desc: 'Show or set model', icon: 'lucide:cpu' },
+      // Skills
+      { cmd: '/skill', desc: 'Open skill commands', icon: 'lucide:sparkles' },
+      { cmd: '/skill find', desc: 'Search for more skills', icon: 'lucide:search' },
+      { cmd: '/skill use', desc: 'Apply a bundled skill', icon: 'lucide:play' },
     ]
     const term = input.toLowerCase()
     return cmds.filter((c) => c.cmd.startsWith(term))
@@ -1939,6 +1965,30 @@ export function AgentPanel() {
           setActiveSuggestionIdx(-1)
           setInput('')
           return
+        }
+      }
+      // ↑/↓: navigate input history (only when input is empty or at history position)
+      if (e.key === 'ArrowUp' && !e.shiftKey) {
+        const textarea = inputRef.current
+        if (textarea && textarea.selectionStart === 0 && textarea.selectionEnd === 0) {
+          historyNav.current.setDraft(input)
+          const prev = historyNav.current.up()
+          if (prev !== null) {
+            e.preventDefault()
+            setInput(prev)
+            return
+          }
+        }
+      }
+      if (e.key === 'ArrowDown' && !e.shiftKey) {
+        const textarea = inputRef.current
+        if (textarea && textarea.selectionStart === textarea.value.length) {
+          const next = historyNav.current.down()
+          if (next !== null) {
+            e.preventDefault()
+            setInput(next)
+            return
+          }
         }
       }
       // Shift+Tab: cycle agent mode (Ask → Agent → Plan → Ask)
