@@ -120,6 +120,9 @@ export const ChatHome = memo(function ChatHome({
     verificationUri: string
   } | null>(null)
   const [authLoading, setAuthLoading] = useState(false)
+  const [showPatInput, setShowPatInput] = useState(false)
+  const [patInput, setPatInput] = useState('')
+  const patInputRef = useRef<HTMLInputElement>(null)
   const deviceFlowAbort = useRef<AbortController | null>(null)
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
@@ -163,6 +166,18 @@ export const ChatHome = memo(function ChatHome({
     setDeviceFlow(null)
     setAuthLoading(false)
   }, [])
+
+  const handlePatSubmit = useCallback(() => {
+    const t = patInput.trim()
+    if (!t) return
+    setManualToken(t)
+    setPatInput('')
+    setShowPatInput(false)
+  }, [patInput, setManualToken])
+
+  useEffect(() => {
+    if (showPatInput) setTimeout(() => patInputRef.current?.focus(), 100)
+  }, [showPatInput])
 
   const handleRepoConnect = useCallback(async () => {
     const val = repoInput
@@ -330,15 +345,66 @@ export const ChatHome = memo(function ChatHome({
               )}
 
               {/* Sign in with GitHub — when no token */}
-              {!ghAuthenticated && !deviceFlow && (
-                <button
-                  onClick={startGitHubSignIn}
-                  disabled={authLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <Icon icon="lucide:github" width={14} height={14} />
-                  {authLoading ? 'Signing in…' : 'Sign in with GitHub'}
-                </button>
+              {!ghAuthenticated && !deviceFlow && !showPatInput && (
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    onClick={startGitHubSignIn}
+                    disabled={authLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Icon icon="lucide:github" width={14} height={14} />
+                    {authLoading ? 'Signing in…' : 'Sign in with GitHub'}
+                  </button>
+                  <button
+                    onClick={() => setShowPatInput(true)}
+                    className="text-[11px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                  >
+                    or use a personal access token
+                  </button>
+                </div>
+              )}
+
+              {/* PAT input */}
+              {!ghAuthenticated && showPatInput && !deviceFlow && (
+                <div className="w-full space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 relative">
+                      <Icon icon="lucide:key-round" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+                      <input
+                        ref={patInputRef}
+                        type="password"
+                        value={patInput}
+                        onChange={(e) => setPatInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handlePatSubmit(); if (e.key === 'Escape') setShowPatInput(false) }}
+                        placeholder="ghp_xxxx..."
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={handlePatSubmit}
+                      disabled={!patInput.trim()}
+                      className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-default bg-[var(--brand)] text-[var(--brand-contrast,#fff)]"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-disabled)] leading-relaxed">
+                    Create a token at{' '}
+                    <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline">
+                      github.com/settings/tokens
+                    </a>
+                    {' '}with <span className="font-mono">repo</span> scope. Stored securely on device.
+                  </p>
+                  <button
+                    onClick={() => { setShowPatInput(false); setPatInput('') }}
+                    className="text-[11px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
+                  >
+                    ← back to sign in
+                  </button>
+                </div>
               )}
 
               {/* Device flow — show code */}

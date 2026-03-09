@@ -58,14 +58,19 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
 
   const persistToken = useCallback(async (t: string, src: TokenSource) => {
     if (isTauri()) {
+      let stored = false
       try {
         await tauriInvoke('local_secret_set', {
           service: KEYCHAIN_SERVICE,
           account: KEYCHAIN_ACCOUNT,
           secret: t,
         })
+        stored = true
       } catch {
-        // Keep token in-memory even if keychain write fails.
+        // Keychain unavailable (iOS) — fall back to localStorage
+      }
+      if (!stored) {
+        try { localStorage.setItem('code-editor:gh-token-fallback', btoa(t)) } catch {}
       }
       localStorage.setItem(STORAGE_SOURCE_KEY, src)
     }
@@ -94,7 +99,18 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
             return
           }
         } catch {
-          // Continue to migration fallback.
+          // Keychain unavailable (iOS) — try localStorage fallback
+          try {
+            const fallback = localStorage.getItem('code-editor:gh-token-fallback')
+            if (fallback && !cancelled) {
+              const decoded = atob(fallback)
+              setToken(decoded)
+              setSource('manual')
+              setGithubToken(decoded)
+              setLoading(false)
+              return
+            }
+          } catch {}
         }
       }
 
@@ -167,6 +183,7 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.removeItem(LEGACY_STORAGE_KEY)
       localStorage.removeItem(STORAGE_SOURCE_KEY)
+      localStorage.removeItem('code-editor:gh-token-fallback')
       setToken('')
       setSource('none')
       setGithubToken('')
