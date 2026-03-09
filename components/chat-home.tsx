@@ -117,7 +117,10 @@ export const ChatHome = memo(function ChatHome({
 
   // Fetch GitHub user when token is available
   useEffect(() => {
-    if (!ghToken) { setGhUser(null); return }
+    if (!ghToken) {
+      setGhUser(null)
+      return
+    }
     fetchAuthenticatedUser().then((u) => setGhUser(u))
   }, [ghToken])
 
@@ -148,13 +151,15 @@ export const ChatHome = memo(function ChatHome({
         fullName: ghRepo.full_name,
       }
       setRepo(info)
-      setSavedRecents(addRecent({
-        fullName: ghRepo.full_name,
-        name: ghRepo.name,
-        owner: ghRepo.owner.login,
-        defaultBranch: ghRepo.default_branch,
-        addedAt: Date.now(),
-      }))
+      setSavedRecents(
+        addRecent({
+          fullName: ghRepo.full_name,
+          name: ghRepo.name,
+          owner: ghRepo.owner.login,
+          defaultBranch: ghRepo.default_branch,
+          addedAt: Date.now(),
+        }),
+      )
       setShowRepoInput(false)
       setRepoInput('')
     } catch (err) {
@@ -164,16 +169,19 @@ export const ChatHome = memo(function ChatHome({
     }
   }, [repoInput, setRepo])
 
-  const selectSavedRepo = useCallback((saved: SavedRepo) => {
-    const info: RepoInfo = {
-      owner: saved.owner,
-      repo: saved.name,
-      branch: saved.defaultBranch,
-      fullName: saved.fullName,
-    }
-    setRepo(info)
-    setSavedRecents(addRecent(saved))
-  }, [setRepo])
+  const selectSavedRepo = useCallback(
+    (saved: SavedRepo) => {
+      const info: RepoInfo = {
+        owner: saved.owner,
+        repo: saved.name,
+        branch: saved.defaultBranch,
+        fullName: saved.fullName,
+      }
+      setRepo(info)
+      setSavedRecents(addRecent(saved))
+    },
+    [setRepo],
+  )
 
   useEffect(() => {
     if (showRepoInput) {
@@ -285,8 +293,8 @@ export const ChatHome = memo(function ChatHome({
           <h1 className="text-center text-[28px] sm:text-[32px] font-semibold tracking-[-0.04em] leading-none text-[var(--text-primary)]">
             Let&apos;s weave
           </h1>
-          <p className="mt-2 max-w-[24rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]">
-            Open a repo or describe the change you want, and Knot Code will help you shape it.
+          <p className="mt-2 max-w-[28rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]">
+            Open a project or describe changes, and we&apos;ll help you shape it.
           </p>
 
           {/* Workspace dropdown — hidden on mobile */}
@@ -317,17 +325,29 @@ export const ChatHome = memo(function ChatHome({
                   {/* Favorites */}
                   {savedFavorites.length > 0 && (
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[var(--text-disabled)] font-medium mb-1.5 px-1">Favorites</p>
+                      <p className="text-[10px] uppercase tracking-wider text-[var(--text-disabled)] font-medium mb-1.5 px-1">
+                        Favorites
+                      </p>
                       <div className="space-y-0.5">
-                        {savedFavorites.map(r => (
+                        {savedFavorites.map((r) => (
                           <button
                             key={r.fullName}
                             onClick={() => selectSavedRepo(r)}
                             className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] transition-colors cursor-pointer text-left"
                           >
-                            <Icon icon="lucide:star" width={12} className="text-amber-400 shrink-0" />
-                            <span className="text-[12px] text-[var(--text-primary)] truncate flex-1">{r.fullName}</span>
-                            <Icon icon="lucide:chevron-right" width={12} className="text-[var(--text-disabled)] shrink-0" />
+                            <Icon
+                              icon="lucide:star"
+                              width={12}
+                              className="text-amber-400 shrink-0"
+                            />
+                            <span className="text-[12px] text-[var(--text-primary)] truncate flex-1">
+                              {r.fullName}
+                            </span>
+                            <Icon
+                              icon="lucide:chevron-right"
+                              width={12}
+                              className="text-[var(--text-disabled)] shrink-0"
+                            />
                           </button>
                         ))}
                       </div>
@@ -337,19 +357,34 @@ export const ChatHome = memo(function ChatHome({
                   {/* Recents */}
                   {savedRecents.length > 0 && (
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[var(--text-disabled)] font-medium mb-1.5 px-1">Recent</p>
+                      <p className="text-[10px] uppercase tracking-wider text-[var(--text-disabled)] font-medium mb-1.5 px-1">
+                        Recent
+                      </p>
                       <div className="space-y-0.5">
-                        {savedRecents.filter(r => !savedFavorites.some(f => f.fullName === r.fullName)).slice(0, 5).map(r => (
-                          <button
-                            key={r.fullName}
-                            onClick={() => selectSavedRepo(r)}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] transition-colors cursor-pointer text-left"
-                          >
-                            <Icon icon="lucide:clock" width={12} className="text-[var(--text-disabled)] shrink-0" />
-                            <span className="text-[12px] text-[var(--text-primary)] truncate flex-1">{r.fullName}</span>
-                            <Icon icon="lucide:chevron-right" width={12} className="text-[var(--text-disabled)] shrink-0" />
-                          </button>
-                        ))}
+                        {savedRecents
+                          .filter((r) => !savedFavorites.some((f) => f.fullName === r.fullName))
+                          .slice(0, 5)
+                          .map((r) => (
+                            <button
+                              key={r.fullName}
+                              onClick={() => selectSavedRepo(r)}
+                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] transition-colors cursor-pointer text-left"
+                            >
+                              <Icon
+                                icon="lucide:clock"
+                                width={12}
+                                className="text-[var(--text-disabled)] shrink-0"
+                              />
+                              <span className="text-[12px] text-[var(--text-primary)] truncate flex-1">
+                                {r.fullName}
+                              </span>
+                              <Icon
+                                icon="lucide:chevron-right"
+                                width={12}
+                                className="text-[var(--text-disabled)] shrink-0"
+                              />
+                            </button>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -370,15 +405,28 @@ export const ChatHome = memo(function ChatHome({
                 <div className="w-full">
                   <div className="flex items-center gap-1.5">
                     <div className="flex-1 relative">
-                      <Icon icon="lucide:github" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+                      <Icon
+                        icon="lucide:github"
+                        width={14}
+                        height={14}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+                      />
                       <input
                         ref={repoInputRef}
                         type="text"
                         value={repoInput}
-                        onChange={(e) => { setRepoInput(e.target.value); setRepoError(null) }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleRepoConnect(); if (e.key === 'Escape') setShowRepoInput(false) }}
+                        onChange={(e) => {
+                          setRepoInput(e.target.value)
+                          setRepoError(null)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRepoConnect()
+                          if (e.key === 'Escape') setShowRepoInput(false)
+                        }}
                         placeholder="owner/repo"
-                        autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
                         className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
                       />
                     </div>
@@ -390,14 +438,19 @@ export const ChatHome = memo(function ChatHome({
                       {repoLoading ? '…' : 'Go'}
                     </button>
                   </div>
-                  {repoError && <p className="mt-1.5 text-[11px] text-[var(--color-deletions)]">{repoError}</p>}
+                  {repoError && (
+                    <p className="mt-1.5 text-[11px] text-[var(--color-deletions)]">{repoError}</p>
+                  )}
                 </div>
               )}
 
               {/* Connected repo — tap to switch */}
               {hasWorkspace && (
                 <button
-                  onClick={() => { setRepo(null); setShowRepoInput(false) }}
+                  onClick={() => {
+                    setRepo(null)
+                    setShowRepoInput(false)
+                  }}
                   className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 >
                   <Icon icon="lucide:folder-git-2" width={13} height={13} className="opacity-60" />
