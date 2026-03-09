@@ -73,8 +73,8 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
   const isLast = idx === steps.length - 1
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-[90] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
         className="relative w-[min(560px,92vw)] rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
