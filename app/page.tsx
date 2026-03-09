@@ -38,10 +38,9 @@ const GitSidebarPanel = dynamic(
 )
 
 // Overlay modals — lazy loaded
-const QuickOpen = dynamic(
-  () => import('@/components/quick-open').then((m) => m.QuickOpen),
-  { ssr: false },
-)
+const QuickOpen = dynamic(() => import('@/components/quick-open').then((m) => m.QuickOpen), {
+  ssr: false,
+})
 const GlobalSearch = dynamic(
   () => import('@/components/global-search').then((m) => m.GlobalSearch),
   { ssr: false },
@@ -134,7 +133,7 @@ export default function EditorLayout() {
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
   const mobileViewTabs = useMemo(() => {
     // On mobile, curate tabs to useful views + always include settings
-    const mobile = visibleViews.filter(v => !['preview', 'diff', 'workshop'].includes(v))
+    const mobile = visibleViews.filter((v) => !['preview', 'diff', 'workshop'].includes(v))
     if (!mobile.includes('settings')) mobile.push('settings')
     return mobile.slice(0, 5)
   }, [visibleViews])
@@ -526,13 +525,13 @@ export default function EditorLayout() {
         {/* View navigation bar — folder tabs */}
         {isMobile ? (
           <div
-            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-3 pb-2"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
+            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-4 pb-1.5"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.25rem)', minHeight: 44 }}
           >
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[14px] font-semibold text-[var(--text-primary)] tracking-tight">
+                  <span className="text-[17px] font-semibold text-[var(--text-primary)] tracking-tight">
                     {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                   </span>
                   <span
@@ -705,10 +704,10 @@ export default function EditorLayout() {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`mode-${mode}-${useCenteredTerminal && terminalVisible ? 'term' : activeView}`}
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden"
           >
             {/* TUI mode: gateway terminal fills center */}
@@ -783,8 +782,8 @@ export default function EditorLayout() {
                   initial={{ y: 520 }}
                   animate={{ y: 0 }}
                   exit={{ y: 520 }}
-                  transition={TERMINAL_SPRING}
-                  className="fixed left-1.5 right-1.5 z-[80] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
+                  transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                  className="fixed left-1.5 right-1.5 z-[80] overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl flex flex-col"
                   style={
                     {
                       bottom: mobileTerminalOffset,
@@ -795,7 +794,10 @@ export default function EditorLayout() {
                     } as React.CSSProperties
                   }
                 >
-                  <div className="h-12 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+                  <div className="flex justify-center pt-2 pb-0.5">
+                    <div className="w-9 h-1 rounded-full bg-[var(--text-disabled)] opacity-40" />
+                  </div>
+                  <div className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
                     <span className="text-[13px] font-semibold text-[var(--text-primary)] flex items-center gap-2.5">
                       <Icon
                         icon="lucide:terminal"
@@ -813,7 +815,7 @@ export default function EditorLayout() {
                       <Icon icon="lucide:x" width={16} height={16} />
                     </button>
                   </div>
-                  <div className="h-[calc(100%-48px)]">
+                  <div className="flex-1 min-h-0">
                     <TerminalPanel
                       visible={terminalVisible && !terminalFloating}
                       height={terminalHeight}
@@ -860,12 +862,16 @@ export default function EditorLayout() {
         {showMobileBottomTabs && (
           <div
             className="shrink-0 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black)]"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            style={{
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              overscrollBehavior: 'none',
+            }}
           >
             <div
               className="grid"
               style={{
                 gridTemplateColumns: `repeat(${mobileViewTabs.length}, minmax(0, 1fr))`,
+                minHeight: 49,
               }}
             >
               {mobileViewTabs.map((v) => {
@@ -876,19 +882,18 @@ export default function EditorLayout() {
                     type="button"
                     onClick={() => {
                       setView(v)
-                      if ('vibrate' in navigator) navigator.vibrate(5)
                     }}
                     whileTap={{ scale: 0.92 }}
-                    className={`relative flex min-w-0 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors touch-manipulation ${
+                    className={`relative mx-1 my-1 flex min-w-0 flex-col items-center gap-0.5 rounded-xl border py-2 text-[10px] font-medium transition-colors touch-manipulation ${
                       isActive
-                        ? 'text-[var(--brand)]'
-                        : 'text-[var(--text-disabled)]'
+                        ? 'border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] shadow-[0_8px_20px_color-mix(in_srgb,var(--brand)_10%,transparent)]'
+                        : 'border-transparent text-[var(--text-disabled)]'
                     } ${flashedTab === v ? 'animate-badge-pop' : ''}`}
                     title={VIEW_ICONS[v].label}
                     style={{ minHeight: 44, WebkitTapHighlightColor: 'transparent' }}
                   >
                     <span className="relative">
-                      <Icon icon={VIEW_ICONS[v].icon} width={20} height={20} />
+                      <Icon icon={VIEW_ICONS[v].icon} width={24} height={24} />
                       {v === 'git' && dirtyCount > 0 && (
                         <span className="absolute -right-2 -top-1 min-w-[14px] rounded-full bg-[var(--brand)] px-0.5 text-center text-[8px] font-bold leading-[14px] text-[var(--brand-contrast)]">
                           {dirtyCount > 9 ? '9+' : dirtyCount}
@@ -908,9 +913,7 @@ export default function EditorLayout() {
       </div>
 
       {/* Git sidebar panel — Codex-style always-visible right panel */}
-      {!isMobile && mode !== 'tui' && layout.isVisible('gitPanel') && (
-        <GitSidebarPanel />
-      )}
+      {!isMobile && mode !== 'tui' && layout.isVisible('gitPanel') && <GitSidebarPanel />}
 
       {/* Plugins */}
       <SpotifyPlugin />
@@ -928,17 +931,17 @@ export default function EditorLayout() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[85] bg-black/50 backdrop-blur-sm"
+              className="fixed inset-0 z-[85] bg-black/60"
               onClick={() => setMobileSidebarOpen(false)}
               aria-label="Close workspace drawer"
             />
             <motion.div
               key="mobile-sidebar-drawer"
-              initial={{ x: -32, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -32, opacity: 0 }}
-              transition={TERMINAL_SPRING}
-              className="fixed left-2 z-[90]"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+              className="fixed left-0 z-[90] w-[280px]"
               style={{
                 top: 'calc(env(safe-area-inset-top) + 0.5rem)',
                 bottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)',

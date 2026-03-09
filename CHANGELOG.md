@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.6.0] — 2026-03-09
+
+### Added
+
+- **Cross-platform desktop release assets** — GitHub releases now attach macOS (`.dmg`), Linux (`.AppImage`, `.deb`), and Windows (`.exe`, `.msi`) installers from the release workflow
+
+### Changed
+
+- **Version metadata aligned** — Synced app, Tauri, Rust, and Apple bundle versions for the 1.6.0 release
+
 ## [1.5.0] — 2026-03-08
 
 ### Added

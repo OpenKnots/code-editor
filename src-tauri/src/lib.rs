@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(not(target_os = "ios"))]
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
-    Emitter, Manager, WebviewUrl, WebviewWindowBuilder,
+    WebviewUrl, WebviewWindowBuilder,
 };
 
 #[cfg(target_os = "ios")]
@@ -85,7 +85,7 @@ pub fn run() {
             setup_desktop_menu(app)?;
         }
 
-        // iOS: make WKWebView fill the entire screen edge-to-edge
+        // iOS: edge-to-edge WKWebView, status bar, and scroll tuning
         #[cfg(target_os = "ios")]
         {
             use tauri::Manager;
@@ -93,7 +93,7 @@ pub fn run() {
                 let _ = ww.with_webview(move |wv| {
                     unsafe {
                         let wk_ptr = wv.inner() as *mut objc2::runtime::AnyObject;
-                        // Get the scrollView from WKWebView
+
                         let scroll_view: *mut objc2::runtime::AnyObject =
                             objc2::msg_send![wk_ptr, scrollView];
                         // contentInsetAdjustmentBehavior = .never (2)
@@ -101,8 +101,12 @@ pub fn run() {
                             scroll_view,
                             setContentInsetAdjustmentBehavior: 2_isize
                         ];
+                        // Disable horizontal bounce to prevent accidental swipe-bounce
+                        let _: () = objc2::msg_send![
+                            scroll_view,
+                            setAlwaysBounceHorizontal: false
+                        ];
 
-                        // Also configure the view controller to extend layout under all bars
                         let vc_ptr = wv.view_controller() as *mut objc2::runtime::AnyObject;
                         if !vc_ptr.is_null() {
                             // edgesForExtendedLayout = UIRectEdgeAll (15)
@@ -114,6 +118,11 @@ pub fn run() {
                             let _: () = objc2::msg_send![
                                 vc_ptr,
                                 setExtendedLayoutIncludesOpaqueBars: true
+                            ];
+                            // preferredStatusBarStyle = .lightContent (1)
+                            let _: () = objc2::msg_send![
+                                vc_ptr,
+                                setNeedsStatusBarAppearanceUpdate
                             ];
                         }
                     }

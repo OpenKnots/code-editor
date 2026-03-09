@@ -514,11 +514,11 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-end sm:items-start justify-center bg-black/45 sm:pt-[12vh]"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[640px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl animate-scale-in"
+        className="w-full max-w-full sm:max-w-[640px] overflow-hidden rounded-t-2xl sm:rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl animate-scale-in max-h-[85vh] sm:max-h-none flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">

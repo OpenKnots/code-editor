@@ -39,10 +39,8 @@ export function AgentApproval() {
       }
       setApprovals((prev) => [request, ...prev])
 
-      // Vibrate on mobile if supported
-      if ('vibrate' in navigator) {
-        navigator.vibrate([100, 50, 100])
-      }
+      // TODO: native haptics via Tauri iOS plugin (UIImpactFeedbackGenerator)
+      // navigator.vibrate is a no-op on iOS WKWebView
     })
 
     return unsub

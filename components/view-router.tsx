@@ -9,10 +9,9 @@ const EditorView = dynamic(
   () => import('@/components/views/editor-view').then((m) => m.EditorView),
   { ssr: false },
 )
-const GitView = dynamic(
-  () => import('@/components/views/git-view').then((m) => m.GitView),
-  { ssr: false },
-)
+const GitView = dynamic(() => import('@/components/views/git-view').then((m) => m.GitView), {
+  ssr: false,
+})
 const WorkshopView = dynamic(
   () => import('@/components/views/workshop-view').then((m) => m.WorkshopView),
   { ssr: false },
@@ -29,10 +28,9 @@ const PreviewPanel = dynamic(
   () => import('@/components/preview/preview-panel').then((m) => m.PreviewPanel),
   { ssr: false },
 )
-const AgentPanel = dynamic(
-  () => import('@/components/agent-panel').then((m) => m.AgentPanel),
-  { ssr: false },
-)
+const AgentPanel = dynamic(() => import('@/components/agent-panel').then((m) => m.AgentPanel), {
+  ssr: false,
+})
 
 const VIEW_ICONS: Record<string, { label: string }> = {
   chat: { label: 'Chat' },
@@ -45,19 +43,16 @@ const VIEW_ICONS: Record<string, { label: string }> = {
 }
 
 const viewVariants = {
-  enter: (dir: 'forward' | 'back') => ({
-    x: dir === 'forward' ? 60 : -60,
+  enter: () => ({
     opacity: 0,
   }),
   center: {
-    x: 0,
     opacity: 1,
-    transition: { type: 'spring' as const, stiffness: 500, damping: 35 },
+    transition: { duration: 0.15, ease: [0.16, 1, 0.3, 1] as const },
   },
-  exit: (dir: 'forward' | 'back') => ({
-    x: dir === 'forward' ? -60 : 60,
+  exit: () => ({
     opacity: 0,
-    transition: { duration: 0.15 },
+    transition: { duration: 0.1 },
   }),
 }
 

@@ -4,6 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Suppress iOS tap highlight globally */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    Shared Structural Tokens (all themes)
    ══════════════════════════════════════════════════════════════════ */
@@ -132,6 +137,11 @@
 }
 
 @media (max-width: 768px) {
+  body {
+    font-size: 15px;
+    -webkit-text-size-adjust: 100%;
+  }
+
   /*
    * Prevent iOS from auto-zooming when a text control receives focus.
    * Safari triggers that behavior for controls rendered below 16px.
@@ -1073,6 +1083,12 @@ body {
   .app-shell {
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
+    overscroll-behavior-y: none;
+  }
+
+  /* GPU compositing for animated overlays on mobile */
+  .shell-frame {
+    transform: translateZ(0);
   }
 }
 
@@ -2489,12 +2505,27 @@ p {
 }
 
 @media (max-width: 768px) {
+  .knot-bg-root {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
   .knot-bg-logos {
     inset: -16%;
     width: 132%;
     height: 132%;
-    opacity: 0.72;
-    transform: translate(-6%, -7%) rotate(-8deg) scale(1.06);
+    opacity: 0.52;
+    transform: translate(-6%, -7%) rotate(-8deg) scale(1.06) translateZ(0);
+  }
+
+  .knot-bg-grid {
+    opacity: 0.42;
+  }
+
+  .knot-bg-glow {
+    opacity: 0.68;
+    filter: blur(72px);
+    transform: translateX(-50%) translateZ(0);
   }
 }
 
@@ -3582,6 +3613,12 @@ p {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/* Prevent scroll chaining on overlay/modal containers */
+.fixed[class*='z-['] > [class*='overflow-y-auto'],
+.fixed[class*='z-['] > [class*='overflow-auto'] {
+  overscroll-behavior: contain;
 }
 
 /* ──────────────────────────────────────────────────────────────────

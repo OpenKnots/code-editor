@@ -115,7 +115,10 @@ export const ChatHome = memo(function ChatHome({
   const [repoError, setRepoError] = useState<string | null>(null)
   const repoInputRef = useRef<HTMLInputElement>(null)
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null)
-  const [deviceFlow, setDeviceFlow] = useState<{ userCode: string; verificationUri: string } | null>(null)
+  const [deviceFlow, setDeviceFlow] = useState<{
+    userCode: string
+    verificationUri: string
+  } | null>(null)
   const [authLoading, setAuthLoading] = useState(false)
   const deviceFlowAbort = useRef<AbortController | null>(null)
 
@@ -123,8 +126,11 @@ export const ChatHome = memo(function ChatHome({
 
   // Fetch GitHub user when token is available
   useEffect(() => {
-    if (!ghToken) { setGhUser(null); return }
-    fetchAuthenticatedUser().then(u => setGhUser(u))
+    if (!ghToken) {
+      setGhUser(null)
+      return
+    }
+    fetchAuthenticatedUser().then((u) => setGhUser(u))
   }, [ghToken])
 
   // GitHub Device Flow sign-in
@@ -135,7 +141,11 @@ export const ChatHome = memo(function ChatHome({
       const flow = await startDeviceFlow()
       setDeviceFlow({ userCode: flow.user_code, verificationUri: flow.verification_uri })
       deviceFlowAbort.current = new AbortController()
-      const token = await pollDeviceFlow(flow.device_code, flow.interval, deviceFlowAbort.current.signal)
+      const token = await pollDeviceFlow(
+        flow.device_code,
+        flow.interval,
+        deviceFlowAbort.current.signal,
+      )
       setManualToken(token)
       setDeviceFlow(null)
     } catch (err) {
@@ -155,7 +165,11 @@ export const ChatHome = memo(function ChatHome({
   }, [])
 
   const handleRepoConnect = useCallback(async () => {
-    const val = repoInput.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '')
+    const val = repoInput
+      .trim()
+      .replace(/^https?:\/\/github\.com\//, '')
+      .replace(/\.git$/, '')
+      .replace(/\/$/, '')
     if (!val || !val.includes('/')) {
       setRepoError('Enter owner/repo (e.g. OpenKnots/code-editor)')
       return
@@ -276,7 +290,7 @@ export const ChatHome = memo(function ChatHome({
   return (
     <div className="flex-1 overflow-y-auto relative">
       <KnotBackground />
-      <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[15vh] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
+      <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[clamp(2.75rem,8vh,5rem)] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
         {/* Header — "Let's build" */}
         <div className="flex flex-col items-center mb-6 sm:mb-7">
           <div
@@ -290,6 +304,9 @@ export const ChatHome = memo(function ChatHome({
           <h1 className="text-center text-[28px] sm:text-[32px] font-semibold tracking-[-0.04em] leading-none text-[var(--text-primary)]">
             Let&apos;s weave
           </h1>
+          <p className="mt-2 max-w-[24rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]">
+            Open a repo or describe the change you want, and Knot Code will help you shape it.
+          </p>
 
           {/* Workspace dropdown — hidden on mobile */}
           <button
@@ -354,9 +371,14 @@ export const ChatHome = memo(function ChatHome({
               {ghAuthenticated && !hasWorkspace && !showRepoInput && (
                 <button
                   onClick={() => setShowRepoInput(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[12px] font-medium text-[var(--text-primary)] shadow-[0_8px_24px_color-mix(in_srgb,var(--brand)_10%,transparent)] hover:border-[color-mix(in_srgb,var(--brand)_40%,var(--border))] hover:bg-[color-mix(in_srgb,var(--brand)_16%,transparent)] transition-all cursor-pointer"
                 >
-                  <Icon icon="lucide:folder-git-2" width={14} height={14} />
+                  <Icon
+                    icon="lucide:folder-git-2"
+                    width={15}
+                    height={15}
+                    className="text-[var(--brand)]"
+                  />
                   Connect a repository
                 </button>
               )}
@@ -366,13 +388,24 @@ export const ChatHome = memo(function ChatHome({
                 <div className="w-full">
                   <div className="flex items-center gap-1.5">
                     <div className="flex-1 relative">
-                      <Icon icon="lucide:github" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+                      <Icon
+                        icon="lucide:github"
+                        width={14}
+                        height={14}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+                      />
                       <input
                         ref={repoInputRef}
                         type="text"
                         value={repoInput}
-                        onChange={(e) => { setRepoInput(e.target.value); setRepoError(null) }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleRepoConnect(); if (e.key === 'Escape') setShowRepoInput(false) }}
+                        onChange={(e) => {
+                          setRepoInput(e.target.value)
+                          setRepoError(null)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRepoConnect()
+                          if (e.key === 'Escape') setShowRepoInput(false)
+                        }}
                         placeholder="owner/repo"
                         autoCapitalize="off"
                         autoCorrect="off"
@@ -394,7 +427,10 @@ export const ChatHome = memo(function ChatHome({
               {/* Connected repo */}
               {hasWorkspace && (
                 <button
-                  onClick={() => { setRepo(null); setShowRepoInput(true) }}
+                  onClick={() => {
+                    setRepo(null)
+                    setShowRepoInput(true)
+                  }}
                   className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 >
                   <Icon icon="lucide:folder-git-2" width={13} height={13} className="opacity-60" />
