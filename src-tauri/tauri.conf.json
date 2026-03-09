@@ -40,7 +40,8 @@
       "icons/icon.ico"
     ],
     "iOS": {
-      "minimumSystemVersion": "17.0"
+      "minimumSystemVersion": "17.0",
+      "infoPlist": "Info.ios.plist"
     }
   },
   "plugins": {}

@@ -22,6 +22,7 @@ const PLUGIN_META: Record<string, { label: string; icon: string; color: string; 
 
 const SECTION_COLLAPSED_KEY = 'ce:git-addons-collapsed'
 const MINIMIZED_KEY = 'ce:git-addons-minimized'
+const ACTIVE_PLUGIN_KEY = 'ce:git-addons-active'
 
 type MinimizedState = Record<string, boolean>
 
@@ -66,13 +67,12 @@ function CardShell({
 }) {
   return (
     <article
-      className={`shrink-0 snap-start overflow-hidden rounded-2xl border bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)] ${
+      className={`w-full overflow-hidden rounded-2xl border bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)] ${
         dimmed
           ? 'border-[var(--border)] opacity-80'
           : 'border-[color-mix(in_srgb,var(--border)_65%,transparent)]'
       }`}
       style={{
-        width: 296,
         boxShadow: dimmed
           ? undefined
           : `inset 0 1px 0 color-mix(in_srgb, ${accentColor} 16%, transparent), var(--shadow-sm)`,
@@ -334,13 +334,16 @@ export function GitSidebarAddons() {
   const layout = useLayout()
   const [collapsed, setCollapsed] = useState(false)
   const [minimized, setMinimized] = useState<MinimizedState>({})
+  const [activePluginId, setActivePluginId] = useState('')
 
   useEffect(() => {
     try {
       const storedCollapsed = localStorage.getItem(SECTION_COLLAPSED_KEY)
       const storedMinimized = localStorage.getItem(MINIMIZED_KEY)
+      const storedActivePlugin = localStorage.getItem(ACTIVE_PLUGIN_KEY)
       if (storedCollapsed === 'true') setCollapsed(true)
       if (storedMinimized) setMinimized(JSON.parse(storedMinimized) as MinimizedState)
+      if (storedActivePlugin) setActivePluginId(storedActivePlugin)
     } catch {}
   }, [])
 
@@ -348,15 +351,39 @@ export function GitSidebarAddons() {
     try {
       localStorage.setItem(SECTION_COLLAPSED_KEY, String(collapsed))
       localStorage.setItem(MINIMIZED_KEY, JSON.stringify(minimized))
+      if (activePluginId) localStorage.setItem(ACTIVE_PLUGIN_KEY, activePluginId)
     } catch {}
-  }, [collapsed, minimized])
+  }, [activePluginId, collapsed, minimized])
 
   const sortedEntries = useMemo(
     () => [...slots.sidebar].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [slots.sidebar],
   )
 
-  if (!layout.isVisible('plugins') || sortedEntries.length === 0) return null
+  useEffect(() => {
+    if (sortedEntries.length === 0) return
+
+    setActivePluginId((current) => {
+      if (current && sortedEntries.some((entry) => entry.id === current)) return current
+      return sortedEntries[0]?.id ?? ''
+    })
+  }, [sortedEntries])
+
+  const activeEntry = useMemo(
+    () => sortedEntries.find((entry) => entry.id === activePluginId) ?? sortedEntries[0] ?? null,
+    [activePluginId, sortedEntries],
+  )
+
+  if (!layout.isVisible('plugins') || sortedEntries.length === 0 || !activeEntry) return null
+
+  const activeMeta = PLUGIN_META[activeEntry.id]
+  const accentColor = activeMeta?.color ?? 'var(--brand)'
+  const label = activeMeta?.label ?? activeEntry.id
+  const enabled = isPluginEnabled(activeEntry.id)
+  const isMinimized = minimized[activeEntry.id] ?? false
+  const pipActive = pipPluginId === activeEntry.id
+  const Comp = activeEntry.component
+  const shouldMountInline = enabled && !pipActive
 
   return (
     <section className="shrink-0 border-t border-[var(--border)] bg-[var(--bg)]">
@@ -366,7 +393,7 @@ export function GitSidebarAddons() {
             Add-ons
           </div>
           <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">
-            Scroll through media tools without leaving the git panel.
+            Switch between media tools without leaving the git panel.
           </p>
         </div>
         <button
@@ -385,32 +412,42 @@ export function GitSidebarAddons() {
       </div>
 
       {collapsed ? (
-        <div className="flex gap-2 overflow-x-auto px-3 pb-3">
+        <div className="flex flex-wrap gap-2 px-3 pb-3">
           {sortedEntries.map((entry) => {
             const meta = PLUGIN_META[entry.id]
-            const enabled = isPluginEnabled(entry.id)
+            const entryEnabled = isPluginEnabled(entry.id)
+            const isActive = activePluginId === entry.id
+
             return (
               <button
                 key={entry.id}
                 type="button"
                 onClick={() => {
-                  if (!enabled) togglePlugin(entry.id)
+                  setActivePluginId(entry.id)
+                  if (!entryEnabled) togglePlugin(entry.id)
                   setCollapsed(false)
                 }}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-medium transition ${
-                  enabled
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-medium transition ${
+                  isActive
                     ? 'border-[var(--border-hover)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
-                    : 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)]'
+                    : entryEnabled
+                      ? 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)]'
+                      : 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)]'
                 }`}
+                aria-pressed={isActive}
                 title={
-                  enabled ? `Open ${meta?.label ?? entry.id}` : `Enable ${meta?.label ?? entry.id}`
+                  entryEnabled
+                    ? `Open ${meta?.label ?? entry.id}`
+                    : `Enable ${meta?.label ?? entry.id}`
                 }
               >
                 <Icon
                   icon={meta?.icon ?? 'lucide:puzzle'}
                   width={12}
                   height={12}
-                  style={{ color: enabled ? meta?.color : 'var(--text-disabled)' }}
+                  style={{
+                    color: isActive || entryEnabled ? meta?.color : 'var(--text-disabled)',
+                  }}
                 />
                 <span>{meta?.label ?? entry.id}</span>
               </button>
@@ -418,125 +455,153 @@ export function GitSidebarAddons() {
           })}
         </div>
       ) : (
-        <div className="overflow-x-auto px-3 pb-3">
-          <div className="flex min-w-max gap-3 pr-2">
+        <div className="px-3 pb-3">
+          <div className="mb-3 flex flex-wrap gap-2">
             {sortedEntries.map((entry) => {
               const meta = PLUGIN_META[entry.id]
-              const accentColor = meta?.color ?? 'var(--brand)'
-              const label = meta?.label ?? entry.id
-              const enabled = isPluginEnabled(entry.id)
-              const isMinimized = minimized[entry.id] ?? false
-              const pipActive = pipPluginId === entry.id
-              const Comp = entry.component
-              const shouldMountInline = enabled && !pipActive
+              const entryEnabled = isPluginEnabled(entry.id)
+              const isActive = entry.id === activeEntry.id
 
               return (
-                <CardShell key={entry.id} accentColor={accentColor} dimmed={!enabled}>
-                  <div className="flex items-start gap-3 border-b border-[var(--border)] px-3 py-3">
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
-                      style={{ color: accentColor }}
-                    >
-                      <Icon icon={meta?.icon ?? 'lucide:puzzle'} width={16} height={16} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate text-[12px] font-semibold text-[var(--text-primary)]">
-                          {label}
-                        </h3>
-                        <span
-                          className={`rounded-full px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide ${
-                            enabled
-                              ? 'bg-[color-mix(in_srgb,var(--color-additions)_12%,transparent)] text-[var(--color-additions)]'
-                              : 'bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)]'
-                          }`}
-                        >
-                          {enabled ? 'On' : 'Off'}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">
-                        {enabled ? meta?.hint : `Enable ${label} to pin it beneath your changes.`}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {enabled ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setMinimized((current) => ({
-                              ...current,
-                              [entry.id]: !isMinimized,
-                            }))
-                          }
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
-                          title={isMinimized ? `Expand ${label}` : `Minimize ${label}`}
-                          aria-label={isMinimized ? `Expand ${label}` : `Minimize ${label}`}
-                        >
-                          <Icon
-                            icon={isMinimized ? 'lucide:maximize-2' : 'lucide:minimize-2'}
-                            width={14}
-                            height={14}
-                          />
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => togglePlugin(entry.id)}
-                        className={`inline-flex h-8 items-center justify-center rounded-xl border px-2.5 text-[10px] font-medium transition ${
-                          enabled
-                            ? 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]'
-                            : 'border-[color-mix(in_srgb,var(--brand)_22%,transparent)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_16%,transparent)]'
-                        }`}
-                        title={enabled ? `Disable ${label}` : `Enable ${label}`}
-                      >
-                        {enabled ? 'Disable' : 'Enable'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {!enabled ? (
-                    <div className="space-y-3 p-3">
-                      <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg)] p-3">
-                        <p className="text-[11px] font-medium text-[var(--text-primary)]">
-                          Add this to the git rail
-                        </p>
-                        <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">
-                          Turn on {label} to keep playback controls available while you review or
-                          commit.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {(isMinimized || pipActive) && (
-                        <PluginCompactState pluginId={entry.id} pipActive={pipActive} />
-                      )}
-
-                      {shouldMountInline ? (
-                        <div
-                          className={`transition-[height,opacity] duration-200 ${
-                            isMinimized
-                              ? 'h-0 overflow-hidden opacity-0 pointer-events-none'
-                              : 'h-[360px]'
-                          }`}
-                          aria-hidden={isMinimized}
-                        >
-                          <Comp />
-                        </div>
-                      ) : pipActive ? (
-                        <div className="px-3 pb-3">
-                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[10px] text-[var(--text-tertiary)]">
-                            {label} is open in picture-in-picture. The quick controls above stay
-                            active here.
-                          </div>
-                        </div>
-                      ) : null}
-                    </>
-                  )}
-                </CardShell>
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setActivePluginId(entry.id)}
+                  aria-pressed={isActive}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-medium transition ${
+                    isActive
+                      ? 'border-[color-mix(in_srgb,var(--brand)_24%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
+                      : entryEnabled
+                        ? 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                        : 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
+                  }`}
+                  title={`Show ${meta?.label ?? entry.id}`}
+                >
+                  <Icon
+                    icon={meta?.icon ?? 'lucide:puzzle'}
+                    width={12}
+                    height={12}
+                    style={{
+                      color: entryEnabled || isActive ? meta?.color : 'var(--text-disabled)',
+                    }}
+                  />
+                  <span>{meta?.label ?? entry.id}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide ${
+                      entryEnabled
+                        ? 'bg-[color-mix(in_srgb,var(--color-additions)_12%,transparent)] text-[var(--color-additions)]'
+                        : 'bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)]'
+                    }`}
+                  >
+                    {entryEnabled ? 'On' : 'Off'}
+                  </span>
+                </button>
               )
             })}
           </div>
+
+          <CardShell key={activeEntry.id} accentColor={accentColor} dimmed={!enabled}>
+            <div className="flex items-start gap-3 border-b border-[var(--border)] px-3 py-3">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
+                style={{ color: accentColor }}
+              >
+                <Icon icon={activeMeta?.icon ?? 'lucide:puzzle'} width={16} height={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="truncate text-[12px] font-semibold text-[var(--text-primary)]">
+                    {label}
+                  </h3>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide ${
+                      enabled
+                        ? 'bg-[color-mix(in_srgb,var(--color-additions)_12%,transparent)] text-[var(--color-additions)]'
+                        : 'bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-disabled)]'
+                    }`}
+                  >
+                    {enabled ? 'On' : 'Off'}
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">
+                  {enabled ? activeMeta?.hint : `Enable ${label} to pin it beneath your changes.`}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {enabled ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMinimized((current) => ({
+                        ...current,
+                        [activeEntry.id]: !isMinimized,
+                      }))
+                    }
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
+                    title={isMinimized ? `Expand ${label}` : `Minimize ${label}`}
+                    aria-label={isMinimized ? `Expand ${label}` : `Minimize ${label}`}
+                  >
+                    <Icon
+                      icon={isMinimized ? 'lucide:maximize-2' : 'lucide:minimize-2'}
+                      width={14}
+                      height={14}
+                    />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => togglePlugin(activeEntry.id)}
+                  className={`inline-flex h-8 items-center justify-center rounded-xl border px-2.5 text-[10px] font-medium transition ${
+                    enabled
+                      ? 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]'
+                      : 'border-[color-mix(in_srgb,var(--brand)_22%,transparent)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_16%,transparent)]'
+                  }`}
+                  title={enabled ? `Disable ${label}` : `Enable ${label}`}
+                >
+                  {enabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </div>
+
+            {!enabled ? (
+              <div className="space-y-3 p-3">
+                <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg)] p-3">
+                  <p className="text-[11px] font-medium text-[var(--text-primary)]">
+                    Add this to the git rail
+                  </p>
+                  <p className="mt-1 text-[10px] leading-4 text-[var(--text-tertiary)]">
+                    Turn on {label} to keep playback controls available while you review or commit.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {(isMinimized || pipActive) && (
+                  <PluginCompactState pluginId={activeEntry.id} pipActive={pipActive} />
+                )}
+
+                {shouldMountInline ? (
+                  <div
+                    className={`transition-[height,opacity] duration-200 ${
+                      isMinimized
+                        ? 'h-0 overflow-hidden pointer-events-none opacity-0'
+                        : 'h-[360px]'
+                    }`}
+                    aria-hidden={isMinimized}
+                  >
+                    <Comp />
+                  </div>
+                ) : pipActive ? (
+                  <div className="px-3 pb-3">
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[10px] text-[var(--text-tertiary)]">
+                      {label} is open in picture-in-picture. The quick controls above stay active
+                      here.
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </CardShell>
         </div>
       )}
     </section>
