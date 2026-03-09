@@ -631,7 +631,7 @@ export function MessageList({
                   style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }}
                 >
                   <div className="prose-chat">
-                    <MarkdownPreview content={streamBuffer} />
+                    <MarkdownPreview content={streamBuffer} streaming />
                   </div>
                   <span className="inline-block w-1.5 h-3.5 bg-[var(--brand)] animate-pulse ml-0.5 align-text-bottom rounded-sm" />
                 </div>
@@ -704,11 +704,16 @@ export function MessageList({
                     <span />
                     <span />
                   </div>
-                  <span className="text-[11px] text-[var(--text-tertiary)]">
+                  <span className="text-[11px] text-[var(--text-tertiary)] shimmer-text">
                     {thinkingTrail.length > 0
                       ? thinkingTrail[thinkingTrail.length - 1]
                       : 'Thinking...'}
                   </span>
+                  {turnElapsedMs > 0 && (
+                    <span className="text-[9px] text-[var(--text-disabled)] tabular-nums">
+                      {turnElapsedMs < 1000 ? '' : `${(turnElapsedMs / 1000).toFixed(0)}s`}
+                    </span>
+                  )}
                 </div>
               </div>
             )}

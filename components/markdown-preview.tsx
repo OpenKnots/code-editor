@@ -195,15 +195,34 @@ function FloatingCard({
   )
 }
 
-export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, className, streaming }: MarkdownPreviewProps & { streaming?: boolean }) {
+  // Debounce parsing during streaming — parse at most every 150ms
+  const lastParsedRef = useRef('')
+  const lastBlocksRef = useRef<ReturnType<typeof parse>>([])
+  const lastParseTimeRef = useRef(0)
+
   const blocks = useMemo(() => {
+    // During streaming, skip re-parse if content hasn't grown enough or too recent
+    if (streaming && lastBlocksRef.current.length > 0) {
+      const now = Date.now()
+      const timeSince = now - lastParseTimeRef.current
+      const growth = content.length - lastParsedRef.current.length
+      if (timeSince < 150 && growth < 100) {
+        return lastBlocksRef.current
+      }
+    }
+
     const clean =
       typeof window !== 'undefined'
         ? DOMPurify.sanitize(content, { ALLOWED_TAGS: [], KEEP_CONTENT: true })
         : content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     const normalized = normalizeToMarkdown(clean)
-    return parse(normalized)
-  }, [content])
+    const result = parse(normalized)
+    lastParsedRef.current = content
+    lastBlocksRef.current = result
+    lastParseTimeRef.current = Date.now()
+    return result
+  }, [content, streaming])
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [hoverTarget, setHoverTarget] = useState<HoverTarget | null>(null)

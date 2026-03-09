@@ -2170,6 +2170,28 @@ p {
   animation: shimmer 2s infinite;
 }
 
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--text-tertiary) 0%,
+    var(--text-secondary) 40%,
+    var(--text-tertiary) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text {
+    background: none;
+    -webkit-text-fill-color: var(--text-tertiary);
+    animation: none;
+  }
+}
+
 .animate-spin {
   animation: spin 1s linear infinite;
 }
