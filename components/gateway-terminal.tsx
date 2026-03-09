@@ -403,6 +403,7 @@ export function GatewayTerminal() {
   const inputRef = useRef<HTMLInputElement>(null)
   const streamBuf = useRef('')
   const streamId = useRef<string | null>(null)
+  const pendingIdempotencyKeys = useRef(new Set<string>())
 
   // Hydrate history
   useLayoutEffect(() => {
@@ -442,19 +443,28 @@ export function GatewayTerminal() {
       const p = payload as Record<string, unknown>
       const state = p.state as string | undefined
 
-      // Only process events for the terminal's session (main)
+      // Match events belonging to terminal requests
       const eventSessionKey = (p.sessionKey ??
         p.session_key ??
         (typeof p.session === 'object' && p.session !== null
           ? (p.session as Record<string, unknown>).key
           : undefined)) as string | undefined
+      const eventIdempotencyKey = (p.idempotencyKey ?? p.idempotency_key) as string | undefined
 
-      // Debug: log all chat events the terminal sees
-      console.log('[GW-Terminal] chat event:', { state, sessionKey: eventSessionKey, keys: Object.keys(p).join(',') })
+      // Accept if: idempotency key matches one we sent, OR session is 'main', OR no session key
+      const idempotencyMatch = eventIdempotencyKey && pendingIdempotencyKeys.current.has(eventIdempotencyKey)
+      const sessionMatch = !eventSessionKey || eventSessionKey === 'main'
 
-      if (eventSessionKey && eventSessionKey !== 'main') {
-        console.log('[GW-Terminal] skipping event — session mismatch:', eventSessionKey)
+      console.log('[GW-Terminal] chat event:', { state, sessionKey: eventSessionKey, idempotencyKey: eventIdempotencyKey, idempotencyMatch, sessionMatch })
+
+      if (!idempotencyMatch && !sessionMatch) {
+        console.log('[GW-Terminal] skipping event — no match:', eventSessionKey)
         return
+      }
+
+      // Clean up idempotency key on final/error/aborted
+      if (eventIdempotencyKey && (state === 'final' || state === 'error' || state === 'aborted')) {
+        pendingIdempotencyKeys.current.delete(eventIdempotencyKey)
       }
 
       if (state === 'delta') {
@@ -566,10 +576,12 @@ export function GatewayTerminal() {
       }, 180000)
 
       try {
+        const idempotencyKey = `gw-term-${Date.now()}`
+        pendingIdempotencyKeys.current.add(idempotencyKey)
         const resp = (await sendRequest('chat.send', {
           sessionKey: 'main',
           message,
-          idempotencyKey: `gw-term-${Date.now()}`,
+          idempotencyKey,
         })) as Record<string, unknown> | undefined
 
         const respStatus = resp?.status as string | undefined
