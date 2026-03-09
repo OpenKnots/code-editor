@@ -7,7 +7,7 @@ import { KnotBackground } from '@/components/knot-background'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
 import { PermissionsToggle } from '@/components/permissions-toggle'
-import { useRepo } from '@/context/repo-context'
+import { useRepo, type RepoInfo } from '@/context/repo-context'
 import { useLocal } from '@/context/local-context'
 import { useGateway } from '@/context/gateway-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
@@ -15,6 +15,7 @@ import { useEditor } from '@/context/editor-context'
 import { emit } from '@/lib/events'
 import { getRecentFolders } from '@/context/local-context'
 import { getAgentConfig } from '@/lib/agent-session'
+import { fetchRepoByName } from '@/lib/github-api'
 
 const STATIC_SUGGESTIONS = [
   {
@@ -88,10 +89,11 @@ export const ChatHome = memo(function ChatHome({
   const [agentMode, setAgentMode] = useState<AgentMode>('ask')
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const { repo } = useRepo()
+  const { repo, setRepo } = useRepo()
   const local = useLocal()
   const { status } = useGateway()
   const { files: openFiles } = useEditor()
+  const { token: ghToken } = useGitHubAuth()
 
   const repoShort = useMemo(
     () => repo?.fullName?.split('/').pop() ?? local.rootPath?.split('/').pop() ?? null,
@@ -101,6 +103,45 @@ export const ChatHome = memo(function ChatHome({
   const branchName = local.gitInfo?.branch ?? null
 
   const [isComposing, setIsComposing] = useState(false)
+  const [showRepoInput, setShowRepoInput] = useState(false)
+  const [repoInput, setRepoInput] = useState('')
+  const [repoLoading, setRepoLoading] = useState(false)
+  const [repoError, setRepoError] = useState<string | null>(null)
+  const repoInputRef = useRef<HTMLInputElement>(null)
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  const handleRepoConnect = useCallback(async () => {
+    const val = repoInput.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '')
+    if (!val || !val.includes('/')) {
+      setRepoError('Enter owner/repo (e.g. OpenKnots/code-editor)')
+      return
+    }
+    setRepoLoading(true)
+    setRepoError(null)
+    try {
+      const ghRepo = await fetchRepoByName(val)
+      const info: RepoInfo = {
+        owner: ghRepo.owner.login,
+        repo: ghRepo.name,
+        branch: ghRepo.default_branch,
+        fullName: ghRepo.full_name,
+      }
+      setRepo(info)
+      setShowRepoInput(false)
+      setRepoInput('')
+    } catch (err) {
+      setRepoError(err instanceof Error ? err.message : 'Repository not found')
+    } finally {
+      setRepoLoading(false)
+    }
+  }, [repoInput, setRepo])
+
+  useEffect(() => {
+    if (showRepoInput) {
+      setTimeout(() => repoInputRef.current?.focus(), 100)
+    }
+  }, [showRepoInput])
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 100)
@@ -215,10 +256,63 @@ export const ChatHome = memo(function ChatHome({
             {repoShort ?? 'Select workspace'}
             <Icon icon="lucide:chevron-down" width={14} height={14} className="opacity-50" />
           </button>
-          {/* Subtle tagline on mobile */}
-          <p className="mt-2 text-[13px] text-[var(--text-disabled)] sm:hidden">
-            Your AI-powered code companion
-          </p>
+          {/* Mobile project selector */}
+          {isMobile && !hasWorkspace && !showRepoInput && (
+            <button
+              onClick={() => setShowRepoInput(true)}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+            >
+              <Icon icon="lucide:github" width={14} height={14} />
+              Connect a repository
+            </button>
+          )}
+          {isMobile && !hasWorkspace && showRepoInput && (
+            <div className="mt-3 w-full max-w-[320px]">
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 relative">
+                  <Icon icon="lucide:github" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+                  <input
+                    ref={repoInputRef}
+                    type="text"
+                    value={repoInput}
+                    onChange={(e) => { setRepoInput(e.target.value); setRepoError(null) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleRepoConnect(); if (e.key === 'Escape') setShowRepoInput(false) }}
+                    placeholder="owner/repo"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={handleRepoConnect}
+                  disabled={repoLoading || !repoInput.trim()}
+                  className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-default bg-[var(--brand)] text-[var(--brand-contrast,#fff)]"
+                >
+                  {repoLoading ? '…' : 'Go'}
+                </button>
+              </div>
+              {repoError && (
+                <p className="mt-1.5 text-[11px] text-[var(--color-deletions)]">{repoError}</p>
+              )}
+            </div>
+          )}
+          {isMobile && hasWorkspace && (
+            <button
+              onClick={() => { setRepo(null); setShowRepoInput(true) }}
+              className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
+              <Icon icon="lucide:github" width={13} height={13} className="opacity-60" />
+              {repoShort}
+              <Icon icon="lucide:chevron-down" width={12} height={12} className="opacity-40" />
+            </button>
+          )}
+          {/* Subtle tagline on mobile — only when no repo input shown */}
+          {isMobile && hasWorkspace && (
+            <p className="mt-1 text-[11px] text-[var(--text-disabled)]">
+              {repo?.fullName ?? 'local project'}
+            </p>
+          )}
         </div>
 
         {/* "Explore more" link — desktop only */}
