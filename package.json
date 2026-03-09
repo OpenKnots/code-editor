@@ -3,7 +3,7 @@
   "version": "1.6.0",
   "private": true,
   "scripts": {
-    "frontend:dev": "next dev --turbopack",
+    "frontend:dev": "next dev --turbopack --port 3080",
     "frontend:build": "next build",
     "desktop:dev": "pnpm exec tauri dev",
     "ios:dev": "node scripts/tauri-ios-dev.mjs",

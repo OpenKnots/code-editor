@@ -949,7 +949,7 @@ function EmptyPreviewState({
 
       {!hasScripts && (
         <div className="flex flex-col gap-1 text-[10px] text-[var(--text-disabled)]">
-          <span className="font-mono">localhost:3000</span>
+          <span className="font-mono">localhost:3080</span>
           <span className="font-mono">localhost:5173</span>
           <span className="font-mono">localhost:8080</span>
         </div>

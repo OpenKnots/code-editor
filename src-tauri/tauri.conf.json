@@ -5,7 +5,7 @@
   "identifier": "ai.openknot.code-editor",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://127.0.0.1:3000",
+    "devUrl": "http://127.0.0.1:3080",
     "beforeDevCommand": "pnpm frontend:dev",
     "beforeBuildCommand": "pnpm frontend:build"
   },
