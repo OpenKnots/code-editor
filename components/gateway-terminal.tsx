@@ -13,7 +13,15 @@
  * - Raw RPC mode (> method.name key=val)
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useTheme } from '@/context/theme-context'
@@ -450,13 +458,23 @@ export function GatewayTerminal() {
         (typeof p.session === 'object' && p.session !== null
           ? (p.session as Record<string, unknown>).key
           : undefined)) as string | undefined
-      const eventIdempotencyKey = (p.idempotencyKey ?? p.idempotency_key) as string | undefined
+      const eventIdempotencyKey = (p.idempotencyKey ??
+        p.idempotency_key ??
+        p.idemKey ??
+        p.runId) as string | undefined
 
       // Accept if: idempotency key matches one we sent, OR session is terminal's, OR no session key
-      const idempotencyMatch = eventIdempotencyKey && pendingIdempotencyKeys.current.has(eventIdempotencyKey)
+      const idempotencyMatch =
+        eventIdempotencyKey && pendingIdempotencyKeys.current.has(eventIdempotencyKey)
       const sessionMatch = !eventSessionKey || eventSessionKey === TERMINAL_SESSION_KEY
 
-      console.log('[GW-Terminal] chat event:', { state, sessionKey: eventSessionKey, idempotencyKey: eventIdempotencyKey, idempotencyMatch, sessionMatch })
+      console.log('[GW-Terminal] chat event:', {
+        state,
+        sessionKey: eventSessionKey,
+        idempotencyKey: eventIdempotencyKey,
+        idempotencyMatch,
+        sessionMatch,
+      })
 
       if (!idempotencyMatch && !sessionMatch) {
         console.log('[GW-Terminal] skipping event — no match:', eventSessionKey)
@@ -586,7 +604,10 @@ export function GatewayTerminal() {
         })) as Record<string, unknown> | undefined
 
         const respStatus = resp?.status as string | undefined
-        console.log('[GW-Terminal] chat.send response:', { status: respStatus, keys: resp ? Object.keys(resp).join(',') : 'null' })
+        console.log('[GW-Terminal] chat.send response:', {
+          status: respStatus,
+          keys: resp ? Object.keys(resp).join(',') : 'null',
+        })
 
         // Check if the response contains an inline reply (synchronous path)
         const inlineReply = extractEventText(resp)
