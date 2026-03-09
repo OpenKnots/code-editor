@@ -502,17 +502,17 @@ export default function EditorLayout() {
         {/* View navigation bar — folder tabs */}
         {isMobile ? (
           <div
-            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-3 pb-3"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-3 pb-2"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
           >
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-                    Knot Code
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[14px] font-semibold text-[var(--text-primary)] tracking-tight">
+                    {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                   </span>
                   <span
-                    className={`h-2 w-2 rounded-full ${
+                    className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                       status === 'connected'
                         ? 'bg-emerald-400'
                         : status === 'connecting'
@@ -551,27 +551,7 @@ export default function EditorLayout() {
               </button>
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2 text-[11px] text-[var(--text-secondary)]">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    status === 'connected'
-                      ? 'bg-emerald-400'
-                      : status === 'connecting'
-                        ? 'bg-amber-400 animate-pulse'
-                        : 'bg-red-400'
-                  }`}
-                />
-                <span className="truncate">
-                  {status === 'connected'
-                    ? 'Gateway active'
-                    : status === 'connecting'
-                      ? 'Connecting'
-                      : 'Disconnected'}
-                </span>
-              </div>
-
-            </div>
+            {/* Gateway status text removed — dot in header is sufficient */}
           </div>
         ) : (
           <div

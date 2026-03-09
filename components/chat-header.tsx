@@ -31,6 +31,11 @@ export function ChatHeader({
 
   if (!title && messageCount === 0) return null
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  // Hide entire chat header on mobile — saves 40px vertical space
+  if (isMobile) return null
+
   return (
     <div className="shrink-0">
       <div className="flex items-center justify-between h-10 px-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
