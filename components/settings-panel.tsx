@@ -33,8 +33,9 @@ import {
   APPROVAL_TIERS,
   type ApprovalTier,
 } from '@/lib/agent-session'
+import { McpSettings } from './mcp-settings'
 
-type SettingsTab = 'connect' | 'general'
+type SettingsTab = 'connect' | 'general' | 'mcp'
 
 const APPEARANCE_MODES: Array<{ id: ThemeMode; label: string; icon: string }> = [
   { id: 'dark', label: 'Dark', icon: 'lucide:moon-star' },
@@ -285,6 +286,7 @@ export function SettingsPanel({
                       label: 'General',
                       icon: 'lucide:sliders-horizontal',
                     },
+                    { id: 'mcp' as SettingsTab, label: 'MCP', icon: 'lucide:plug' },
                   ].map((item) => {
                     const active = tab === item.id
                     return (
@@ -847,6 +849,8 @@ export function SettingsPanel({
                     </section>
                   </div>
                 )}
+
+                {tab === 'mcp' && <McpSettings />}
               </div>
             </motion.div>
           </div>
@@ -875,6 +879,7 @@ export function SettingsPanel({
             {[
               { id: 'connect' as SettingsTab, label: 'Connect', icon: 'lucide:smartphone' },
               { id: 'general' as SettingsTab, label: 'General', icon: 'lucide:sliders-horizontal' },
+              { id: 'mcp' as SettingsTab, label: 'MCP', icon: 'lucide:plug' },
             ].map((item) => {
               const active = tab === item.id
               return (
@@ -1105,6 +1110,8 @@ export function SettingsPanel({
               </section>
             </div>
           )}
+
+          {tab === 'mcp' && <McpSettings />}
         </div>
       </div>
     </div>
