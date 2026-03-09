@@ -7,6 +7,8 @@ import { MobileConnect } from './mobile-connect'
 import { SessionPresence } from './session-presence'
 import { CaffeinateToggle } from './caffeinate-toggle'
 import { useGateway } from '@/context/gateway-context'
+import { useGitHubAuth } from '@/context/github-auth-context'
+import { fetchAuthenticatedUser, type GitHubUser } from '@/lib/github-api'
 import { THEME_PRESETS, useTheme, type ThemeMode, type ThemePreset } from '@/context/theme-context'
 
 type SettingsTab = 'connect' | 'general'
@@ -46,6 +48,18 @@ export function SettingsPanel({
   const [tab, setTab] = useState<SettingsTab>((initialTab as SettingsTab) || 'connect')
   const { status, gatewayUrl } = useGateway()
   const { themeId, setThemeId, mode, setMode } = useTheme()
+  const { token: ghToken, authenticated: ghAuth, setManualToken, clearToken } = useGitHubAuth()
+  const [ghUser, setGhUser] = useState<GitHubUser | null>(null)
+  const [patInput, setPatInput] = useState('')
+  const [showPatField, setShowPatField] = useState(false)
+
+  // Fetch GitHub user on token change
+  const ghTokenRef = useRef(ghToken)
+  if (ghTokenRef.current !== ghToken) {
+    ghTokenRef.current = ghToken
+    if (ghToken) fetchAuthenticatedUser().then(u => setGhUser(u))
+    else setGhUser(null)
+  }
 
   const themeGroups = useMemo(() => groupThemes(), [])
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
@@ -325,6 +339,110 @@ export function SettingsPanel({
                         </div>
                       </div>
                       <CaffeinateToggle />
+                    </section>
+
+                    {/* GitHub Account */}
+                    <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+                      <div className="mb-3 flex items-center gap-2">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                          <Icon icon="lucide:github" width={14} />
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-medium text-[var(--text-primary)]">GitHub</h3>
+                          <p className="text-[11px] text-[var(--text-secondary)]">
+                            Connect your account to browse repos.
+                          </p>
+                        </div>
+                      </div>
+
+                      {ghAuth && ghUser ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2.5">
+                            {ghUser.avatar_url && (
+                              <img src={ghUser.avatar_url} alt="" className="w-8 h-8 rounded-full border border-[var(--border)]" />
+                            )}
+                            <div>
+                              <p className="text-[13px] font-medium text-[var(--text-primary)]">{ghUser.name ?? ghUser.login}</p>
+                              <p className="text-[11px] text-[var(--text-secondary)]">@{ghUser.login}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => { clearToken(); setGhUser(null) }}
+                            className="text-[12px] text-[var(--color-deletions)] hover:underline cursor-pointer"
+                          >
+                            Sign out
+                          </button>
+                        </div>
+                      ) : ghAuth ? (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          <span className="text-[12px] text-[var(--text-secondary)]">Connected</span>
+                          <button
+                            onClick={() => { clearToken(); setGhUser(null) }}
+                            className="ml-auto text-[12px] text-[var(--color-deletions)] hover:underline cursor-pointer"
+                          >
+                            Sign out
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {!showPatField ? (
+                            <button
+                              onClick={() => setShowPatField(true)}
+                              className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] transition hover:border-[var(--border-hover)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] cursor-pointer"
+                            >
+                              <Icon icon="lucide:key-round" width={14} />
+                              Add Personal Access Token
+                            </button>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex-1 relative">
+                                  <Icon icon="lucide:key-round" width={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+                                  <input
+                                    type="password"
+                                    value={patInput}
+                                    onChange={(e) => setPatInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && patInput.trim()) {
+                                        setManualToken(patInput.trim())
+                                        setPatInput('')
+                                        setShowPatField(false)
+                                      }
+                                      if (e.key === 'Escape') { setShowPatField(false); setPatInput('') }
+                                    }}
+                                    placeholder="ghp_xxxx..."
+                                    autoCapitalize="off"
+                                    autoCorrect="off"
+                                    spellCheck={false}
+                                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    if (patInput.trim()) {
+                                      setManualToken(patInput.trim())
+                                      setPatInput('')
+                                      setShowPatField(false)
+                                    }
+                                  }}
+                                  disabled={!patInput.trim()}
+                                  className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-default bg-[var(--brand)] text-[var(--brand-contrast,#fff)]"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                              <p className="text-[10px] text-[var(--text-disabled)] leading-relaxed">
+                                Create at{' '}
+                                <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline">
+                                  github.com/settings/tokens
+                                </a>
+                                {' '}with <span className="font-mono">repo</span> scope.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </section>
 
                     <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
