@@ -448,7 +448,14 @@ export function GatewayTerminal() {
         (typeof p.session === 'object' && p.session !== null
           ? (p.session as Record<string, unknown>).key
           : undefined)) as string | undefined
-      if (eventSessionKey && eventSessionKey !== 'main') return
+
+      // Debug: log all chat events the terminal sees
+      console.log('[GW-Terminal] chat event:', { state, sessionKey: eventSessionKey, keys: Object.keys(p).join(',') })
+
+      if (eventSessionKey && eventSessionKey !== 'main') {
+        console.log('[GW-Terminal] skipping event — session mismatch:', eventSessionKey)
+        return
+      }
 
       if (state === 'delta') {
         const text = extractEventText(p)
@@ -546,6 +553,18 @@ export function GatewayTerminal() {
       setSending(true)
       streamBuf.current = ''
       streamId.current = null
+
+      // Safety timeout — if nothing arrives via events within 3 min, stop waiting
+      const safetyTimer = setTimeout(() => {
+        setSending((prev) => {
+          if (prev) {
+            addEntry('system', '⏱ Response timed out — no reply received')
+            return false
+          }
+          return prev
+        })
+      }, 180000)
+
       try {
         const resp = (await sendRequest('chat.send', {
           sessionKey: 'main',
@@ -554,37 +573,36 @@ export function GatewayTerminal() {
         })) as Record<string, unknown> | undefined
 
         const respStatus = resp?.status as string | undefined
+        console.log('[GW-Terminal] chat.send response:', { status: respStatus, keys: resp ? Object.keys(resp).join(',') : 'null' })
 
-        // Streaming/async — response will arrive via onEvent('chat')
-        if (respStatus === 'started' || respStatus === 'in_flight' || respStatus === 'streaming') {
-          // setSending stays true; events will clear it on 'final'
-          setTimeout(
-            () =>
-              setSending((prev) => {
-                if (prev) {
-                  addEntry('system', '⏱ Response timed out')
-                  return false
-                }
-                return prev
-              }),
-            120000, // 2 min timeout for long agent runs
-          )
-          return
-        }
-
-        // Synchronous reply
-        if (respStatus === 'ok' || !respStatus) {
-          const reply = extractEventText(resp)
-          if (reply && !isNoReply(reply)) {
-            addEntry('response', reply)
+        // Check if the response contains an inline reply (synchronous path)
+        const inlineReply = extractEventText(resp)
+        if (inlineReply && !isNoReply(inlineReply)) {
+          // If we haven't already rendered this via streaming events, add it
+          if (!streamId.current) {
+            addEntry('response', inlineReply)
           }
+          clearTimeout(safetyTimer)
           setSending(false)
           return
         }
 
-        // Unknown status — still wait for events
-        setSending(false)
+        if (isNoReply(inlineReply)) {
+          clearTimeout(safetyTimer)
+          setSending(false)
+          return
+        }
+
+        // No inline reply — response will arrive via chat events (streaming)
+        // setSending stays true; the event listener's 'final' handler clears it
+        // Safety timer is still running as a backstop
       } catch (e) {
+        // If streaming already started via events, don't kill it
+        if (streamId.current) {
+          console.log('[GW-Terminal] sendRequest errored but stream in progress, continuing')
+          return
+        }
+        clearTimeout(safetyTimer)
         addEntry('error', e instanceof Error ? e.message : 'Send failed')
         setSending(false)
       }

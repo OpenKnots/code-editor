@@ -421,10 +421,12 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
         }
 
         const req = makeRequest(method, params)
+        // Chat requests can take minutes (agent runs); use longer timeout
+        const timeoutMs = method === 'chat.send' ? 300000 : 30000
         const timer = setTimeout(() => {
           pendingRef.current.delete(req.id)
           reject(new Error(`Request '${method}' timed out`))
-        }, 30000)
+        }, timeoutMs)
         pendingRef.current.set(req.id, { resolve, reject, timer })
         wsRef.current.send(JSON.stringify(req))
       })
