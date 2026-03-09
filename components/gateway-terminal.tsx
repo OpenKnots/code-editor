@@ -544,6 +544,8 @@ export function GatewayTerminal() {
   const sendChatMessage = useCallback(
     async (message: string) => {
       setSending(true)
+      streamBuf.current = ''
+      streamId.current = null
       try {
         const resp = (await sendRequest('chat.send', {
           sessionKey: 'main',
@@ -551,27 +553,37 @@ export function GatewayTerminal() {
           idempotencyKey: `gw-term-${Date.now()}`,
         })) as Record<string, unknown> | undefined
 
-        const status = resp?.status as string | undefined
-        if (status === 'ok') {
+        const respStatus = resp?.status as string | undefined
+
+        // Streaming/async — response will arrive via onEvent('chat')
+        if (respStatus === 'started' || respStatus === 'in_flight' || respStatus === 'streaming') {
+          // setSending stays true; events will clear it on 'final'
+          setTimeout(
+            () =>
+              setSending((prev) => {
+                if (prev) {
+                  addEntry('system', '⏱ Response timed out')
+                  return false
+                }
+                return prev
+              }),
+            120000, // 2 min timeout for long agent runs
+          )
+          return
+        }
+
+        // Synchronous reply
+        if (respStatus === 'ok' || !respStatus) {
           const reply = extractEventText(resp)
           if (reply && !isNoReply(reply)) {
             addEntry('response', reply)
-            setSending(false)
-          } else if (isNoReply(reply)) {
-            setSending(false)
           }
+          setSending(false)
+          return
         }
-        setTimeout(
-          () =>
-            setSending((prev) => {
-              if (prev) {
-                addEntry('system', '⏱ Response timed out')
-                return false
-              }
-              return prev
-            }),
-          60000,
-        )
+
+        // Unknown status — still wait for events
+        setSending(false)
       } catch (e) {
         addEntry('error', e instanceof Error ? e.message : 'Send failed')
         setSending(false)
