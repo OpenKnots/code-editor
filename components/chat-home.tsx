@@ -15,7 +15,13 @@ import { useEditor } from '@/context/editor-context'
 import { emit } from '@/lib/events'
 import { getRecentFolders } from '@/context/local-context'
 import { getAgentConfig } from '@/lib/agent-session'
-import { fetchRepoByName } from '@/lib/github-api'
+import {
+  fetchRepoByName,
+  fetchAuthenticatedUser,
+  startDeviceFlow,
+  pollDeviceFlow,
+  type GitHubUser,
+} from '@/lib/github-api'
 
 const STATIC_SUGGESTIONS = [
   {
@@ -93,7 +99,7 @@ export const ChatHome = memo(function ChatHome({
   const local = useLocal()
   const { status } = useGateway()
   const { files: openFiles } = useEditor()
-  const { token: ghToken } = useGitHubAuth()
+  const { token: ghToken, setManualToken, authenticated: ghAuthenticated } = useGitHubAuth()
 
   const repoShort = useMemo(
     () => repo?.fullName?.split('/').pop() ?? local.rootPath?.split('/').pop() ?? null,
@@ -108,8 +114,45 @@ export const ChatHome = memo(function ChatHome({
   const [repoLoading, setRepoLoading] = useState(false)
   const [repoError, setRepoError] = useState<string | null>(null)
   const repoInputRef = useRef<HTMLInputElement>(null)
+  const [ghUser, setGhUser] = useState<GitHubUser | null>(null)
+  const [deviceFlow, setDeviceFlow] = useState<{ userCode: string; verificationUri: string } | null>(null)
+  const [authLoading, setAuthLoading] = useState(false)
+  const deviceFlowAbort = useRef<AbortController | null>(null)
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  // Fetch GitHub user when token is available
+  useEffect(() => {
+    if (!ghToken) { setGhUser(null); return }
+    fetchAuthenticatedUser().then(u => setGhUser(u))
+  }, [ghToken])
+
+  // GitHub Device Flow sign-in
+  const startGitHubSignIn = useCallback(async () => {
+    setAuthLoading(true)
+    setRepoError(null)
+    try {
+      const flow = await startDeviceFlow()
+      setDeviceFlow({ userCode: flow.user_code, verificationUri: flow.verification_uri })
+      deviceFlowAbort.current = new AbortController()
+      const token = await pollDeviceFlow(flow.device_code, flow.interval, deviceFlowAbort.current.signal)
+      setManualToken(token)
+      setDeviceFlow(null)
+    } catch (err) {
+      if ((err as Error).message !== 'Cancelled') {
+        setRepoError(err instanceof Error ? err.message : 'Sign-in failed')
+      }
+      setDeviceFlow(null)
+    } finally {
+      setAuthLoading(false)
+    }
+  }, [setManualToken])
+
+  const cancelGitHubSignIn = useCallback(() => {
+    deviceFlowAbort.current?.abort()
+    setDeviceFlow(null)
+    setAuthLoading(false)
+  }, [])
 
   const handleRepoConnect = useCallback(async () => {
     const val = repoInput.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '')
@@ -257,61 +300,114 @@ export const ChatHome = memo(function ChatHome({
             <Icon icon="lucide:chevron-down" width={14} height={14} className="opacity-50" />
           </button>
           {/* Mobile project selector */}
-          {isMobile && !hasWorkspace && !showRepoInput && (
-            <button
-              onClick={() => setShowRepoInput(true)}
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
-            >
-              <Icon icon="lucide:github" width={14} height={14} />
-              Connect a repository
-            </button>
-          )}
-          {isMobile && !hasWorkspace && showRepoInput && (
-            <div className="mt-3 w-full max-w-[320px]">
-              <div className="flex items-center gap-1.5">
-                <div className="flex-1 relative">
-                  <Icon icon="lucide:github" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
-                  <input
-                    ref={repoInputRef}
-                    type="text"
-                    value={repoInput}
-                    onChange={(e) => { setRepoInput(e.target.value); setRepoError(null) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleRepoConnect(); if (e.key === 'Escape') setShowRepoInput(false) }}
-                    placeholder="owner/repo"
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
-                  />
-                </div>
+          {isMobile && (
+            <div className="mt-3 flex flex-col items-center gap-2 w-full max-w-[320px]">
+              {/* GitHub user badge */}
+              {ghAuthenticated && ghUser && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+                  {ghUser.avatar_url && (
+                    <img src={ghUser.avatar_url} alt="" className="w-4 h-4 rounded-full" />
+                  )}
+                  {ghUser.login}
+                </span>
+              )}
+
+              {/* Sign in with GitHub — when no token */}
+              {!ghAuthenticated && !deviceFlow && (
                 <button
-                  onClick={handleRepoConnect}
-                  disabled={repoLoading || !repoInput.trim()}
-                  className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-default bg-[var(--brand)] text-[var(--brand-contrast,#fff)]"
+                  onClick={startGitHubSignIn}
+                  disabled={authLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {repoLoading ? '…' : 'Go'}
+                  <Icon icon="lucide:github" width={14} height={14} />
+                  {authLoading ? 'Signing in…' : 'Sign in with GitHub'}
                 </button>
-              </div>
+              )}
+
+              {/* Device flow — show code */}
+              {deviceFlow && (
+                <div className="text-center space-y-2">
+                  <p className="text-[11px] text-[var(--text-disabled)]">
+                    Enter this code at{' '}
+                    <a
+                      href={deviceFlow.verificationUri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--brand)] underline"
+                    >
+                      github.com/login/device
+                    </a>
+                  </p>
+                  <p className="text-[20px] font-mono font-bold tracking-[0.15em] text-[var(--text-primary)]">
+                    {deviceFlow.userCode}
+                  </p>
+                  <button
+                    onClick={cancelGitHubSignIn}
+                    className="text-[11px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* Connect repo — when authenticated */}
+              {ghAuthenticated && !hasWorkspace && !showRepoInput && (
+                <button
+                  onClick={() => setShowRepoInput(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+                >
+                  <Icon icon="lucide:folder-git-2" width={14} height={14} />
+                  Connect a repository
+                </button>
+              )}
+
+              {/* Repo input */}
+              {ghAuthenticated && !hasWorkspace && showRepoInput && (
+                <div className="w-full">
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 relative">
+                      <Icon icon="lucide:github" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]" />
+                      <input
+                        ref={repoInputRef}
+                        type="text"
+                        value={repoInput}
+                        onChange={(e) => { setRepoInput(e.target.value); setRepoError(null) }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleRepoConnect(); if (e.key === 'Escape') setShowRepoInput(false) }}
+                        placeholder="owner/repo"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={handleRepoConnect}
+                      disabled={repoLoading || !repoInput.trim()}
+                      className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-default bg-[var(--brand)] text-[var(--brand-contrast,#fff)]"
+                    >
+                      {repoLoading ? '…' : 'Go'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Connected repo */}
+              {hasWorkspace && (
+                <button
+                  onClick={() => { setRepo(null); setShowRepoInput(true) }}
+                  className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <Icon icon="lucide:folder-git-2" width={13} height={13} className="opacity-60" />
+                  {repo?.fullName ?? repoShort}
+                  <Icon icon="lucide:chevron-down" width={12} height={12} className="opacity-40" />
+                </button>
+              )}
+
+              {/* Error */}
               {repoError && (
-                <p className="mt-1.5 text-[11px] text-[var(--color-deletions)]">{repoError}</p>
+                <p className="text-[11px] text-[var(--color-deletions)]">{repoError}</p>
               )}
             </div>
-          )}
-          {isMobile && hasWorkspace && (
-            <button
-              onClick={() => { setRepo(null); setShowRepoInput(true) }}
-              className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-            >
-              <Icon icon="lucide:github" width={13} height={13} className="opacity-60" />
-              {repoShort}
-              <Icon icon="lucide:chevron-down" width={12} height={12} className="opacity-40" />
-            </button>
-          )}
-          {/* Subtle tagline on mobile — only when no repo input shown */}
-          {isMobile && hasWorkspace && (
-            <p className="mt-1 text-[11px] text-[var(--text-disabled)]">
-              {repo?.fullName ?? 'local project'}
-            </p>
           )}
         </div>
 

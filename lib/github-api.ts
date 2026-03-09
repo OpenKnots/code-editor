@@ -63,6 +63,88 @@ export interface Repo {
   default_branch: string
 }
 
+// ─── User ──────────────────────────────────────────────────────
+
+export interface GitHubUser {
+  login: string
+  avatar_url: string
+  name: string | null
+}
+
+export async function fetchAuthenticatedUser(): Promise<GitHubUser | null> {
+  if (!_token) return null
+  try {
+    const res = await ghFetch('https://api.github.com/user')
+    if (!res.ok) return null
+    return (await res.json()) as GitHubUser
+  } catch {
+    return null
+  }
+}
+
+// ─── Device Flow Auth ──────────────────────────────────────────
+
+const GITHUB_CLIENT_ID = 'Ov23liQaoZtc4ji8xCk0'
+
+export interface DeviceCodeResponse {
+  device_code: string
+  user_code: string
+  verification_uri: string
+  expires_in: number
+  interval: number
+}
+
+export async function startDeviceFlow(): Promise<DeviceCodeResponse> {
+  const res = await fetch('https://github.com/login/device/code', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: GITHUB_CLIENT_ID,
+      scope: 'repo read:user',
+    }),
+  })
+  if (!res.ok) throw new Error(`Device flow failed: ${res.status}`)
+  return (await res.json()) as DeviceCodeResponse
+}
+
+export async function pollDeviceFlow(
+  deviceCode: string,
+  interval: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  for (let i = 0; i < 60; i++) {
+    if (signal?.aborted) throw new Error('Cancelled')
+    await delay(interval * 1000)
+    const res = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: GITHUB_CLIENT_ID,
+        device_code: deviceCode,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      }),
+    })
+    const data = (await res.json()) as { access_token?: string; error?: string }
+    if (data.access_token) return data.access_token
+    if (data.error === 'authorization_pending') continue
+    if (data.error === 'slow_down') {
+      interval += 5
+      continue
+    }
+    if (data.error === 'expired_token') throw new Error('Code expired — try again')
+    if (data.error === 'access_denied') throw new Error('Access denied')
+    throw new Error(data.error ?? 'Unknown error')
+  }
+  throw new Error('Timed out waiting for authorization')
+}
+
 // ─── Repository ────────────────────────────────────────────────
 
 export async function fetchUserRepos(): Promise<Repo[]> {

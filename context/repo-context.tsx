@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { fetchRepoTreeByName as fetchRepoTree } from '@/lib/github-api'
 
 export interface RepoInfo {
@@ -47,6 +47,25 @@ export function RepoProvider({ children }: { children: ReactNode }) {
       setTreeLoading(false)
     }
   }, [repo])
+
+  // Auto-load tree when repo changes
+  useEffect(() => {
+    if (!repo) { setTree([]); return }
+    let cancelled = false
+    ;(async () => {
+      setTreeLoading(true)
+      setTreeError(null)
+      try {
+        const nodes = await fetchRepoTree(repo.fullName, repo.branch)
+        if (!cancelled) setTree(nodes)
+      } catch (err) {
+        if (!cancelled) setTreeError(err instanceof Error ? err.message : 'Failed to load tree')
+      } finally {
+        if (!cancelled) setTreeLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [repo])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo<RepoContextValue>(() => ({
     repo, setRepo, tree, treeLoading, treeError, loadTree,

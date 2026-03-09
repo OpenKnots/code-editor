@@ -860,7 +860,7 @@ export default function EditorLayout() {
         {showMobileBottomTabs && (
           <div
             className="shrink-0 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black)]"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.25rem)' }}
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div
               className="grid"
