@@ -23,11 +23,7 @@ import {
   getSkillPresentationMeta,
 } from '@/lib/skills/catalog'
 import { buildSkillUseEnvelope } from '@/lib/skills/provider-adapter'
-import type {
-  SkillCatalogItem,
-  SkillPresentationLane,
-  SkillsRuntimeMap,
-} from '@/lib/skills/types'
+import type { SkillCatalogItem, SkillPresentationLane, SkillsRuntimeMap } from '@/lib/skills/types'
 import {
   SKILLS_RUNTIME_STORAGE_KEY,
   buildCatalogSummary,
@@ -180,7 +176,7 @@ function PageSkillCard({
         {skill.shortDescription}
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {skill.tags.slice(0, 3).map((tag) => (
           <span
             key={tag}
@@ -191,23 +187,27 @@ function PageSkillCard({
         ))}
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] px-3 py-2.5">
+      <div className="mt-3 grid gap-2 grid-cols-2">
+        <div className="rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] px-3 py-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-disabled)]">
             Collection
           </div>
-          <div className="mt-1 text-[12px] text-[var(--text-primary)]">{meta.collectionLabel}</div>
+          <div className="mt-0.5 truncate text-[12px] text-[var(--text-primary)]">
+            {meta.collectionLabel}
+          </div>
         </div>
-        <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] px-3 py-2.5">
+        <div className="rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] px-3 py-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-disabled)]">
             Update
           </div>
-          <div className="mt-1 text-[12px] text-[var(--text-primary)]">{meta.updatedLabel}</div>
+          <div className="mt-0.5 truncate text-[12px] text-[var(--text-primary)]">
+            {meta.updatedLabel}
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_84%,transparent)] px-3 py-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--brand)_16%,transparent)] text-[11px] font-semibold text-[var(--brand)]">
+      <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_84%,transparent)] px-3 py-2">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--brand)_16%,transparent)] text-[10px] font-semibold text-[var(--brand)]">
           {initials}
         </div>
         <div className="min-w-0">
@@ -220,7 +220,7 @@ function PageSkillCard({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <button
           onClick={onToggle}
           type="button"
@@ -282,9 +282,13 @@ function PageSkillCard({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-tertiary)]">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-tertiary)]">
         <span>{formatActivityAge(state?.lastUsedAt)}</span>
-        <span>{state?.syncState === 'error' ? state.lastError : formatRelativeTimestamp(state?.syncedAt)}</span>
+        <span>
+          {state?.syncState === 'error'
+            ? state.lastError
+            : formatRelativeTimestamp(state?.syncedAt)}
+        </span>
       </div>
 
       {busyAction && state?.syncState === 'running' ? (
@@ -317,7 +321,9 @@ function SettingsSkillCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">{skill.title}</h4>
+              <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">
+                {skill.title}
+              </h4>
               <p className="mt-0.5 text-[10px] text-[var(--text-disabled)]">
                 {skill.shortDescription}
               </p>
@@ -403,7 +409,9 @@ function SettingsSkillCard({
           </div>
 
           <div className="mt-3 space-y-1 text-[10px] text-[var(--text-disabled)]">
-            <div>{state?.synced ? formatRelativeTimestamp(state.syncedAt) : 'Not yet synced locally'}</div>
+            <div>
+              {state?.synced ? formatRelativeTimestamp(state.syncedAt) : 'Not yet synced locally'}
+            </div>
             <div>
               Install: <code className="font-mono">{skill.installCommand}</code>
             </div>
@@ -568,6 +576,26 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
           return
         }
 
+        if (plan.kind === 'use' && plan.skill) {
+          const request = plan.query ?? ''
+          if (!request) {
+            setActionNote(
+              'Provide a task after the skill slug. Usage: /skill use <slug> <your request>',
+            )
+            return
+          }
+          const envelope = buildSkillUseEnvelope({ skill: plan.skill, request, modelName })
+          await sendGatewayMessage(
+            envelope.prompt,
+            successLabel || `${plan.skill.title} sent to ${envelope.provider.label}.`,
+          )
+          updateRuntime(plan.skill.id, (previous) => ({
+            ...previous,
+            lastUsedAt: Date.now(),
+          }))
+          return
+        }
+
         if (plan.message) {
           await sendGatewayMessage(
             plan.message,
@@ -578,7 +606,7 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
         setBusyAction(null)
       }
     },
-    [preferTerminal, sendGatewayMessage, updateRuntime],
+    [modelName, preferTerminal, sendGatewayMessage, updateRuntime],
   )
 
   const handleToggleEnabled = useCallback(
@@ -737,7 +765,12 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
             <div className="relative grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.75fr)]">
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
-                  <Icon icon="lucide:sparkles" width={14} height={14} className="text-[var(--brand)]" />
+                  <Icon
+                    icon="lucide:sparkles"
+                    width={14}
+                    height={14}
+                    className="text-[var(--brand)]"
+                  />
                   Skills Library
                 </div>
                 <div>
@@ -779,7 +812,9 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
                       <div className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
                         {SKILLS_CATALOG.length}
                       </div>
-                      <div className="text-[12px] text-[var(--text-tertiary)] sm:text-sm">curated skills</div>
+                      <div className="text-[12px] text-[var(--text-tertiary)] sm:text-sm">
+                        curated skills
+                      </div>
                     </div>
                     <div className="text-right text-[11px] text-[var(--text-secondary)] sm:text-[12px]">
                       <div>{installedCount} installed</div>
@@ -871,7 +906,9 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] sm:text-lg">Skill Catalog</h2>
+                <h2 className="text-base font-semibold text-[var(--text-primary)] sm:text-lg">
+                  Skill Catalog
+                </h2>
                 <p className="mt-0.5 hidden text-sm text-[var(--text-tertiary)] sm:block">
                   Browse curated workflows, inspect sources, and activate the ones you want ready.
                 </p>
@@ -906,8 +943,8 @@ export function SkillsInterface({ variant = 'page' }: SkillsInterfaceProps) {
               <div>
                 <h2 className="text-[20px] font-semibold text-[var(--text-primary)]">Skills</h2>
                 <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">
-                  Curated skills from `obra/superpowers` plus `find-skills`, adapted for GPT,
-                  Opus, Sonnet, and gateway-driven workflows.
+                  Curated skills from `obra/superpowers` plus `find-skills`, adapted for GPT, Opus,
+                  Sonnet, and gateway-driven workflows.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
