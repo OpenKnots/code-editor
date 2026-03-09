@@ -20,6 +20,8 @@
 	<string>1.5.0</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>KnotCode needs local network access to connect to the local development server during iOS development.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
