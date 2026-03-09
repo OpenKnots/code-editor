@@ -10,7 +10,7 @@
 
 ### Changed
 
-- **Mobile tabs curated** — Chat, Editor, Git, Workshop, Settings (dropped desktop-only views: Skills, Prism, Preview, Diff)
+- **Mobile tabs curated** — Chat, Editor, Git, Workshop, Settings (dropped desktop-only views: Skills, Preview, Diff)
 - **44px touch targets** — Tab bar buttons meet iOS HIG minimum with `touch-manipulation` CSS
 - **Hidden model picker on mobile** — Mode selector (Ask/Agent/Plan) stays, model name hidden to save space
 - **Cleaner connect form** — Icon-prefixed inputs (globe + lock), focus rings, always-visible form

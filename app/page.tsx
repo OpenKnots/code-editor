@@ -33,54 +33,53 @@ import type { AppMode } from '@/lib/mode-registry'
 import { openNewEditorInstance } from '@/lib/tauri'
 
 const GitSidebarPanel = dynamic(
-  () => import('@/components/git-sidebar-panel').then((m) => ({ default: m.GitSidebarPanel })),
+  () => import('@/components/git-sidebar-panel').then((m) => m.GitSidebarPanel),
   { ssr: false },
 )
 
 // Overlay modals — lazy loaded
 const QuickOpen = dynamic(
-  () => import('@/components/quick-open').then((m) => ({ default: m.QuickOpen })),
+  () => import('@/components/quick-open').then((m) => m.QuickOpen),
   { ssr: false },
 )
 const GlobalSearch = dynamic(
-  () => import('@/components/global-search').then((m) => ({ default: m.GlobalSearch })),
+  () => import('@/components/global-search').then((m) => m.GlobalSearch),
   { ssr: false },
 )
 const CommandPalette = dynamic(
-  () => import('@/components/command-palette').then((m) => ({ default: m.CommandPalette })),
+  () => import('@/components/command-palette').then((m) => m.CommandPalette),
   { ssr: false },
 )
 const ShortcutsOverlay = dynamic(
-  () => import('@/components/shortcuts-overlay').then((m) => ({ default: m.ShortcutsOverlay })),
+  () => import('@/components/shortcuts-overlay').then((m) => m.ShortcutsOverlay),
   { ssr: false },
 )
 const TerminalPanel = dynamic(
-  () => import('@/components/terminal-panel').then((m) => ({ default: m.TerminalPanel })),
+  () => import('@/components/terminal-panel').then((m) => m.TerminalPanel),
   { ssr: false },
 )
 const GatewayTerminalLazy = dynamic(
-  () => import('@/components/gateway-terminal').then((m) => ({ default: m.GatewayTerminal })),
+  () => import('@/components/gateway-terminal').then((m) => m.GatewayTerminal),
   { ssr: false },
 )
 const PipWindow = dynamic(
-  () => import('@/components/preview/pip-window').then((m) => ({ default: m.PipWindow })),
+  () => import('@/components/preview/pip-window').then((m) => m.PipWindow),
   { ssr: false },
 )
 const WidgetPipWindow = dynamic(
-  () =>
-    import('@/components/plugins/widget-pip-window').then((m) => ({ default: m.WidgetPipWindow })),
+  () => import('@/components/plugins/widget-pip-window').then((m) => m.WidgetPipWindow),
   { ssr: false },
 )
 const SettingsPanel = dynamic(
-  () => import('@/components/settings-panel').then((m) => ({ default: m.SettingsPanel })),
+  () => import('@/components/settings-panel').then((m) => m.SettingsPanel),
   { ssr: false },
 )
 const OnboardingTour = dynamic(
-  () => import('@/components/onboarding-tour').then((m) => ({ default: m.OnboardingTour })),
+  () => import('@/components/onboarding-tour').then((m) => m.OnboardingTour),
   { ssr: false },
 )
 const PluginSlotRenderer = dynamic(
-  () => import('@/context/plugin-context').then((m) => ({ default: m.PluginSlotRenderer })),
+  () => import('@/context/plugin-context').then((m) => m.PluginSlotRenderer),
   { ssr: false },
 )
 
@@ -92,7 +91,6 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   git: { icon: 'lucide:git-branch', label: 'Git' },
   workshop: { icon: 'lucide:bot', label: 'Workshop' },
   skills: { icon: 'lucide:sparkles', label: 'Skills' },
-  prism: { icon: 'lucide:file-text', label: 'Prism' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
 }
 
@@ -134,10 +132,9 @@ export default function EditorLayout() {
   const terminalRefreshToken = mode
   const useCenteredTerminal = modeSpec.terminalCenter && activeView === 'editor'
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
-  const usePrismShell = activeView === 'prism'
   const mobileViewTabs = useMemo(() => {
     // On mobile, curate tabs to useful views + always include settings
-    const mobile = visibleViews.filter(v => !['prism', 'preview', 'diff', 'skills'].includes(v))
+    const mobile = visibleViews.filter(v => !['preview', 'diff', 'skills'].includes(v))
     if (!mobile.includes('settings')) mobile.push('settings')
     return mobile.slice(0, 5)
   }, [visibleViews])
@@ -150,7 +147,7 @@ export default function EditorLayout() {
     [repo?.fullName, localRootPath],
   )
   const showMobileBottomTabs = isMobile && !modeSpec.terminalCenter && keyboardOffset === 0
-  const showMobileSidebarButton = isMobile && mode !== 'tui' && !usePrismShell
+  const showMobileSidebarButton = isMobile && mode !== 'tui'
   const showWorkflowEditorTabs =
     !isMobile && !modeSpec.terminalCenter && activeView === 'workshop' && files.length > 0
   const mobileTerminalOffset = showMobileBottomTabs
@@ -202,10 +199,10 @@ export default function EditorLayout() {
   }, [])
 
   useEffect(() => {
-    if (!isMobile || mode === 'tui' || usePrismShell) {
+    if (!isMobile || mode === 'tui') {
       setMobileSidebarOpen(false)
     }
-  }, [isMobile, mode, usePrismShell])
+  }, [isMobile, mode])
 
   // ─── iOS keyboard: shrink layout when virtual keyboard opens ───
   useEffect(() => {
@@ -501,7 +498,7 @@ export default function EditorLayout() {
       )}
 
       {/* Workspace Sidebar — always visible in chat mode, toggleable otherwise */}
-      {!isMobile && mode !== 'tui' && !usePrismShell && (
+      {!isMobile && mode !== 'tui' && (
         <WorkspaceSidebar
           collapsed={mode !== 'chat' && sidebarCollapsed}
           onToggle={() => layout.toggle('sidebar')}
@@ -911,7 +908,7 @@ export default function EditorLayout() {
       </div>
 
       {/* Git sidebar panel — Codex-style always-visible right panel */}
-      {!isMobile && mode !== 'tui' && !usePrismShell && layout.isVisible('gitPanel') && (
+      {!isMobile && mode !== 'tui' && layout.isVisible('gitPanel') && (
         <GitSidebarPanel />
       )}
 

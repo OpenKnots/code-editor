@@ -37,9 +37,9 @@ A lightweight, AI-native code editor powered by [OpenClaw](https://github.com/op
 
 ## Quick Start
 
-### Desktop (macOS)
+### Desktop
 
-Download the [latest release](https://github.com/OpenKnots/code-editor/releases/latest) (.dmg).
+Download the [latest release](https://github.com/OpenKnots/code-editor/releases/latest) for your platform (`.dmg`, `.exe`, `.msi`, `.AppImage`, `.deb`).
 
 After installing, macOS may show _"KnotCode is damaged"_ — this is because the app isn't notarized with Apple (yet). Fix it with:
 

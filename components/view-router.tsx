@@ -6,35 +6,31 @@ import { useView } from '@/context/view-context'
 import { ErrorBoundary } from '@/components/error-boundary'
 
 const EditorView = dynamic(
-  () => import('@/components/views/editor-view').then((m) => ({ default: m.EditorView })),
+  () => import('@/components/views/editor-view').then((m) => m.EditorView),
   { ssr: false },
 )
 const GitView = dynamic(
-  () => import('@/components/views/git-view').then((m) => ({ default: m.GitView })),
+  () => import('@/components/views/git-view').then((m) => m.GitView),
   { ssr: false },
 )
 const WorkshopView = dynamic(
-  () => import('@/components/views/workshop-view').then((m) => ({ default: m.WorkshopView })),
+  () => import('@/components/views/workshop-view').then((m) => m.WorkshopView),
   { ssr: false },
 )
 const SkillsView = dynamic(
-  () => import('@/components/views/skills-view').then((m) => ({ default: m.SkillsView })),
-  { ssr: false },
-)
-const PrismView = dynamic(
-  () => import('@/components/views/prism-view').then((m) => ({ default: m.PrismView })),
+  () => import('@/components/views/skills-view').then((m) => m.SkillsView),
   { ssr: false },
 )
 const SettingsPanel = dynamic(
-  () => import('@/components/settings-panel').then((m) => ({ default: m.SettingsPanel })),
+  () => import('@/components/settings-panel').then((m) => m.SettingsPanel),
   { ssr: false },
 )
 const PreviewPanel = dynamic(
-  () => import('@/components/preview/preview-panel').then((m) => ({ default: m.PreviewPanel })),
+  () => import('@/components/preview/preview-panel').then((m) => m.PreviewPanel),
   { ssr: false },
 )
 const AgentPanel = dynamic(
-  () => import('@/components/agent-panel').then((m) => ({ default: m.AgentPanel })),
+  () => import('@/components/agent-panel').then((m) => m.AgentPanel),
   { ssr: false },
 )
 
@@ -45,7 +41,6 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   git: { label: 'Git' },
   workshop: { label: 'Workshop' },
   skills: { label: 'Skills' },
-  prism: { label: 'Prism' },
   settings: { label: 'Settings' },
 }
 
@@ -91,7 +86,6 @@ export function ViewRouter() {
             {activeView === 'git' && <GitView />}
             {activeView === 'workshop' && <WorkshopView />}
             {activeView === 'skills' && <SkillsView />}
-            {activeView === 'prism' && <PrismView />}
             {activeView === 'settings' && (
               <div className="flex-1 flex items-center justify-center">
                 <SettingsPanel open={true} onClose={() => setView('editor')} />

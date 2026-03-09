@@ -14,15 +14,15 @@ import { isTauri } from '@/lib/tauri'
 import { emit } from '@/lib/events'
 
 const FileExplorer = dynamic(
-  () => import('@/components/file-explorer').then((m) => ({ default: m.FileExplorer })),
+  () => import('@/components/file-explorer').then((m) => m.FileExplorer),
   { ssr: false },
 )
 const CodeEditor = dynamic(
-  () => import('@/components/code-editor').then((m) => ({ default: m.CodeEditor })),
+  () => import('@/components/code-editor').then((m) => m.CodeEditor),
   { ssr: false },
 )
 const AgentPanel = dynamic(
-  () => import('@/components/agent-panel').then((m) => ({ default: m.AgentPanel })),
+  () => import('@/components/agent-panel').then((m) => m.AgentPanel),
   { ssr: false },
 )
 

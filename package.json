@@ -5,8 +5,8 @@
   "scripts": {
     "frontend:dev": "next dev --turbopack",
     "frontend:build": "next build",
-    "desktop:dev": "PORT=3080 tauri dev",
-    "ios:dev": "PORT=3080 tauri ios dev",
+    "desktop:dev": "pnpm exec tauri dev",
+    "ios:dev": "node scripts/tauri-ios-dev.mjs",
     "desktop:check": "tsc --noEmit",
     "desktop:build": "CI=true tauri build --target aarch64-apple-darwin",
     "ios:build": "CI=true tauri ios build",

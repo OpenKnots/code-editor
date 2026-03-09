@@ -19,7 +19,6 @@ export type ViewId =
   | 'git'
   | 'workshop'
   | 'skills'
-  | 'prism'
   | 'settings'
 
 const VIEW_ORDER: ViewId[] = [
@@ -29,7 +28,6 @@ const VIEW_ORDER: ViewId[] = [
   'git',
   'workshop',
   'skills',
-  'prism',
   'settings',
 ]
 
