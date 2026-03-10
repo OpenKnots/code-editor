@@ -64,7 +64,7 @@ interface ChatInputBarProps {
   setAtMenuIdx: (v: number | ((i: number) => number)) => void
   setAtQuery: (q: string) => void
   selectAtFile: (path: string) => void
-  activePicker: 'skill' | 'mcp' | 'prompt' | null
+  activePicker: 'skill' | 'prompt' | null
   pickerItems: PickerItem[]
   pickerQuery: string
   pickerIndex: number

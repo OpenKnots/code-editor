@@ -191,17 +191,9 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           </button>
 
           <button
-            onClick={() => setView('mcp')}
-            className={`activity-bar-btn ${activeView === 'mcp' ? 'activity-bar-btn--active' : ''}`}
-            title="MCP (⌘5)"
-          >
-            <Icon icon="lucide:plug" width={24} height={24} />
-          </button>
-
-          <button
             onClick={() => setView('skills')}
             className={`activity-bar-btn ${activeView === 'skills' ? 'activity-bar-btn--active' : ''}`}
-            title="Skills (⌘6)"
+            title="Skills (⌘5)"
           >
             <Icon icon="lucide:wand-2" width={24} height={24} />
           </button>
@@ -209,7 +201,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('prompts')}
             className={`activity-bar-btn ${activeView === 'prompts' ? 'activity-bar-btn--active' : ''}`}
-            title="Prompts (⌘7)"
+            title="Prompts (⌘6)"
           >
             <Icon icon="lucide:book-open" width={24} height={24} />
           </button>
@@ -217,7 +209,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('kanban')}
             className={`activity-bar-btn ${activeView === 'kanban' ? 'activity-bar-btn--active' : ''}`}
-            title="Kanban (⌘8)"
+            title="Kanban (⌘7)"
           >
             <Icon icon="lucide:kanban" width={24} height={24} />
           </button>
@@ -296,10 +288,9 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                 { id: 'editor' as const, icon: 'lucide:code', label: 'Editor', shortcut: '⌘2' },
                 { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
                 { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git', shortcut: '⌘4' },
-                { id: 'mcp' as const, icon: 'lucide:plug', label: 'MCP', shortcut: '⌘5' },
-                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘6' },
-                { id: 'prompts' as const, icon: 'lucide:book-open', label: 'Prompts', shortcut: '⌘7' },
-                { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘8' },
+                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘5' },
+                { id: 'prompts' as const, icon: 'lucide:book-open', label: 'Prompts', shortcut: '⌘6' },
+                { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
               ] as const).map((item) => (
                 <button
                   key={item.id}

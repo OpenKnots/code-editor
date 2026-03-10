@@ -87,10 +87,14 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   git: { icon: 'lucide:git-branch', label: 'Git' },
   skills: { icon: 'lucide:sparkles', label: 'Skills' },
   prompts: { icon: 'lucide:book-open', label: 'Prompts' },
-  mcp: { icon: 'lucide:plug', label: 'MCP' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
   terminal: { icon: 'lucide:terminal', label: 'Terminal' },
+  kanban: { icon: 'lucide:kanban', label: 'Kanban' },
+  mcp: { icon: 'lucide:plug', label: 'MCP' },
 }
+
+/** Primary view cycle: Chat → Editor → Terminal */
+const VIEW_CYCLE: ViewId[] = ['chat', 'editor', 'terminal']
 
 const MODE_BUTTONS: Array<{ id: AppMode; icon: string; label: string }> = [
   { id: 'classic', icon: 'lucide:code-2', label: 'Classic' },
@@ -133,7 +137,7 @@ export default function EditorLayout() {
   const mobileViewTabs = useMemo(() => {
     // On mobile, curate tabs to useful views + always include settings
     const mobile = visibleViews.filter(
-      (v) => !['preview', 'diff', 'skills', 'prompts', 'mcp'].includes(v),
+      (v) => !['preview', 'diff', 'skills', 'prompts'].includes(v),
     )
     if (!mobile.includes('terminal')) mobile.push('terminal')
     return mobile.slice(0, 5)
@@ -746,43 +750,50 @@ export default function EditorLayout() {
               overscrollBehavior: 'none',
             }}
           >
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: `repeat(${mobileViewTabs.length}, minmax(0, 1fr))`,
-                minHeight: 49,
-              }}
-            >
-              {mobileViewTabs.map((v) => {
+            {/* Primary view cycle toggle: Chat → Editor → Terminal */}
+            <div className="flex items-center justify-center gap-1 px-3 py-2">
+              {VIEW_CYCLE.map((v) => {
                 const isActive = activeView === v
+                const meta = VIEW_ICONS[v]
                 return (
                   <motion.button
                     key={v}
                     type="button"
-                    onClick={() => {
-                      setView(v)
-                    }}
-                    whileTap={{ scale: 0.92 }}
-                    className={`relative mx-1 my-1 flex min-w-0 flex-col items-center gap-0.5 rounded-xl border py-2 text-[10px] font-medium transition-colors touch-manipulation ${
+                    onClick={() => setView(v)}
+                    whileTap={{ scale: 0.95 }}
+                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 touch-manipulation ${
                       isActive
-                        ? 'border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] shadow-[0_8px_20px_color-mix(in_srgb,var(--brand)_10%,transparent)]'
-                        : 'border-transparent text-[var(--text-disabled)]'
-                    } ${flashedTab === v ? 'animate-badge-pop' : ''}`}
-                    title={VIEW_ICONS[v].label}
-                    style={{ minHeight: 44, WebkitTapHighlightColor: 'transparent' }}
+                        ? 'bg-[var(--brand)] text-[var(--brand-contrast)] shadow-[0_4px_16px_color-mix(in_srgb,var(--brand)_30%,transparent)]'
+                        : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                    }`}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
-                    <span className="relative">
-                      <Icon icon={VIEW_ICONS[v].icon} width={24} height={24} />
-                      {v === 'git' && dirtyCount > 0 && (
-                        <span className="absolute -right-2 -top-1 min-w-[14px] rounded-full bg-[var(--brand)] px-0.5 text-center text-[8px] font-bold leading-[14px] text-[var(--brand-contrast)]">
-                          {dirtyCount > 9 ? '9+' : dirtyCount}
-                        </span>
-                      )}
-                    </span>
-                    <span className="max-w-full truncate">{VIEW_ICONS[v].label}</span>
+                    <Icon icon={meta.icon} width={18} height={18} />
+                    {isActive && (
+                      <motion.span
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: 'auto', opacity: 1 }}
+                        exit={{ width: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden whitespace-nowrap"
+                      >
+                        {meta.label}
+                      </motion.span>
+                    )}
                   </motion.button>
                 )
               })}
+
+              {/* More views overflow */}
+              <motion.button
+                type="button"
+                onClick={() => setView('settings')}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center justify-center w-10 h-10 rounded-full text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors touch-manipulation"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+              >
+                <Icon icon="lucide:more-horizontal" width={18} height={18} />
+              </motion.button>
             </div>
           </div>
         )}

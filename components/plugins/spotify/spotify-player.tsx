@@ -507,12 +507,12 @@ export function SpotifyPlayer() {
           )}
 
           {/* ─── Now playing ─── */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
             {track ? (
               <div className="flex flex-col gap-2 p-3">
                 {/* Album art */}
                 {albumArt && (
-                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-[var(--bg-subtle)]">
+                  <div className="w-full max-h-[200px] rounded-lg overflow-hidden bg-[var(--bg-subtle)]">
                     <img
                       src={albumArt}
                       alt={track.album.name}

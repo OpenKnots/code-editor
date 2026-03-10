@@ -21,10 +21,6 @@ const SkillsView = dynamic(
   () => import('@/components/views/skills-view').then((m) => m.SkillsView),
   { ssr: false },
 )
-const McpLibraryView = dynamic(
-  () => import('@/components/views/mcp-library-view').then((m) => m.McpLibraryView),
-  { ssr: false },
-)
 const PromptLibraryView = dynamic(
   () => import('@/components/views/prompt-library-view').then((m) => m.PromptLibraryView),
   { ssr: false },
@@ -57,7 +53,6 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   kanban: { label: 'Kanban' },
   skills: { label: 'Skills' },
   prompts: { label: 'Prompts' },
-  mcp: { label: 'MCP Library' },
   settings: { label: 'Settings' },
   terminal: { label: 'Terminal' },
 }
@@ -136,7 +131,6 @@ export function ViewRouter() {
                 {activeView === 'kanban' && <KanbanView />}
                 {activeView === 'skills' && <SkillsView />}
                 {activeView === 'prompts' && <PromptLibraryView />}
-                {activeView === 'mcp' && <McpLibraryView />}
                 {activeView === 'settings' && <SettingsPanel onBack={() => setView('chat')} />}
                 {activeView === 'terminal' && (
                   <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">

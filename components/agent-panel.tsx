@@ -375,7 +375,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
   const [confirmClear, setConfirmClear] = useState(false)
 
   // ─── Inline picker state ──────────────────────────────────────
-  const [activePicker, setActivePicker] = useState<'skill' | 'mcp' | 'prompt' | null>(null)
+  const [activePicker, setActivePicker] = useState<'skill' | 'prompt' | null>(null)
   const [pickerQuery, setPickerQuery] = useState('')
   const [pickerIndex, setPickerIndex] = useState(0)
   const [sending, setSending] = useState(false)
@@ -1950,12 +1950,6 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       setPickerQuery(query)
       return
     }
-    if (input === '/mcp' || input.startsWith('/mcp ')) {
-      const query = input.replace(/^\/mcp\s*/, '')
-      setActivePicker('mcp')
-      setPickerQuery(query)
-      return
-    }
     if (input === '/prompt' || input.startsWith('/prompt ')) {
       const query = input.replace(/^\/prompt\s*/, '')
       setActivePicker('prompt')
@@ -1973,9 +1967,6 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
 
     // Don't show suggestions when a picker is active
     if (input === '/skill' || input === '/skill ' || input.startsWith('/skill use') || input === '/skill use') {
-      return []
-    }
-    if (input === '/mcp' || input.startsWith('/mcp ')) {
       return []
     }
     if (input === '/prompt' || input.startsWith('/prompt ')) {
@@ -2020,7 +2011,6 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       { cmd: '/skill', desc: 'Open skill commands', icon: 'lucide:sparkles' },
       { cmd: '/skill find', desc: 'Search for more skills', icon: 'lucide:search' },
       { cmd: '/skill use', desc: 'Apply a bundled skill', icon: 'lucide:play' },
-      { cmd: '/mcp', desc: 'Select an MCP server', icon: 'lucide:plug' },
       { cmd: '/prompt', desc: 'Use a prompt template', icon: 'lucide:book-open' },
     ]
     const term = input.toLowerCase()
@@ -2056,25 +2046,6 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
     ]
   }, [])
 
-  const mcpPickerItems = useMemo<PickerItem[]>(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('knot-code:mcp:servers') : null
-    if (stored) {
-      try {
-        const servers = JSON.parse(stored) as Array<{ id: string; name: string; type: string; enabled: boolean }>
-        return servers.map((s) => ({
-          id: s.id,
-          name: s.name,
-          description: `${s.type} server`,
-          icon: 'lucide:plug',
-          enabled: s.enabled,
-        }))
-      } catch {
-        // Ignore parse errors, return empty array
-      }
-    }
-    return []
-  }, [])
-
   const promptPickerItems = useMemo<PickerItem[]>(() => {
     return [
       { id: 'explain-like-5', name: 'Explain Like I\'m 5', description: 'Simple explanation of complex topics', icon: 'lucide:baby' },
@@ -2092,8 +2063,6 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
   const handlePickerSelect = useCallback((item: PickerItem) => {
     if (activePicker === 'skill') {
       setInput(`/skill use ${item.id} `)
-    } else if (activePicker === 'mcp') {
-      setInput(`/mcp ${item.id} `)
     } else if (activePicker === 'prompt') {
       // For prompt templates, replace the command with the template name or insert it
       setInput(`Use the "${item.name}" template: `)
@@ -2112,14 +2081,12 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
 
   const currentPickerItems = useMemo(() => {
     if (activePicker === 'skill') return skillPickerItems
-    if (activePicker === 'mcp') return mcpPickerItems
     if (activePicker === 'prompt') return promptPickerItems
     return []
-  }, [activePicker, skillPickerItems, mcpPickerItems, promptPickerItems])
+  }, [activePicker, skillPickerItems, promptPickerItems])
 
   const pickerTitle = useMemo(() => {
     if (activePicker === 'skill') return 'Select Skill'
-    if (activePicker === 'mcp') return 'Select MCP Server'
     if (activePicker === 'prompt') return 'Select Prompt Template'
     return ''
   }, [activePicker])
@@ -2129,19 +2096,9 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       icon: 'lucide:sparkles',
       heading: 'Getting Started with Skills',
       steps: [
-        'Open Skills view (⌘6)',
+        'Open Skills view (⌘5)',
         'Enable skills from the catalog',
         'Skills will appear here once active',
-      ],
-    }
-    if (activePicker === 'mcp') return {
-      icon: 'lucide:plug',
-      heading: 'Getting Started with MCP',
-      steps: [
-        'Open MCP Library (⌘5)',
-        'Browse and install a server',
-        'Configure API keys if needed',
-        'Come back here to use it',
       ],
     }
     if (activePicker === 'prompt') return {

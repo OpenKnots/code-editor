@@ -235,7 +235,7 @@ export function WidgetPipWindow() {
 
         {/* Plugin content */}
         <div
-          className="w-full overflow-hidden bg-[var(--bg)]"
+          className="w-full overflow-y-auto bg-[var(--bg)]"
           style={{
             height: size.h - 28,
             pointerEvents: isDragging || isResizing ? 'none' : 'auto',
