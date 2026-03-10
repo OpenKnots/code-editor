@@ -50,6 +50,16 @@ export async function tauriReadFileBase64(absolutePath: string): Promise<string 
   return tauriInvoke<string>('local_read_file_base64', { root, path: file })
 }
 
+/** Open a URL in the system's default browser (works in both Tauri and web). */
+export async function openExternal(url: string): Promise<void> {
+  if (isTauri()) {
+    const { open } = await import('@tauri-apps/plugin-shell')
+    await open(url)
+    return
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 export async function openNewEditorInstance(): Promise<void> {
   if (isTauri()) {
     const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')

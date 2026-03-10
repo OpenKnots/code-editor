@@ -84,15 +84,9 @@ function WelcomeView() {
   const startItems = [
     {
       icon: 'lucide:folder-open',
-      label: 'Open Folder',
+      label: 'Open File',
       hint: formatShortcut('meta+O'),
       action: () => emit('open-folder'),
-    },
-    {
-      icon: 'lucide:file-plus',
-      label: 'New File',
-      hint: formatShortcut('meta+N'),
-      action: () => emit('file-select', { path: 'untitled', sha: '' }),
     },
     {
       icon: 'lucide:search',
@@ -100,69 +94,69 @@ function WelcomeView() {
       hint: formatShortcut('meta+P'),
       action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', metaKey: true })),
     },
-    ...(isDesktop
-      ? [
-          {
-            icon: 'lucide:terminal',
-            label: 'Open Terminal',
-            hint: formatShortcut('meta+`'),
-            action: () => emit('toggle-terminal'),
-          },
-        ]
-      : []),
+    {
+      icon: 'lucide:file-plus',
+      label: 'New File',
+      hint: formatShortcut('meta+N'),
+      action: () => emit('file-select', { path: 'untitled', sha: '' }),
+    },
   ]
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-[var(--bg)] select-none">
-      <div className="w-full max-w-[520px] px-8">
-        {/* App identity */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 flex items-center justify-center">
-            <KnotLogo size={40} />
+      <div className="w-full max-w-[520px] px-8 text-center">
+        {/* Centered hero */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="mb-4 flex items-center justify-center">
+            <Icon icon="lucide:code-2" className="h-12 w-12 text-[var(--brand)]" />
           </div>
-          <div>
-            <h1 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-              KnotCode
-            </h1>
-            <p className="text-[11px] text-[var(--text-tertiary)]">
-              AI-powered code editor by OpenKnots
-            </p>
-          </div>
+          <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2">
+            Open a file to start editing
+          </h1>
+          <p className="text-[13px] text-[var(--text-tertiary)]">
+            Use keyboard shortcuts or the explorer to navigate your project
+          </p>
         </div>
 
-        {/* Start section */}
-        <div className="mb-6">
-          <h2 className="text-[11px] font-medium text-[var(--text-disabled)] uppercase tracking-wider mb-2.5">
-            Start
-          </h2>
-          <div className="flex flex-col gap-0.5">
-            {startItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                className="flex items-center gap-2.5 w-full px-2.5 py-1.5 -mx-2.5 rounded-lg text-left text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer group"
-              >
-                <Icon
-                  icon={item.icon}
-                  width={14}
-                  height={14}
-                  className="text-[var(--text-tertiary)] group-hover:text-[var(--brand)] transition-colors shrink-0"
-                />
-                <span className="flex-1">{item.label}</span>
-                <span className="text-[10px] font-mono text-[var(--text-disabled)] group-hover:text-[var(--text-tertiary)]">
-                  {item.hint}
-                </span>
-              </button>
-            ))}
-          </div>
+        {/* Keyboard hints as pills */}
+        <div className="flex flex-wrap gap-3 justify-center mb-10">
+          {startItems.map((item) => (
+            <button
+              key={item.label}
+              onClick={item.action}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] text-[13px] text-[var(--text-primary)] hover:border-[var(--brand)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer group"
+            >
+              <Icon
+                icon={item.icon}
+                width={16}
+                height={16}
+                className="text-[var(--text-tertiary)] group-hover:text-[var(--brand)] transition-colors"
+              />
+              <span>{item.label}</span>
+              <span className="text-[10px] font-mono text-[var(--text-disabled)] group-hover:text-[var(--text-tertiary)] ml-1">
+                {item.hint}
+              </span>
+            </button>
+          ))}
         </div>
+
+        {/* Divider */}
+        {recentFolders.length > 0 && (
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--border)]" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-3 text-[10px] uppercase tracking-wider font-medium text-[var(--text-disabled)] bg-[var(--bg)]">
+                Recent
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Recent */}
         {recentFolders.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-[11px] font-medium text-[var(--text-disabled)] uppercase tracking-wider mb-2.5">
-              Recent
-            </h2>
+          <div className="mb-6 max-w-md mx-auto text-left">
             <div className="flex flex-col gap-0.5">
               {recentFolders.map((folder) => {
                 const name = folder.split('/').pop() || folder
@@ -189,66 +183,6 @@ function WelcomeView() {
             </div>
           </div>
         )}
-
-        {/* Agent */}
-        <div className="mb-6">
-          <h2 className="text-[11px] font-medium text-[var(--text-disabled)] uppercase tracking-wider mb-2.5">
-            Agent
-          </h2>
-          <button
-            onClick={() => {
-              window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', metaKey: true }))
-            }}
-            className="flex items-center gap-2.5 w-full px-2.5 py-1.5 -mx-2.5 rounded-lg text-left text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer group"
-          >
-            <Icon
-              icon="lucide:bot"
-              width={14}
-              height={14}
-              className="text-[var(--text-tertiary)] group-hover:text-[var(--brand)] transition-colors shrink-0"
-            />
-            <span className="flex-1">Open Agent Panel</span>
-            <span className="text-[10px] font-mono text-[var(--text-disabled)] group-hover:text-[var(--text-tertiary)]">
-              {formatShortcut('meta+J')}
-            </span>
-          </button>
-          <div className="flex gap-1.5 mt-2 px-2.5">
-            {['/edit', '/explain', '/generate', '/search'].map((cmd) => (
-              <span
-                key={cmd}
-                className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-disabled)]"
-              >
-                {cmd}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Keyboard shortcuts */}
-        <div>
-          <h2 className="text-[11px] font-medium text-[var(--text-disabled)] uppercase tracking-wider mb-2.5">
-            Keyboard
-          </h2>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
-            {[
-              ['meta+P', 'Quick Open'],
-              ['meta+B', 'Toggle Explorer'],
-              ['meta+J', 'Toggle Agent'],
-              ['meta+K', 'Inline Edit'],
-              ['meta+S', 'Save'],
-              ['meta+shift+F', 'Search Files'],
-              ['meta+`', 'Terminal'],
-              ['?', 'All Shortcuts'],
-            ].map(([combo, label]) => (
-              <div key={combo} className="flex items-center gap-2 py-0.5">
-                <kbd className="inline-flex items-center justify-center min-w-[28px] px-1 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-subtle)] text-[9px] font-mono text-[var(--text-tertiary)] shrink-0">
-                  {formatShortcut(combo)}
-                </kbd>
-                <span className="text-[var(--text-disabled)]">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -894,7 +828,30 @@ export function CodeEditor() {
       />
     </MonacoErrorBoundary>
   ) : (
-    <div className="h-full w-full bg-[var(--bg)]" />
+    <div className="h-full w-full bg-[var(--bg)] flex items-center justify-center p-8">
+      <div className="w-full max-w-2xl space-y-4">
+        {/* Skeleton shimmer lines */}
+        {[80, 60, 75, 50, 85, 65].map((width, i) => (
+          <div
+            key={i}
+            className="h-5 rounded animate-pulse"
+            style={{
+              width: `${width}%`,
+              background: 'linear-gradient(90deg, var(--bg-subtle) 0%, var(--bg-elevated) 50%, var(--bg-subtle) 100%)',
+              backgroundSize: '200% 100%',
+              animation: `shimmer 1.5s ease-in-out infinite ${i * 0.1}s`,
+              opacity: 0.6,
+            }}
+          />
+        ))}
+      </div>
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
+    </div>
   )
 
   if (!file) {

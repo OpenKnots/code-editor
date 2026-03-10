@@ -374,14 +374,14 @@ export function DiffViewer({ filePath, original, modified, onApply, onReject }: 
 
               {/* Diff line */}
               <div
-                className={`flex relative ${
+                className={`flex relative transition-colors ${
                   isHunkRejected
                     ? 'opacity-30'
                     : line.type === 'added'
-                      ? 'bg-[color-mix(in_srgb,var(--color-additions)_8%,transparent)]'
+                      ? 'bg-[color-mix(in_srgb,var(--color-additions)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-additions)_15%,transparent)]'
                       : line.type === 'removed'
-                        ? 'bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)]'
-                        : ''
+                        ? 'bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-deletions)_15%,transparent)]'
+                        : 'hover:bg-[var(--bg-subtle)]'
                 }`}
               >
                 {/* Gutter indicator */}

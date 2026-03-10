@@ -6372,3 +6372,162 @@ p {
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.02), transparent 18%),
     linear-gradient(180deg, #050505 0%, #0a0a0a 100%);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   COMPREHENSIVE POLISH PASS — Global Enhancements
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--accent, #3b82f6) 40%, transparent);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--accent, #3b82f6) 60%, transparent);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: color-mix(in srgb, var(--accent, #3b82f6) 25%, transparent);
+  color: inherit;
+}
+
+/* ── Focus Visible ── */
+*:focus-visible {
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── Universal Button Enhancements ── */
+button,
+a,
+[role='button'] {
+  cursor: pointer;
+}
+
+button:active,
+a:active,
+[role='button']:active {
+  transform: scale(0.98);
+}
+
+/* ── Particle Animation ── */
+.particles {
+  opacity: 0.6;
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--text-primary, #fff);
+  border-radius: 50%;
+  animation: particle-drift infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+@keyframes particle-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(20px, -30px);
+  }
+  50% {
+    transform: translate(-15px, -60px);
+  }
+  75% {
+    transform: translate(30px, -40px);
+  }
+}
+
+/* ── Suggestion Card Gradient Border on Hover ── */
+.codex-suggestion-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.codex-suggestion-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--brand, #3b82f6), var(--accent, #8b5cf6));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.codex-suggestion-card:hover::before {
+  opacity: 1;
+}
+
+/* ── Recent Chats Glass Card Styling ── */
+.recent-chat-card {
+  background: color-mix(in srgb, var(--text-primary, #fff) 5%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.recent-chat-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--text-primary, #fff) 7%, transparent);
+  transform: translateY(-1px);
+}
+
+/* ── Toast Progress Animation ── */
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Print Styles ── */
+@media print {
+  .sidebar,
+  .shell-sidebar,
+  .status-bar,
+  .shell-statusbar,
+  .toast-container,
+  .codex-sidebar {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}

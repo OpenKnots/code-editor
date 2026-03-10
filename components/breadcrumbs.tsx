@@ -19,7 +19,7 @@ export function Breadcrumbs({ filePath, repoName, onClick }: BreadcrumbsProps) {
       {repoName && (
         <>
           <span className="text-[var(--text-disabled)] shrink-0">{repoName}</span>
-          <Icon icon="lucide:chevron-right" width={10} className="text-[var(--text-disabled)] shrink-0" />
+          <Icon icon="lucide:chevron-right" width={12} className="text-[var(--text-disabled)] shrink-0" />
         </>
       )}
       {dirs.map((dir, i) => {
@@ -32,11 +32,15 @@ export function Breadcrumbs({ filePath, repoName, onClick }: BreadcrumbsProps) {
             >
               {dir}
             </button>
-            <Icon icon="lucide:chevron-right" width={10} className="text-[var(--text-disabled)]" />
+            <Icon icon="lucide:chevron-right" width={12} className="text-[var(--text-disabled)]" />
           </span>
         )
       })}
-      <span className="text-[var(--text-primary)] font-medium shrink-0">{fileName}</span>
+      {/* Active (last) segment with file icon */}
+      <span className="flex items-center gap-1.5 shrink-0">
+        <Icon icon="lucide:file-code" width={12} className="text-[var(--brand)]" />
+        <span className="text-[var(--text-primary)] font-medium">{fileName}</span>
+      </span>
     </div>
   )
 }

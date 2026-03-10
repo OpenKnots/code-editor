@@ -28,10 +28,10 @@ const ICONS = {
 }
 
 const COLORS = {
-  info: 'var(--info, #3b82f6)',
-  success: 'var(--success, #10b981)',
-  error: 'var(--error, #ef4444)',
-  warning: 'var(--warning, #eab308)',
+  info: '#3b82f6',
+  success: '#10b981',
+  error: '#ef4444',
+  warning: '#f59e0b',
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -65,41 +65,57 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
         <AnimatePresence mode="popLayout">
-          {toasts.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, x: 100, scale: 0.8 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 100, scale: 0.8 }}
-              transition={{
-                type: 'spring',
-                stiffness: 500,
-                damping: 35,
-              }}
-              className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--border)] shadow-[var(--shadow-xl)] backdrop-blur-xl max-w-[360px]"
-              style={{
-                background: 'color-mix(in srgb, var(--bg-elevated) 88%, transparent)',
-              }}
-            >
-              <Icon
-                icon={ICONS[t.type]}
-                width={18}
-                height={18}
-                style={{ color: COLORS[t.type] }}
-                className="shrink-0"
-              />
-              <span className="text-[13px] text-[var(--text-primary)] leading-[1.4] flex-1">
-                {t.message}
-              </span>
-              <button
-                onClick={() => removeToast(t.id)}
-                className="shrink-0 p-1 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-                title="Dismiss"
+          {toasts.map((t) => {
+            const duration = t.duration ?? DEFAULT_DURATION
+            return (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, x: 100, scale: 0.8 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 100, scale: 0.8 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 500,
+                  damping: 35,
+                }}
+                className="pointer-events-auto flex flex-col rounded-xl border shadow-[var(--shadow-xl)] backdrop-blur-xl max-w-[360px] overflow-hidden"
+                style={{
+                  background: 'color-mix(in srgb, var(--bg-elevated) 88%, transparent)',
+                  borderColor: 'var(--border)',
+                  borderLeftWidth: '3px',
+                  borderLeftColor: COLORS[t.type],
+                }}
               >
-                <Icon icon="lucide:x" width={14} height={14} />
-              </button>
-            </motion.div>
-          ))}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <Icon
+                    icon={ICONS[t.type]}
+                    width={18}
+                    height={18}
+                    style={{ color: COLORS[t.type] }}
+                    className="shrink-0"
+                  />
+                  <span className="text-[13px] text-[var(--text-primary)] leading-[1.4] flex-1">
+                    {t.message}
+                  </span>
+                  <button
+                    onClick={() => removeToast(t.id)}
+                    className="shrink-0 p-1 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                    title="Dismiss"
+                  >
+                    <Icon icon="lucide:x" width={14} height={14} />
+                  </button>
+                </div>
+                {/* Auto-dismiss progress bar */}
+                <div
+                  className="h-0.5 w-full"
+                  style={{
+                    backgroundColor: COLORS[t.type],
+                    animation: `toast-progress ${duration}ms linear`,
+                  }}
+                />
+              </motion.div>
+            )
+          })}
         </AnimatePresence>
       </div>
     </ToastContext.Provider>

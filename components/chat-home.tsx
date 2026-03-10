@@ -329,6 +329,22 @@ export const ChatHome = memo(function ChatHome({
   return (
     <div className="flex-1 overflow-y-auto relative">
       <KnotBackground />
+      {/* Particle animation background */}
+      <div className="particles absolute inset-0 pointer-events-none overflow-hidden z-0">
+        {Array.from({ length: 18 }).map((_, i) => (
+          <div
+            key={i}
+            className="particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 8}s`,
+              animationDuration: `${15 + Math.random() * 10}s`,
+              opacity: 0.1 + Math.random() * 0.2,
+            }}
+          />
+        ))}
+      </div>
       <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[clamp(2.75rem,8vh,5rem)] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
         {/* Header — Dynamic greeting + gradient tagline */}
         <div className="flex flex-col items-center mb-6 sm:mb-7">
@@ -559,7 +575,7 @@ export const ChatHome = memo(function ChatHome({
         </div>
 
         {/* Suggestion cards — hidden on mobile, 2x2 grid desktop with staggered animation */}
-        <div className="codex-suggestion-grid hidden sm:grid grid-cols-2 gap-3.5 mb-5">
+        <div className="codex-suggestion-grid hidden sm:grid grid-cols-2 gap-3.5 mb-4">
           {suggestions.map((card, i) => (
             <motion.button
               key={i}
@@ -600,6 +616,36 @@ export const ChatHome = memo(function ChatHome({
             </motion.button>
           ))}
         </div>
+
+        {/* Recent Chats section — desktop only */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
+          className="hidden sm:block mb-5"
+        >
+          <p className="text-[11px] uppercase tracking-wider text-[var(--text-disabled)] font-medium mb-2.5 px-1">
+            Recent Chats
+          </p>
+          <div className="space-y-2">
+            {MOCK_RECENT_CHATS.map((chat) => (
+              <button
+                key={chat.id}
+                onClick={() => console.log('Open chat', chat.id)}
+                className="recent-chat-card w-full flex items-center justify-between gap-3 p-3 text-left cursor-pointer group"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors truncate">
+                    {chat.title}
+                  </p>
+                </div>
+                <span className="text-[10px] text-[var(--text-disabled)] font-mono shrink-0">
+                  {chat.timestamp}
+                </span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
         {/* Composer with enhanced focus glow */}
         <motion.div

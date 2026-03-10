@@ -206,6 +206,8 @@ export function MessageList({
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [showSystemMessages, setShowSystemMessages] = useState(false)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const { chatFontSize, chatFontCss } = useChatAppearance()
 
   const visibleMessages = useMemo(
@@ -218,6 +220,18 @@ export function MessageList({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, streamBuffer])
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    }
+  }, [])
+
+  const handleCopyCode = useCallback((code: string, id: string) => {
+    copyToClipboard(code)
+    setCopiedCode(id)
+    setTimeout(() => setCopiedCode(null), 2000)
+  }, [])
 
   useEffect(() => {
     if (!menuOpenId) return
@@ -290,18 +304,33 @@ export function MessageList({
       {/* Streaming progress bar */}
       {isStreaming && <div className="streaming-progress-bar shrink-0" />}
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0 scroll-shadow"
-        onScroll={(e) => {
-          const el = e.currentTarget
-          el.classList.toggle('has-scroll-top', el.scrollTop > 8)
-          el.classList.toggle(
-            'has-scroll-bottom',
-            el.scrollTop + el.clientHeight < el.scrollHeight - 8,
-          )
-        }}
-      >
+      <div className="relative flex-1 overflow-hidden">
+        {/* Scroll to bottom FAB */}
+        {showScrollToBottom && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-4 right-4 z-10 w-10 h-10 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl flex items-center justify-center text-[var(--brand)] hover:bg-[var(--bg-subtle)] transition-all hover:scale-105 cursor-pointer animate-fade-in"
+            style={{ animationDuration: '0.2s' }}
+            title="Scroll to bottom"
+          >
+            <Icon icon="lucide:arrow-down" width={16} height={16} />
+          </button>
+        )}
+
+        <div
+          ref={scrollRef}
+          className="h-full overflow-y-auto px-3 py-3 space-y-3 scroll-shadow"
+          onScroll={(e) => {
+            const el = e.currentTarget
+            el.classList.toggle('has-scroll-top', el.scrollTop > 8)
+            el.classList.toggle(
+              'has-scroll-bottom',
+              el.scrollTop + el.clientHeight < el.scrollHeight - 8,
+            )
+            // Show scroll to bottom FAB if scrolled up more than 200px from bottom
+            setShowScrollToBottom(el.scrollTop + el.clientHeight < el.scrollHeight - 200)
+          }}
+        >
         {visibleMessages.map((msg, idx) => {
           const t = msg.type ?? 'text'
           const isUser = msg.role === 'user'
@@ -314,6 +343,19 @@ export function MessageList({
           // Check if previous message is from the same sender for grouping
           const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null
           const isGrouped = prevMsg && prevMsg.role === msg.role && !(prevMsg.type === 'error' || t === 'error')
+
+          // Check if we need a date separator
+          const currentDate = new Date(msg.timestamp).toDateString()
+          const prevDate = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null
+          const showDateSeparator = !prevMsg || currentDate !== prevDate
+
+          const getDateLabel = (dateString: string) => {
+            const today = new Date().toDateString()
+            const yesterday = new Date(Date.now() - 86400000).toDateString()
+            if (dateString === today) return 'Today'
+            if (dateString === yesterday) return 'Yesterday'
+            return new Date(dateString).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+          }
 
           const bubbleClass = isUser
             ? 'bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--text-primary)] rounded-br-sm'
@@ -346,11 +388,21 @@ export function MessageList({
           const userPreview = isUser ? parseUserAttachmentPreview(msg.content) : null
 
           return (
-            <div
-              key={msg.id}
-              className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full animate-fade-in-up`}
-              style={{ animationDuration: '0.2s', marginTop: isGrouped ? '4px' : '12px' }}
-            >
+            <>
+              {/* Date separator */}
+              {showDateSeparator && (
+                <div className="flex justify-center my-4">
+                  <div className="px-3 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] text-[10px] font-medium text-[var(--text-tertiary)]">
+                    {getDateLabel(currentDate)}
+                  </div>
+                </div>
+              )}
+
+              <div
+                key={msg.id}
+                className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full animate-fade-in-up`}
+                style={{ animationDuration: '0.2s', marginTop: isGrouped ? '4px' : '12px' }}
+              >
               {/* Assistant avatar row */}
               {isAssistant && !isGrouped && (
                 <div className="flex items-center gap-1.5 mb-1">
@@ -419,7 +471,7 @@ export function MessageList({
 
                 {/* Message bubble */}
                 <div
-                  className={`rounded-xl px-3 py-2 leading-relaxed ${bubbleClass}`}
+                  className={`rounded-xl px-3 py-2 leading-relaxed ${bubbleClass} ${isUser ? 'transition-transform hover:scale-[1.005]' : ''}`}
                   style={
                     isUser || isAssistant
                       ? { fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }
@@ -581,6 +633,7 @@ export function MessageList({
                 />
               )}
             </div>
+          </>
           )
         })}
 
@@ -744,6 +797,7 @@ export function MessageList({
             </button>
           )
         })()}
+        </div>
       </div>
     </>
   )

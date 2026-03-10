@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { MobileConnect } from './mobile-connect'
 import { SessionPresence } from './session-presence'

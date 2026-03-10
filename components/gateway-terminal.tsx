@@ -851,6 +851,31 @@ export function GatewayTerminal() {
           />
         </>
       )}
+      {/* Terminal Header */}
+      <div
+        className={`flex items-center justify-between px-3 py-1.5 border-b border-[var(--border)] shrink-0 ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
+        style={
+          hasBgImage ? { background: 'color-mix(in srgb, var(--bg) 70%, transparent)' } : undefined
+        }
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-2 h-2 rounded-full transition-colors ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+            title={isConnected ? 'Connected' : 'Disconnected'}
+          />
+          <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+            Gateway Terminal
+          </span>
+        </div>
+        <button
+          onClick={() => setEntries([])}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+          title="Clear terminal"
+        >
+          <Icon icon="lucide:trash-2" width={12} height={12} />
+          <span>Clear</span>
+        </button>
+      </div>
       {/* Output */}
       <div
         ref={scrollRef}
@@ -922,17 +947,10 @@ export function GatewayTerminal() {
             autoFocus
           />
           {sending && (
-            <span className="text-[10px] text-[var(--text-disabled)] animate-pulse mr-2">
+            <span className="text-[10px] text-[var(--text-disabled)] animate-pulse">
               running…
             </span>
           )}
-          <button
-            onClick={() => setEntries([])}
-            className="p-1 rounded hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-            title="Clear"
-          >
-            <Icon icon="lucide:trash-2" width={13} height={13} />
-          </button>
         </div>
       </div>
     </div>

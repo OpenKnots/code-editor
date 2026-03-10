@@ -8,7 +8,7 @@ import { useThread, THREAD_IDS, type ThreadId } from '@/context/thread-context'
 import { useView } from '@/context/view-context'
 import { useEditor } from '@/context/editor-context'
 import { formatShortcut } from '@/lib/platform'
-import { isTauri } from '@/lib/tauri'
+import { isTauri, openExternal } from '@/lib/tauri'
 import { emit, on } from '@/lib/events'
 
 const SIDEBAR_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
@@ -242,6 +242,18 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           >
             <Icon icon="lucide:panel-left" width={24} height={24} />
           </button>
+
+          {/* Mini User Avatar */}
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, var(--brand, #3b82f6), var(--accent, #8b5cf6))',
+              color: 'var(--brand-contrast, #fff)',
+            }}
+            title={workspaceLabel || 'KnotCode'}
+          >
+            {(workspaceLabel || 'V').charAt(0).toUpperCase()}
+          </div>
         </>
       ) : (
         <>
@@ -291,50 +303,106 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
 
             {/* View Navigation */}
             <div className="mt-2 flex flex-col gap-0.5">
-              {(
-                [
-                  {
-                    id: 'chat' as const,
-                    icon: 'lucide:message-circle',
-                    label: 'Chat',
-                    shortcut: '⌘1',
-                  },
-                  { id: 'editor' as const, icon: 'lucide:code', label: 'Editor', shortcut: '⌘2' },
-                  { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
-                  { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git', shortcut: '⌘4' },
-                  { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘5' },
-                  {
-                    id: 'prompts' as const,
-                    icon: 'lucide:book-open',
-                    label: 'Prompts',
-                    shortcut: '⌘6',
-                  },
-                  { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
-                  {
-                    id: 'workshop' as const,
-                    icon: 'lucide:hammer',
-                    label: 'Workshop',
-                    shortcut: '⌘9',
-                  },
-                ] as const
-              ).map((item) => (
+              {[
+                {
+                  id: 'chat' as const,
+                  icon: 'lucide:message-circle',
+                  label: 'Chat',
+                  shortcut: '⌘1',
+                },
+                { id: 'editor' as const, icon: 'lucide:code', label: 'Editor', shortcut: '⌘2' },
+                { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
+                { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git', shortcut: '⌘4' },
+              ].map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setView(item.id)}
-                  className={`sidebar-view-nav group ${activeView === item.id ? 'sidebar-view-nav--active' : ''}`}
+                  className={`sidebar-view-nav group relative ${activeView === item.id ? 'sidebar-view-nav--active' : ''}`}
                 >
-                  <Icon icon={item.icon} width={16} height={16} className="shrink-0" />
-                  <span className="truncate">{item.label}</span>
+                  {activeView === item.id && (
+                    <motion.div
+                      layoutId="activeNavItem"
+                      className="absolute inset-0 bg-[var(--bg-subtle)] rounded-lg"
+                      initial={false}
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <Icon icon={item.icon} width={16} height={16} className="shrink-0 relative z-10" />
+                  <span className="truncate relative z-10">{item.label}</span>
                   {item.id === 'git' && dirtyCount > 0 && (
-                    <span className="ml-auto px-1.5 min-w-[20px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[10px] leading-[18px] font-bold shrink-0">
+                    <span className="ml-auto px-1.5 min-w-[20px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[10px] leading-[18px] font-bold shrink-0 relative z-10">
                       {dirtyCount}
                     </span>
                   )}
                   {item.id !== 'git' && (
-                    <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
                       {item.shortcut}
                     </span>
                   )}
+                </button>
+              ))}
+
+              <div className="h-px my-1.5 bg-[var(--border)]" style={{ opacity: 0.3 }} />
+
+              {[
+                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘5' },
+                {
+                  id: 'prompts' as const,
+                  icon: 'lucide:book-open',
+                  label: 'Prompts',
+                  shortcut: '⌘6',
+                },
+                { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setView(item.id)}
+                  className={`sidebar-view-nav group relative ${activeView === item.id ? 'sidebar-view-nav--active' : ''}`}
+                >
+                  {activeView === item.id && (
+                    <motion.div
+                      layoutId="activeNavItem"
+                      className="absolute inset-0 bg-[var(--bg-subtle)] rounded-lg"
+                      initial={false}
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <Icon icon={item.icon} width={16} height={16} className="shrink-0 relative z-10" />
+                  <span className="truncate relative z-10">{item.label}</span>
+                  <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
+                    {item.shortcut}
+                  </span>
+                </button>
+              ))}
+
+              <div className="h-px my-1.5 bg-[var(--border)]" style={{ opacity: 0.3 }} />
+
+              {[
+                {
+                  id: 'workshop' as const,
+                  icon: 'lucide:hammer',
+                  label: 'Workshop',
+                  shortcut: '⌘9',
+                },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setView(item.id)}
+                  className={`sidebar-view-nav group relative ${activeView === item.id ? 'sidebar-view-nav--active' : ''}`}
+                >
+                  {activeView === item.id && (
+                    <motion.div
+                      layoutId="activeNavItem"
+                      className="absolute inset-0 bg-[var(--bg-subtle)] rounded-lg"
+                      initial={false}
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <Icon icon={item.icon} width={16} height={16} className="shrink-0 relative z-10" />
+                  <span className="truncate relative z-10">{item.label}</span>
+                  <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
+                    {item.shortcut}
+                  </span>
                 </button>
               ))}
             </div>
@@ -431,7 +499,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
               Settings
             </button>
             <button
-              onClick={() => window.open('https://x.com/OpenKnot', '_blank')}
+              onClick={() => openExternal('https://x.com/OpenKnot')}
               className="codex-sidebar-nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
             >
               <Icon icon="ri:twitter-x-fill" width={18} height={18} />

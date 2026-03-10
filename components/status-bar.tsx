@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
@@ -86,8 +86,26 @@ export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
   const layout = useLayout()
   const { spec: modeSpec } = useAppMode()
   const terminalVisible = layout.isVisible('terminal')
+  const [currentTime, setCurrentTime] = useState('')
 
   const dirtyCount = useMemo(() => files.filter((f) => f.dirty).length, [files])
+
+  // Update time every minute
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      const hours = now.getHours()
+      const minutes = now.getMinutes()
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      const displayHours = hours % 12 || 12
+      const displayMinutes = minutes.toString().padStart(2, '0')
+      setCurrentTime(`${displayHours}:${displayMinutes} ${ampm}`)
+    }
+
+    updateTime()
+    const interval = setInterval(updateTime, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <footer className="shell-statusbar flex items-center justify-between px-3 h-[24px] text-[11px] text-[var(--text-tertiary)] shrink-0">
@@ -140,6 +158,40 @@ export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
 
       {/* ── Right: tools & status ── */}
       <div className="flex items-center gap-1.5">
+        {/* Line count */}
+        <button
+          className="shell-status-item gap-1 hover:bg-[var(--bg-secondary)] rounded-sm px-1.5 py-0.5 transition-colors cursor-pointer"
+          title="Line 1, Column 1"
+        >
+          <span className="text-[10px] font-mono">Ln 1, Col 1</span>
+        </button>
+
+        <span className="shell-status-separator" />
+
+        {/* Encoding */}
+        <button
+          className="shell-status-item gap-1 hover:bg-[var(--bg-secondary)] rounded-sm px-1.5 py-0.5 transition-colors cursor-pointer"
+          title="Encoding: UTF-8"
+        >
+          <span className="text-[10px] font-mono">UTF-8</span>
+        </button>
+
+        <span className="shell-status-separator" />
+
+        {/* Current time */}
+        {currentTime && (
+          <>
+            <button
+              className="shell-status-item gap-1 hover:bg-[var(--bg-secondary)] rounded-sm px-1.5 py-0.5 transition-colors cursor-pointer"
+              title="Current time"
+            >
+              <Icon icon="lucide:clock" width={10} height={10} />
+              <span className="text-[10px] font-mono">{currentTime}</span>
+            </button>
+            <span className="shell-status-separator" />
+          </>
+        )}
+
         {/* Git branch */}
         {gitInfo?.branch && (
           <>

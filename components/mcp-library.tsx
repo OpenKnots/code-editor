@@ -25,6 +25,7 @@ interface McpCatalogEntry {
   command: string
   type: McpServerType
   featured?: boolean
+  installs?: string
 }
 
 const MCP_CATALOG: McpCatalogEntry[] = [
@@ -38,6 +39,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-postgres',
     type: 'stdio',
     featured: true,
+    installs: '5.3k',
   },
   {
     id: 'filesystem',
@@ -49,6 +51,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-filesystem',
     type: 'stdio',
     featured: true,
+    installs: '8.1k',
   },
   {
     id: 'brave-search',
@@ -60,6 +63,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-brave-search',
     type: 'stdio',
     featured: true,
+    installs: '3.7k',
   },
   {
     id: 'github',
@@ -71,6 +75,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-github',
     type: 'stdio',
     featured: true,
+    installs: '12.4k',
   },
   {
     id: 'slack',
@@ -81,6 +86,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     tags: ['slack', 'messaging', 'chat'],
     command: 'npx @modelcontextprotocol/server-slack',
     type: 'stdio',
+    installs: '2.1k',
   },
   {
     id: 'linear',
@@ -112,6 +118,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-memory',
     type: 'stdio',
     featured: true,
+    installs: '4.2k',
   },
   {
     id: 'puppeteer',
@@ -163,6 +170,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-notion',
     type: 'stdio',
     featured: true,
+    installs: '6.8k',
   },
   {
     id: 'google-drive',
@@ -204,6 +212,7 @@ const MCP_CATALOG: McpCatalogEntry[] = [
     command: 'npx @modelcontextprotocol/server-supabase',
     type: 'stdio',
     featured: true,
+    installs: '4.9k',
   },
   {
     id: 'vercel',
@@ -285,6 +294,9 @@ function ServerCard({ entry, installed, enabled, onInstall, onConfigure }: Serve
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">{entry.name}</h3>
+          {entry.installs && (
+            <p className="text-[10px] text-[var(--text-disabled)]">{entry.installs} installs</p>
+          )}
         </div>
       </div>
 
@@ -660,6 +672,22 @@ export function McpLibrary() {
 
   const installedIds = useMemo(() => new Set(servers.map((s) => s.id)), [servers])
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    CATEGORIES.forEach((cat) => {
+      if (cat.id === 'all') {
+        counts[cat.id] = MCP_CATALOG.length
+      } else if (cat.id === 'installed') {
+        counts[cat.id] = servers.length
+      } else if (cat.id === 'featured') {
+        counts[cat.id] = MCP_CATALOG.filter((e) => e.featured).length
+      } else {
+        counts[cat.id] = MCP_CATALOG.filter((e) => e.category === cat.id).length
+      }
+    })
+    return counts
+  }, [servers])
+
   const filteredCatalog = useMemo(() => {
     let filtered = MCP_CATALOG
 
@@ -685,6 +713,11 @@ export function McpLibrary() {
 
     return filtered
   }, [category, search, installedIds])
+
+  const featuredServers = useMemo(
+    () => MCP_CATALOG.filter((entry) => entry.featured).slice(0, 5),
+    [],
+  )
 
   const handleInstall = (entry: McpCatalogEntry) => {
     setSelectedEntry(entry)
@@ -767,6 +800,15 @@ export function McpLibrary() {
               >
                 <Icon icon={cat.icon} className="h-4 w-4" />
                 {cat.label}
+                <span
+                  className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    category === cat.id
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-disabled)]'
+                  }`}
+                >
+                  {categoryCounts[cat.id] ?? 0}
+                </span>
               </button>
             ))}
           </div>
@@ -775,7 +817,7 @@ export function McpLibrary() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7xl space-y-6">
           {showEmptyState ? (
             <div className="flex h-full min-h-[400px] flex-col items-center justify-center text-center">
               <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--bg-subtle)]">
@@ -794,28 +836,78 @@ export function McpLibrary() {
                 Browse Catalog
               </button>
             </div>
+          ) : search.trim() && filteredCatalog.length === 0 ? (
+            <div className="flex h-full min-h-[400px] flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--bg-subtle)]">
+                <Icon icon="lucide:search-x" className="h-10 w-10 text-[var(--text-muted)]" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">
+                No servers match your search
+              </h3>
+              <p className="mb-6 text-sm text-[var(--text-muted)]">
+                Try a different search term or browse all categories
+              </p>
+              <button
+                onClick={() => setSearch('')}
+                className="rounded-lg bg-[var(--brand)] px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-[var(--brand-hover)] hover:shadow-md active:scale-95"
+              >
+                Clear Search
+              </button>
+            </div>
           ) : (
-            <motion.div
-              layout
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            >
-              <AnimatePresence mode="popLayout">
-                {filteredCatalog.map((entry) => {
-                  const installed = installedIds.has(entry.id)
-                  const config = servers.find((s) => s.id === entry.id)
-                  return (
-                    <ServerCard
-                      key={entry.id}
-                      entry={entry}
-                      installed={installed}
-                      enabled={config?.enabled ?? false}
-                      onInstall={() => handleInstall(entry)}
-                      onConfigure={() => handleConfigure(entry)}
-                    />
-                  )
-                })}
-              </AnimatePresence>
-            </motion.div>
+            <>
+              {/* Featured Row */}
+              {category === 'all' && !search.trim() && (
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <Icon icon="lucide:star" className="h-5 w-5 text-[var(--brand)]" />
+                    <h2 className="text-lg font-bold text-[var(--text-primary)]">Featured</h2>
+                  </div>
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex gap-4">
+                      {featuredServers.map((entry) => {
+                        const installed = installedIds.has(entry.id)
+                        const config = servers.find((s) => s.id === entry.id)
+                        return (
+                          <div key={entry.id} className="w-[280px] flex-shrink-0">
+                            <ServerCard
+                              entry={entry}
+                              installed={installed}
+                              enabled={config?.enabled ?? false}
+                              onInstall={() => handleInstall(entry)}
+                              onConfigure={() => handleConfigure(entry)}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* All Servers Grid */}
+              <motion.div
+                layout
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredCatalog.map((entry) => {
+                    const installed = installedIds.has(entry.id)
+                    const config = servers.find((s) => s.id === entry.id)
+                    return (
+                      <ServerCard
+                        key={entry.id}
+                        entry={entry}
+                        installed={installed}
+                        enabled={config?.enabled ?? false}
+                        onInstall={() => handleInstall(entry)}
+                        onConfigure={() => handleConfigure(entry)}
+                      />
+                    )
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            </>
           )}
         </div>
       </div>

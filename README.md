@@ -4,17 +4,23 @@
 
 A lightweight, AI-native code editor powered by [OpenClaw](https://github.com/openclaw/openclaw). Your agent, your gateway, your data. Browser + Desktop (Tauri).
 
-```
-┌──────────────┬──────────────────────────┬─────────────────┐
-│  File Tree   │   Monaco Editor          │   Agent Panel   │
-│              │   (multi-tab, vim mode)  │   (chat + diff) │
-│ Cmd/Ctrl+B   │   Cmd/Ctrl+K             │   Cmd/Ctrl+J    │
-│ toggle       │   inline edit            │   toggle        │
-│              │   Cmd/Ctrl+P quick open  │                 │
-├──────────────┴──────────────────────────┴─────────────────┤
-│  Terminal (xterm.js)                                      │
-└───────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="assets/start-chat.png" alt="Knot Code — Start screen" width="720" />
+</p>
+
+## Screenshots
+
+| Chat | Agent Workshop |
+| :--: | :--: |
+| ![Chat screen](./assets/chat-screen.png) | ![Agent Workshop](./assets/agent-workshop.png) |
+
+| Prompt Library | Skills Library |
+| :--: | :--: |
+| ![Prompt Library](./assets/prompt-library.png) | ![Skills Library](assets/skills-library.png) |
+
+| Project Tasks |
+| :--: |
+| ![Project Tasks](./assets/project-tasks.png) |
 
 ## How It Compares
 
