@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import { KnotLogo } from '@/components/knot-logo'
 import { MarkdownPreview } from '@/components/markdown-preview'
@@ -331,472 +331,489 @@ export function MessageList({
             setShowScrollToBottom(el.scrollTop + el.clientHeight < el.scrollHeight - 200)
           }}
         >
-        {visibleMessages.map((msg, idx) => {
-          const t = msg.type ?? 'text'
-          const isUser = msg.role === 'user'
-          const isSystem = msg.role === 'system'
-          const isAssistant = msg.role === 'assistant'
+          {visibleMessages.map((msg, idx) => {
+            const t = msg.type ?? 'text'
+            const isUser = msg.role === 'user'
+            const isSystem = msg.role === 'system'
+            const isAssistant = msg.role === 'assistant'
 
-          // Hide system status/tool messages by default (errors always show)
-          if (isSystem && !showSystemMessages && t !== 'error') return null
+            // Hide system status/tool messages by default (errors always show)
+            if (isSystem && !showSystemMessages && t !== 'error') return null
 
-          // Check if previous message is from the same sender for grouping
-          const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null
-          const isGrouped = prevMsg && prevMsg.role === msg.role && !(prevMsg.type === 'error' || t === 'error')
+            // Check if previous message is from the same sender for grouping
+            const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null
+            const isGrouped =
+              prevMsg && prevMsg.role === msg.role && !(prevMsg.type === 'error' || t === 'error')
 
-          // Check if we need a date separator
-          const currentDate = new Date(msg.timestamp).toDateString()
-          const prevDate = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null
-          const showDateSeparator = !prevMsg || currentDate !== prevDate
+            // Check if we need a date separator
+            const currentDate = new Date(msg.timestamp).toDateString()
+            const prevDate = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null
+            const showDateSeparator = !prevMsg || currentDate !== prevDate
 
-          const getDateLabel = (dateString: string) => {
-            const today = new Date().toDateString()
-            const yesterday = new Date(Date.now() - 86400000).toDateString()
-            if (dateString === today) return 'Today'
-            if (dateString === yesterday) return 'Yesterday'
-            return new Date(dateString).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-          }
+            const getDateLabel = (dateString: string) => {
+              const today = new Date().toDateString()
+              const yesterday = new Date(Date.now() - 86400000).toDateString()
+              if (dateString === today) return 'Today'
+              if (dateString === yesterday) return 'Yesterday'
+              return new Date(dateString).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              })
+            }
 
-          const bubbleClass = isUser
-            ? 'bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--text-primary)] rounded-br-sm'
-            : t === 'error'
-              ? 'px-2.5 py-1.5 text-[10px] border-l-2 border-[var(--color-deletions,#ef4444)] bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_8%,transparent)] text-[var(--text-secondary)]'
-              : t === 'tool'
-                ? 'px-2.5 py-1 text-[10px] border-l-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] text-[var(--text-secondary)]'
-                : t === 'status'
-                  ? 'px-2.5 py-1 text-[10px] bg-[color-mix(in_srgb,var(--text-disabled)_6%,transparent)] text-[var(--text-tertiary)]'
-                  : t === 'cancelled'
-                    ? 'bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-sm opacity-60'
-                    : isSystem
-                      ? 'px-2.5 py-1.5 text-[10px] border-l-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] text-[var(--text-secondary)]'
-                      : t === 'edit'
-                        ? 'bg-[var(--bg-subtle)] border border-[color-mix(in_srgb,var(--color-additions,#22c55e)_25%,var(--border))] text-[var(--text-primary)] rounded-bl-sm'
-                        : 'bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-sm'
+            const bubbleClass = isUser
+              ? 'bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--text-primary)] rounded-br-sm'
+              : t === 'error'
+                ? 'px-2.5 py-1.5 text-[10px] border-l-2 border-[var(--color-deletions,#ef4444)] bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_8%,transparent)] text-[var(--text-secondary)]'
+                : t === 'tool'
+                  ? 'px-2.5 py-1 text-[10px] border-l-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] text-[var(--text-secondary)]'
+                  : t === 'status'
+                    ? 'px-2.5 py-1 text-[10px] bg-[color-mix(in_srgb,var(--text-disabled)_6%,transparent)] text-[var(--text-tertiary)]'
+                    : t === 'cancelled'
+                      ? 'bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-sm opacity-60'
+                      : isSystem
+                        ? 'px-2.5 py-1.5 text-[10px] border-l-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] text-[var(--text-secondary)]'
+                        : t === 'edit'
+                          ? 'bg-[var(--bg-subtle)] border border-[color-mix(in_srgb,var(--color-additions,#22c55e)_25%,var(--border))] text-[var(--text-primary)] rounded-bl-sm'
+                          : 'bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-sm'
 
-          const typeIcon =
-            t === 'error'
-              ? 'lucide:alert-circle'
-              : t === 'tool'
-                ? 'lucide:wrench'
-                : t === 'status'
-                  ? 'lucide:info'
-                  : t === 'cancelled'
-                    ? 'lucide:circle-slash'
-                    : t === 'edit' && isAssistant
-                      ? 'lucide:file-diff'
-                      : null
-          const userPreview = isUser ? parseUserAttachmentPreview(msg.content) : null
+            const typeIcon =
+              t === 'error'
+                ? 'lucide:alert-circle'
+                : t === 'tool'
+                  ? 'lucide:wrench'
+                  : t === 'status'
+                    ? 'lucide:info'
+                    : t === 'cancelled'
+                      ? 'lucide:circle-slash'
+                      : t === 'edit' && isAssistant
+                        ? 'lucide:file-diff'
+                        : null
+            const userPreview = isUser ? parseUserAttachmentPreview(msg.content) : null
 
-          return (
-            <>
-              {/* Date separator */}
-              {showDateSeparator && (
-                <div className="flex justify-center my-4">
-                  <div className="px-3 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] text-[10px] font-medium text-[var(--text-tertiary)]">
-                    {getDateLabel(currentDate)}
-                  </div>
-                </div>
-              )}
-
-              <div
-                key={msg.id}
-                className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full animate-fade-in-up`}
-                style={{ animationDuration: '0.2s', marginTop: isGrouped ? '4px' : '12px' }}
-              >
-              {/* Assistant avatar row */}
-              {isAssistant && !isGrouped && (
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="message-avatar-ring">
-                    <KnotLogo size={12} className="text-[var(--brand)]" />
-                  </div>
-                  <span className="text-[10px] font-medium text-[var(--text-tertiary)]">Knot</span>
-                </div>
-              )}
-
-              <div className={`relative min-w-0 ${isUser ? 'max-w-[85%]' : 'w-full'}`}>
-                {/* Ellipsis menu trigger */}
-                <button
-                  onClick={() => setMenuOpenId((prev) => (prev === msg.id ? null : msg.id))}
-                  className={`absolute ${isUser ? '-left-5' : '-right-5'} top-0.5 p-0.5 rounded text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer ${menuOpenId === msg.id ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'}`}
-                >
-                  <Icon icon="lucide:ellipsis" width={13} height={13} />
-                </button>
-
-                {/* Context menu */}
-                {menuOpenId === msg.id && (
-                  <div
-                    ref={menuRef}
-                    className={`absolute ${isUser ? 'right-0' : 'left-0'} top-6 z-50 w-44 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 animate-fade-in`}
-                    style={{ animationDuration: '0.1s' }}
-                  >
-                    <button
-                      onClick={() => handleCopy(msg.content)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                    >
-                      <Icon icon="lucide:copy" width={12} height={12} /> Copy message
-                    </button>
-                    {isAssistant && (
-                      <button
-                        onClick={() => {
-                          setMenuOpenId(null)
-                          onRegenerate(msg.id)
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                      >
-                        <Icon icon="lucide:refresh-cw" width={12} height={12} /> Regenerate
-                      </button>
-                    )}
-                    {isUser && (
-                      <button
-                        onClick={() => {
-                          setMenuOpenId(null)
-                          onEditAndResend(msg.id)
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-                      >
-                        <Icon icon="lucide:pencil" width={12} height={12} /> Edit & resend
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setMenuOpenId(null)
-                        onDeleteMessage(msg.id)
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--color-deletions,#ef4444)] hover:bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_6%,transparent)] transition-colors cursor-pointer"
-                    >
-                      <Icon icon="lucide:trash-2" width={12} height={12} /> Delete
-                    </button>
-                  </div>
-                )}
-
-                {/* Message bubble */}
-                <div
-                  className={`rounded-xl px-3 py-2 leading-relaxed ${bubbleClass} ${isUser ? 'transition-transform hover:scale-[1.005]' : ''}`}
-                  style={
-                    isUser || isAssistant
-                      ? { fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }
-                      : undefined
-                  }
-                >
-                  {(t === 'tool' || t === 'status' || t === 'error') && typeIcon && (
-                    <span className="inline-flex items-center gap-1 mr-1 align-middle">
-                      <Icon
-                        icon={typeIcon}
-                        width={11}
-                        height={11}
-                        className={
-                          t === 'error'
-                            ? 'text-[var(--color-deletions,#ef4444)]'
-                            : 'text-[var(--text-disabled)]'
-                        }
-                      />
-                    </span>
-                  )}
-                  {t === 'cancelled' && (
-                    <span className="inline-flex items-center gap-1 mr-1 align-middle text-[var(--text-disabled)]">
-                      <Icon icon="lucide:circle-slash" width={11} height={11} />
-                    </span>
-                  )}
-                  {isUser ? (
-                    <div>
-                      {userPreview && userPreview.chips.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {userPreview.chips.map((chip, chipIdx) => (
-                            <div
-                              key={`${chip.path}-${chipIdx}`}
-                              className="inline-flex max-w-[220px] items-start gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--border)_85%,transparent)] bg-[color-mix(in_srgb,var(--bg)_76%,transparent)] px-2.5 py-1.5"
-                            >
-                              <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_12%,transparent)] text-[var(--color-deletions,#ef4444)]">
-                                <Icon
-                                  icon={getFileTypeIcon(chip.path, chip.kind)}
-                                  width={9}
-                                  height={9}
-                                />
-                              </span>
-                              <span className="min-w-0">
-                                <span className="block truncate font-mono text-[10px] leading-tight text-[var(--text-primary)]">
-                                  {chip.title}
-                                </span>
-                                <span className="block text-[8px] leading-tight text-[var(--text-disabled)]">
-                                  {chip.detail}
-                                </span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {msg.images && msg.images.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {msg.images.map((img, imgIdx) => (
-                            <div
-                              key={imgIdx}
-                              className="relative group/msgimg rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-[var(--brand)] transition-all"
-                              style={{ width: 96, height: 72 }}
-                              onClick={() => setLightboxSrc(img.dataUrl)}
-                            >
-                              <img
-                                src={img.dataUrl}
-                                alt={img.name}
-                                className="w-full h-full object-cover transition-transform duration-200 group-hover/msgimg:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/msgimg:opacity-100 transition-opacity flex items-end p-1.5">
-                                <span className="text-[8px] text-white/90 font-mono truncate leading-tight">
-                                  {img.name}
-                                </span>
-                              </div>
-                              <div className="absolute top-1 right-1 opacity-0 group-hover/msgimg:opacity-100 transition-opacity">
-                                <Icon
-                                  icon="lucide:zoom-in"
-                                  width={10}
-                                  height={10}
-                                  className="text-white/80 drop-shadow-md"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {userPreview?.text ? (
-                        <p className="whitespace-pre-wrap break-words">{userPreview.text}</p>
-                      ) : null}
+            return (
+              <Fragment key={msg.id}>
+                {/* Date separator */}
+                {showDateSeparator && (
+                  <div className="flex justify-center my-4">
+                    <div className="px-3 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] text-[10px] font-medium text-[var(--text-tertiary)]">
+                      {getDateLabel(currentDate)}
                     </div>
-                  ) : isSystem && (t === 'tool' || t === 'status' || t === 'error') ? (
-                    <span className="inline">{msg.content}</span>
-                  ) : (
-                    <CollapsibleMessage content={msg.content}>
-                      <div
-                        className="prose-chat stagger-paragraph"
-                        onClick={(e) => {
-                          const target = e.target as HTMLElement
-                          const clickText = target.textContent ?? ''
-                          const lineMatch =
-                            clickText.match(/(?:lines?\s+|L)(\d+)(?:\s*[-–]\s*L?(\d+))?/i) ||
-                            clickText.match(/([\w./\-]+\.\w+)[:#]L?(\d+)/)
-                          if (lineMatch) {
-                            const start = parseInt(lineMatch[1] ?? '', 10)
-                            const end = lineMatch[2] ? parseInt(lineMatch[2], 10) : undefined
-                            if (!isNaN(start)) {
-                              e.preventDefault()
-                              navigateToLine(start, end)
-                            }
-                          }
-                        }}
-                      >
-                        {t === 'edit' && isAssistant && (
-                          <div className="flex items-center gap-1.5 mb-1.5 text-[11px] text-[var(--color-additions,#22c55e)] font-medium">
-                            <Icon icon="lucide:file-diff" width={12} height={12} />
-                            File changes proposed
-                            {editSummaries.has(msg.id) && (
-                              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-additions,#22c55e)_10%,transparent)] text-[10px]">
-                                {editSummaries.get(msg.id)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <MarkdownPreview content={msg.content} />
-                        {isAssistant && msg.type === 'plan' && msg.planSteps && (
-                          <PlanView
-                            steps={msg.planSteps}
-                            interactive={agentMode === 'plan'}
-                            onApprove={() => onSendMessage('Execute the plan above. Proceed step by step.')}
-                            onReject={() => onSendMessage('I want to modify this plan. Let me explain what to change.')}
-                          />
-                        )}
-                      </div>
-                    </CollapsibleMessage>
-                  )}
-                </div>
-              </div>
-
-              {/* Response metadata — time + token estimate on hover */}
-              <div className="flex items-center gap-2 mt-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                <span className="text-[9px] text-[var(--text-disabled)] font-mono">
-                  {new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-                {isAssistant && (
-                  <span className="text-[9px] text-[var(--text-disabled)] font-mono">
-                    ~{estimateTokens(msg.content).toLocaleString()} tokens
-                  </span>
+                  </div>
                 )}
-              </div>
 
-              {/* Inline diff review */}
-              {msg.editProposals && msg.editProposals.length > 0 && (
-                <InlineDiffGroup
-                  proposals={msg.editProposals}
-                  getOriginal={(filePath) => getFileContent?.(filePath)}
-                  onApply={onQuickApply}
-                  onApplyAll={() => onApplyAll?.(msg.editProposals!)}
-                />
-              )}
-            </div>
-          </>
-          )
-        })}
-
-        {/* Streaming indicator */}
-        {isStreaming && (
-          <div
-            className="flex flex-col items-start animate-fade-in"
-            style={{ animationDuration: '0.15s' }}
-          >
-            {/* Agent activity feed (structured) or inline tool badges (fallback) */}
-            {agentActivities.length > 0 && !streamBuffer && (
-              <div className="w-full mb-1.5">
-                <AgentActivityFeed activities={agentActivities} isRunning={isStreaming} elapsedMs={turnElapsedMs} />
-              </div>
-            )}
-            {agentActivities.length === 0 && thinkingTrail.length > 0 && !streamBuffer && (
-              <div className="flex flex-wrap gap-1 mb-1.5">
-                {thinkingTrail.map((step, i) => {
-                  const isLast = i === thinkingTrail.length - 1
-                  return (
-                    <span
-                      key={i}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
-                        isLast
-                          ? 'border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] text-[var(--brand)]'
-                          : 'border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-disabled)]'
-                      }`}
-                    >
-                      <Icon
-                        icon={isLast ? getToolIcon(step) : 'lucide:check'}
-                        width={10}
-                        height={10}
-                      />
-                      {step}
-                    </span>
-                  )
-                })}
-              </div>
-            )}
-
-            {streamBuffer ? (
-              <div className="w-full min-w-0">
-                {/* Avatar for streaming */}
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="message-avatar-ring">
-                    <KnotLogo size={12} className="text-[var(--brand)]" />
-                  </div>
-                  <span className="text-[10px] font-medium text-[var(--text-tertiary)]">Knot</span>
-                </div>
                 <div
-                  className="rounded-xl px-3 py-2 leading-relaxed bg-[var(--bg-subtle)] border border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] text-[var(--text-primary)] rounded-bl-sm"
-                  style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }}
+                  className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full animate-fade-in-up`}
+                  style={{ animationDuration: '0.2s', marginTop: isGrouped ? '4px' : '12px' }}
                 >
-                  <div className="prose-chat">
-                    <MarkdownPreview content={streamBuffer} streaming />
-                  </div>
-                  <span className="inline-block w-1.5 h-3.5 bg-[var(--brand)] animate-pulse ml-0.5 align-text-bottom rounded-sm" />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1 px-3 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border)] rounded-bl-sm w-full">
-                {/* Thinking disclosure (collapsed by default) */}
-                {thinkingTrail.length > 0 && (
-                  <details className="thinking-disclosure mb-1" open={thinkingOpen}>
-                    <summary
-                      className="text-[11px] text-[var(--text-tertiary)] select-none"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setThinkingOpen((v) => !v)
-                      }}
+                  {/* Assistant avatar row */}
+                  {isAssistant && !isGrouped && (
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="message-avatar-ring">
+                        <KnotLogo size={12} className="text-[var(--brand)]" />
+                      </div>
+                      <span className="text-[10px] font-medium text-[var(--text-tertiary)]">
+                        Knot
+                      </span>
+                    </div>
+                  )}
+
+                  <div className={`relative min-w-0 ${isUser ? 'max-w-[85%]' : 'w-full'}`}>
+                    {/* Ellipsis menu trigger */}
+                    <button
+                      onClick={() => setMenuOpenId((prev) => (prev === msg.id ? null : msg.id))}
+                      className={`absolute ${isUser ? '-left-5' : '-right-5'} top-0.5 p-0.5 rounded text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer ${menuOpenId === msg.id ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'}`}
                     >
-                      <Icon
-                        icon="lucide:chevron-right"
-                        width={10}
-                        height={10}
-                        className="thinking-chevron text-[var(--text-disabled)]"
-                      />
-                      <span>{thinkingTrail.length} operations</span>
-                    </summary>
-                    <div className="relative flex flex-col gap-0 mt-1 ml-1">
-                      <div className="absolute left-[4px] top-1 bottom-1 w-px bg-[color-mix(in_srgb,var(--brand)_20%,transparent)]" />
-                      {thinkingTrail.map((step, i) => {
-                        const isLast = i === thinkingTrail.length - 1
-                        const age = thinkingTrail.length - 1 - i
-                        return (
+                      <Icon icon="lucide:ellipsis" width={13} height={13} />
+                    </button>
+
+                    {/* Context menu */}
+                    {menuOpenId === msg.id && (
+                      <div
+                        ref={menuRef}
+                        className={`absolute ${isUser ? 'right-0' : 'left-0'} top-6 z-50 w-44 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 animate-fade-in`}
+                        style={{ animationDuration: '0.1s' }}
+                      >
+                        <button
+                          onClick={() => handleCopy(msg.content)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                        >
+                          <Icon icon="lucide:copy" width={12} height={12} /> Copy message
+                        </button>
+                        {isAssistant && (
+                          <button
+                            onClick={() => {
+                              setMenuOpenId(null)
+                              onRegenerate(msg.id)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                          >
+                            <Icon icon="lucide:refresh-cw" width={12} height={12} /> Regenerate
+                          </button>
+                        )}
+                        {isUser && (
+                          <button
+                            onClick={() => {
+                              setMenuOpenId(null)
+                              onEditAndResend(msg.id)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                          >
+                            <Icon icon="lucide:pencil" width={12} height={12} /> Edit & resend
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setMenuOpenId(null)
+                            onDeleteMessage(msg.id)
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[var(--color-deletions,#ef4444)] hover:bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_6%,transparent)] transition-colors cursor-pointer"
+                        >
+                          <Icon icon="lucide:trash-2" width={12} height={12} /> Delete
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Message bubble */}
+                    <div
+                      className={`rounded-xl px-3 py-2 leading-relaxed ${bubbleClass} ${isUser ? 'transition-transform hover:scale-[1.005]' : ''}`}
+                      style={
+                        isUser || isAssistant
+                          ? { fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }
+                          : undefined
+                      }
+                    >
+                      {(t === 'tool' || t === 'status' || t === 'error') && typeIcon && (
+                        <span className="inline-flex items-center gap-1 mr-1 align-middle">
+                          <Icon
+                            icon={typeIcon}
+                            width={11}
+                            height={11}
+                            className={
+                              t === 'error'
+                                ? 'text-[var(--color-deletions,#ef4444)]'
+                                : 'text-[var(--text-disabled)]'
+                            }
+                          />
+                        </span>
+                      )}
+                      {t === 'cancelled' && (
+                        <span className="inline-flex items-center gap-1 mr-1 align-middle text-[var(--text-disabled)]">
+                          <Icon icon="lucide:circle-slash" width={11} height={11} />
+                        </span>
+                      )}
+                      {isUser ? (
+                        <div>
+                          {userPreview && userPreview.chips.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {userPreview.chips.map((chip, chipIdx) => (
+                                <div
+                                  key={`${chip.path}-${chipIdx}`}
+                                  className="inline-flex max-w-[220px] items-start gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--border)_85%,transparent)] bg-[color-mix(in_srgb,var(--bg)_76%,transparent)] px-2.5 py-1.5"
+                                >
+                                  <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_12%,transparent)] text-[var(--color-deletions,#ef4444)]">
+                                    <Icon
+                                      icon={getFileTypeIcon(chip.path, chip.kind)}
+                                      width={9}
+                                      height={9}
+                                    />
+                                  </span>
+                                  <span className="min-w-0">
+                                    <span className="block truncate font-mono text-[10px] leading-tight text-[var(--text-primary)]">
+                                      {chip.title}
+                                    </span>
+                                    <span className="block text-[8px] leading-tight text-[var(--text-disabled)]">
+                                      {chip.detail}
+                                    </span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {msg.images && msg.images.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {msg.images.map((img, imgIdx) => (
+                                <div
+                                  key={imgIdx}
+                                  className="relative group/msgimg rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-[var(--brand)] transition-all"
+                                  style={{ width: 96, height: 72 }}
+                                  onClick={() => setLightboxSrc(img.dataUrl)}
+                                >
+                                  <img
+                                    src={img.dataUrl}
+                                    alt={img.name}
+                                    className="w-full h-full object-cover transition-transform duration-200 group-hover/msgimg:scale-105"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/msgimg:opacity-100 transition-opacity flex items-end p-1.5">
+                                    <span className="text-[8px] text-white/90 font-mono truncate leading-tight">
+                                      {img.name}
+                                    </span>
+                                  </div>
+                                  <div className="absolute top-1 right-1 opacity-0 group-hover/msgimg:opacity-100 transition-opacity">
+                                    <Icon
+                                      icon="lucide:zoom-in"
+                                      width={10}
+                                      height={10}
+                                      className="text-white/80 drop-shadow-md"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {userPreview?.text ? (
+                            <p className="whitespace-pre-wrap break-words">{userPreview.text}</p>
+                          ) : null}
+                        </div>
+                      ) : isSystem && (t === 'tool' || t === 'status' || t === 'error') ? (
+                        <span className="inline">{msg.content}</span>
+                      ) : (
+                        <CollapsibleMessage content={msg.content}>
                           <div
-                            key={i}
-                            className="flex items-center gap-2 text-[11px] py-0.5 plan-step-enter"
-                            style={{
-                              opacity: isLast ? 1 : Math.max(0.3, 1 - age * 0.2),
-                              transition: 'all 0.3s ease',
+                            className="prose-chat stagger-paragraph"
+                            onClick={(e) => {
+                              const target = e.target as HTMLElement
+                              const clickText = target.textContent ?? ''
+                              const lineMatch =
+                                clickText.match(/(?:lines?\s+|L)(\d+)(?:\s*[-–]\s*L?(\d+))?/i) ||
+                                clickText.match(/([\w./\-]+\.\w+)[:#]L?(\d+)/)
+                              if (lineMatch) {
+                                const start = parseInt(lineMatch[1] ?? '', 10)
+                                const end = lineMatch[2] ? parseInt(lineMatch[2], 10) : undefined
+                                if (!isNaN(start)) {
+                                  e.preventDefault()
+                                  navigateToLine(start, end)
+                                }
+                              }
                             }}
                           >
-                            <div className="relative z-[1] shrink-0">
-                              {isLast ? (
-                                <span className="relative flex h-[9px] w-[9px]">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--brand)] opacity-50" />
-                                  <span className="relative inline-flex rounded-full h-[9px] w-[9px] bg-[var(--brand)]" />
-                                </span>
-                              ) : (
-                                <span className="block w-[9px] h-[9px] rounded-full border-2 border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] bg-[var(--bg-subtle)]" />
-                              )}
-                            </div>
-                            <Icon
-                              icon={getToolIcon(step)}
-                              width={11}
-                              height={11}
-                              className={`shrink-0 ${isLast ? 'text-[var(--brand)]' : 'text-[var(--text-disabled)]'}`}
-                            />
-                            <span
-                              className={`truncate flex-1 ${isLast ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-disabled)]'}`}
-                            >
-                              {step}
-                            </span>
+                            {t === 'edit' && isAssistant && (
+                              <div className="flex items-center gap-1.5 mb-1.5 text-[11px] text-[var(--color-additions,#22c55e)] font-medium">
+                                <Icon icon="lucide:file-diff" width={12} height={12} />
+                                File changes proposed
+                                {editSummaries.has(msg.id) && (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-additions,#22c55e)_10%,transparent)] text-[10px]">
+                                    {editSummaries.get(msg.id)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <MarkdownPreview content={msg.content} />
+                            {isAssistant && msg.type === 'plan' && msg.planSteps && (
+                              <PlanView
+                                steps={msg.planSteps}
+                                interactive={agentMode === 'plan'}
+                                onApprove={() =>
+                                  onSendMessage('Execute the plan above. Proceed step by step.')
+                                }
+                                onReject={() =>
+                                  onSendMessage(
+                                    'I want to modify this plan. Let me explain what to change.',
+                                  )
+                                }
+                              />
+                            )}
                           </div>
-                        )
-                      })}
+                        </CollapsibleMessage>
+                      )}
                     </div>
-                  </details>
-                )}
-                <div className="flex items-center gap-2">
-                  <div className="typing-wave">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
                   </div>
-                  <span className="text-[11px] text-[var(--text-tertiary)] shimmer-text">
-                    {thinkingTrail.length > 0
-                      ? thinkingTrail[thinkingTrail.length - 1]
-                      : 'Thinking...'}
-                  </span>
-                  {turnElapsedMs > 0 && (
-                    <span className="text-[9px] text-[var(--text-disabled)] tabular-nums">
-                      {turnElapsedMs < 1000 ? '' : `${(turnElapsedMs / 1000).toFixed(0)}s`}
+
+                  {/* Response metadata — time + token estimate on hover */}
+                  <div className="flex items-center gap-2 mt-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                    <span className="text-[9px] text-[var(--text-disabled)] font-mono">
+                      {new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
+                    {isAssistant && (
+                      <span className="text-[9px] text-[var(--text-disabled)] font-mono">
+                        ~{estimateTokens(msg.content).toLocaleString()} tokens
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Inline diff review */}
+                  {msg.editProposals && msg.editProposals.length > 0 && (
+                    <InlineDiffGroup
+                      proposals={msg.editProposals}
+                      getOriginal={(filePath) => getFileContent?.(filePath)}
+                      onApply={onQuickApply}
+                      onApplyAll={() => onApplyAll?.(msg.editProposals!)}
+                    />
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-        {/* Hidden system messages toggle */}
-        {(() => {
-          const hiddenCount = visibleMessages.filter(
-            (m) => m.role === 'system' && (m.type ?? 'text') !== 'error',
-          ).length
-          if (hiddenCount === 0) return null
-          return (
-            <button
-              onClick={() => setShowSystemMessages((v) => !v)}
-              className="mx-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+              </Fragment>
+            )
+          })}
+
+          {/* Streaming indicator */}
+          {isStreaming && (
+            <div
+              className="flex flex-col items-start animate-fade-in"
+              style={{ animationDuration: '0.15s' }}
             >
-              <Icon
-                icon={showSystemMessages ? 'lucide:eye-off' : 'lucide:eye'}
-                width={10}
-                height={10}
-              />
-              {showSystemMessages ? 'Hide' : 'Show'} {hiddenCount} system{' '}
-              {hiddenCount === 1 ? 'message' : 'messages'}
-            </button>
-          )
-        })()}
+              {/* Agent activity feed (structured) or inline tool badges (fallback) */}
+              {agentActivities.length > 0 && !streamBuffer && (
+                <div className="w-full mb-1.5">
+                  <AgentActivityFeed
+                    activities={agentActivities}
+                    isRunning={isStreaming}
+                    elapsedMs={turnElapsedMs}
+                  />
+                </div>
+              )}
+              {agentActivities.length === 0 && thinkingTrail.length > 0 && !streamBuffer && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {thinkingTrail.map((step, i) => {
+                    const isLast = i === thinkingTrail.length - 1
+                    return (
+                      <span
+                        key={i}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
+                          isLast
+                            ? 'border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] text-[var(--brand)]'
+                            : 'border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-disabled)]'
+                        }`}
+                      >
+                        <Icon
+                          icon={isLast ? getToolIcon(step) : 'lucide:check'}
+                          width={10}
+                          height={10}
+                        />
+                        {step}
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+
+              {streamBuffer ? (
+                <div className="w-full min-w-0">
+                  {/* Avatar for streaming */}
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <div className="message-avatar-ring">
+                      <KnotLogo size={12} className="text-[var(--brand)]" />
+                    </div>
+                    <span className="text-[10px] font-medium text-[var(--text-tertiary)]">
+                      Knot
+                    </span>
+                  </div>
+                  <div
+                    className="rounded-xl px-3 py-2 leading-relaxed bg-[var(--bg-subtle)] border border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] text-[var(--text-primary)] rounded-bl-sm"
+                    style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }}
+                  >
+                    <div className="prose-chat">
+                      <MarkdownPreview content={streamBuffer} streaming />
+                    </div>
+                    <span className="inline-block w-1.5 h-3.5 bg-[var(--brand)] animate-pulse ml-0.5 align-text-bottom rounded-sm" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1 px-3 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border)] rounded-bl-sm w-full">
+                  {/* Thinking disclosure (collapsed by default) */}
+                  {thinkingTrail.length > 0 && (
+                    <details className="thinking-disclosure mb-1" open={thinkingOpen}>
+                      <summary
+                        className="text-[11px] text-[var(--text-tertiary)] select-none"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setThinkingOpen((v) => !v)
+                        }}
+                      >
+                        <Icon
+                          icon="lucide:chevron-right"
+                          width={10}
+                          height={10}
+                          className="thinking-chevron text-[var(--text-disabled)]"
+                        />
+                        <span>{thinkingTrail.length} operations</span>
+                      </summary>
+                      <div className="relative flex flex-col gap-0 mt-1 ml-1">
+                        <div className="absolute left-[4px] top-1 bottom-1 w-px bg-[color-mix(in_srgb,var(--brand)_20%,transparent)]" />
+                        {thinkingTrail.map((step, i) => {
+                          const isLast = i === thinkingTrail.length - 1
+                          const age = thinkingTrail.length - 1 - i
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 text-[11px] py-0.5 plan-step-enter"
+                              style={{
+                                opacity: isLast ? 1 : Math.max(0.3, 1 - age * 0.2),
+                                transition: 'all 0.3s ease',
+                              }}
+                            >
+                              <div className="relative z-[1] shrink-0">
+                                {isLast ? (
+                                  <span className="relative flex h-[9px] w-[9px]">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--brand)] opacity-50" />
+                                    <span className="relative inline-flex rounded-full h-[9px] w-[9px] bg-[var(--brand)]" />
+                                  </span>
+                                ) : (
+                                  <span className="block w-[9px] h-[9px] rounded-full border-2 border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] bg-[var(--bg-subtle)]" />
+                                )}
+                              </div>
+                              <Icon
+                                icon={getToolIcon(step)}
+                                width={11}
+                                height={11}
+                                className={`shrink-0 ${isLast ? 'text-[var(--brand)]' : 'text-[var(--text-disabled)]'}`}
+                              />
+                              <span
+                                className={`truncate flex-1 ${isLast ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-disabled)]'}`}
+                              >
+                                {step}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </details>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <div className="typing-wave">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <span className="text-[11px] text-[var(--text-tertiary)] shimmer-text">
+                      {thinkingTrail.length > 0
+                        ? thinkingTrail[thinkingTrail.length - 1]
+                        : 'Thinking...'}
+                    </span>
+                    {turnElapsedMs > 0 && (
+                      <span className="text-[9px] text-[var(--text-disabled)] tabular-nums">
+                        {turnElapsedMs < 1000 ? '' : `${(turnElapsedMs / 1000).toFixed(0)}s`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {/* Hidden system messages toggle */}
+          {(() => {
+            const hiddenCount = visibleMessages.filter(
+              (m) => m.role === 'system' && (m.type ?? 'text') !== 'error',
+            ).length
+            if (hiddenCount === 0) return null
+            return (
+              <button
+                onClick={() => setShowSystemMessages((v) => !v)}
+                className="mx-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+              >
+                <Icon
+                  icon={showSystemMessages ? 'lucide:eye-off' : 'lucide:eye'}
+                  width={10}
+                  height={10}
+                />
+                {showSystemMessages ? 'Hide' : 'Show'} {hiddenCount} system{' '}
+                {hiddenCount === 1 ? 'message' : 'messages'}
+              </button>
+            )
+          })()}
         </div>
       </div>
     </>
