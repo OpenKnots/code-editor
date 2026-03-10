@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Icon } from '@iconify/react'
-import { isSpotifyAuthenticated } from '@/lib/spotify-auth'
+import { usePlugins } from '@/context/plugin-context'
+import { isSpotifyAuthenticated, spotifyAvailable } from '@/lib/spotify-auth'
 
 interface TrackInfo {
   name: string
@@ -11,6 +12,7 @@ interface TrackInfo {
 }
 
 export function SpotifyStatusBar() {
+  const { setPipPluginId, pipPluginId } = usePlugins()
   const [track, setTrack] = useState<TrackInfo | null>(null)
   const [authenticated, setAuthenticated] = useState(false)
 
@@ -39,23 +41,38 @@ export function SpotifyStatusBar() {
     return () => window.removeEventListener('spotify-state-changed', handler)
   }, [])
 
-  if (!authenticated || !track) return null
+  const togglePip = useCallback(() => {
+    setPipPluginId(pipPluginId === 'spotify-player' ? null : 'spotify-player')
+  }, [setPipPluginId, pipPluginId])
+
+  if (!spotifyAvailable()) return null
+
+  const isActive = pipPluginId === 'spotify-player'
 
   return (
-    <span
-      className="flex items-center gap-1 max-w-[150px] text-[var(--text-tertiary)] cursor-default"
-      title={`${track.name} — ${track.artist}`}
+    <button
+      onClick={togglePip}
+      className={`flex items-center gap-1 max-w-[150px] cursor-pointer transition-colors rounded px-1 py-0.5 ${
+        isActive
+          ? 'text-[#1DB954] bg-[color-mix(in_srgb,#1DB954_10%,transparent)]'
+          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+      }`}
+      title={track ? `${track.name} — ${track.artist}` : 'Open Spotify'}
     >
       <Icon
-        icon={track.paused ? 'lucide:pause' : 'lucide:volume-2'}
-        width={9}
-        height={9}
-        className={track.paused ? '' : 'text-[#1DB954]'}
+        icon="simple-icons:spotify"
+        width={10}
+        height={10}
+        className={track && !track.paused ? 'text-[#1DB954]' : ''}
       />
-      <span className="truncate text-[10px]">
-        {track.name}
-        {track.artist ? ` · ${track.artist}` : ''}
-      </span>
-    </span>
+      {track ? (
+        <span className="truncate text-[10px]">
+          {track.name}
+          {track.artist ? ` · ${track.artist}` : ''}
+        </span>
+      ) : authenticated ? (
+        <span className="text-[10px]">Spotify</span>
+      ) : null}
+    </button>
   )
 }

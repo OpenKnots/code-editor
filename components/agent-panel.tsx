@@ -36,6 +36,7 @@ import {
 } from '@/lib/gateway-commit-message'
 import { MessageList } from '@/components/chat/message-list'
 import { ChatInputBar } from '@/components/chat/chat-input-bar'
+import type { PickerItem } from '@/components/chat/inline-picker'
 import { emit, on } from '@/lib/events'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatShortcut } from '@/lib/platform'
@@ -383,6 +384,11 @@ export function AgentPanel() {
   const inlineDiffRef = useRef<InlineDiffResult | null>(null)
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
   const [confirmClear, setConfirmClear] = useState(false)
+
+  // ─── Inline picker state ──────────────────────────────────────
+  const [activePicker, setActivePicker] = useState<'skill' | 'mcp' | 'prompt' | null>(null)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const [pickerIndex, setPickerIndex] = useState(0)
   const [sending, setSending] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [thinkingTrail, setThinkingTrail] = useState<string[]>([])
@@ -1935,7 +1941,32 @@ export function AgentPanel() {
 
   // ─── Slash command suggestions ────────────────────────────────
   const suggestions = useMemo(() => {
-    if (!input.startsWith('/')) return []
+    if (!input.startsWith('/')) {
+      setActivePicker(null)
+      return []
+    }
+
+    // Detect picker triggers
+    if (input === '/skill ' || input.startsWith('/skill use ')) {
+      const query = input.replace('/skill use ', '').replace('/skill ', '')
+      setActivePicker('skill')
+      setPickerQuery(query)
+      return []
+    }
+    if (input.startsWith('/mcp ')) {
+      const query = input.replace('/mcp ', '')
+      setActivePicker('mcp')
+      setPickerQuery(query)
+      return []
+    }
+    if (input.startsWith('/prompt ')) {
+      const query = input.replace('/prompt ', '')
+      setActivePicker('prompt')
+      setPickerQuery(query)
+      return []
+    }
+
+    setActivePicker(null)
     const cmds = [
       // Coding
       { cmd: '/edit', desc: 'Edit current file', icon: 'lucide:pencil' },
@@ -1974,14 +2005,136 @@ export function AgentPanel() {
       { cmd: '/skill', desc: 'Open skill commands', icon: 'lucide:sparkles' },
       { cmd: '/skill find', desc: 'Search for more skills', icon: 'lucide:search' },
       { cmd: '/skill use', desc: 'Apply a bundled skill', icon: 'lucide:play' },
+      { cmd: '/mcp', desc: 'Select an MCP server', icon: 'lucide:plug' },
+      { cmd: '/prompt', desc: 'Use a prompt template', icon: 'lucide:book-open' },
     ]
     const term = input.toLowerCase()
     return cmds.filter((c) => c.cmd.startsWith(term))
   }, [input])
 
+  // ─── Picker data sources ──────────────────────────────────────
+  const skillPickerItems = useMemo<PickerItem[]>(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('knot-code:skills:runtime') : null
+    if (stored) {
+      try {
+        const skills = JSON.parse(stored) as Array<{ id: string; name: string; description?: string; enabled?: boolean }>
+        return skills.map((s) => ({
+          id: s.id,
+          name: s.name,
+          description: s.description || 'No description',
+          icon: 'lucide:sparkles',
+          enabled: s.enabled ?? true,
+        }))
+      } catch {}
+    }
+    return [
+      { id: 'code-review', name: 'Code Review', description: 'Review code for bugs and improvements', icon: 'lucide:scan-eye' },
+      { id: 'refactor', name: 'Refactor', description: 'Improve code structure and readability', icon: 'lucide:refresh-cw' },
+      { id: 'test-gen', name: 'Test Generator', description: 'Generate unit tests for code', icon: 'lucide:flask-conical' },
+      { id: 'doc-gen', name: 'Documentation', description: 'Generate documentation for code', icon: 'lucide:file-text' },
+      { id: 'explain', name: 'Explain Code', description: 'Get a detailed explanation of code', icon: 'lucide:book-open' },
+      { id: 'optimize', name: 'Optimize', description: 'Optimize code for performance', icon: 'lucide:zap' },
+      { id: 'security', name: 'Security Audit', description: 'Check code for security vulnerabilities', icon: 'lucide:shield' },
+      { id: 'debug', name: 'Debug Helper', description: 'Help identify and fix bugs', icon: 'lucide:bug' },
+    ]
+  }, [])
+
+  const mcpPickerItems = useMemo<PickerItem[]>(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('knot-code:mcp:servers') : null
+    if (stored) {
+      try {
+        const servers = JSON.parse(stored) as Array<{ id: string; name: string; type: string; enabled: boolean }>
+        return servers.map((s) => ({
+          id: s.id,
+          name: s.name,
+          description: `${s.type} server`,
+          icon: 'lucide:plug',
+          enabled: s.enabled,
+        }))
+      } catch {}
+    }
+    return []
+  }, [])
+
+  const promptPickerItems = useMemo<PickerItem[]>(() => {
+    return [
+      { id: 'explain-like-5', name: 'Explain Like I\'m 5', description: 'Simple explanation of complex topics', icon: 'lucide:baby' },
+      { id: 'write-readme', name: 'Write README', description: 'Generate a project README', icon: 'lucide:file-text' },
+      { id: 'commit-message', name: 'Commit Message', description: 'Write a conventional commit message', icon: 'lucide:git-commit-horizontal' },
+      { id: 'api-docs', name: 'API Documentation', description: 'Generate API endpoint docs', icon: 'lucide:book' },
+      { id: 'code-comment', name: 'Code Comments', description: 'Add JSDoc/inline comments to code', icon: 'lucide:message-square-code' },
+      { id: 'convert-ts', name: 'Convert to TypeScript', description: 'Add types to JavaScript code', icon: 'simple-icons:typescript' },
+      { id: 'write-tests', name: 'Write Tests', description: 'Generate test cases for code', icon: 'lucide:flask-conical' },
+      { id: 'review-pr', name: 'PR Review Template', description: 'Structured PR review format', icon: 'lucide:git-pull-request' },
+    ]
+  }, [])
+
+  // ─── Picker handlers ──────────────────────────────────────────
+  const handlePickerSelect = useCallback((item: PickerItem) => {
+    if (activePicker === 'skill') {
+      setInput(`/skill use ${item.id} `)
+    } else if (activePicker === 'mcp') {
+      setInput(`/mcp ${item.id} `)
+    } else if (activePicker === 'prompt') {
+      // For prompt templates, replace the command with the template name or insert it
+      setInput(`Use the "${item.name}" template: `)
+    }
+    setActivePicker(null)
+    setPickerQuery('')
+    setPickerIndex(0)
+    inputRef.current?.focus()
+  }, [activePicker])
+
+  const handlePickerClose = useCallback(() => {
+    setActivePicker(null)
+    setPickerQuery('')
+    setPickerIndex(0)
+  }, [])
+
+  const currentPickerItems = useMemo(() => {
+    if (activePicker === 'skill') return skillPickerItems
+    if (activePicker === 'mcp') return mcpPickerItems
+    if (activePicker === 'prompt') return promptPickerItems
+    return []
+  }, [activePicker, skillPickerItems, mcpPickerItems, promptPickerItems])
+
+  const pickerTitle = useMemo(() => {
+    if (activePicker === 'skill') return 'Select Skill'
+    if (activePicker === 'mcp') return 'Select MCP Server'
+    if (activePicker === 'prompt') return 'Select Prompt Template'
+    return ''
+  }, [activePicker])
+
   // ─── Keyboard ─────────────────────────────────────────────────
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Handle picker navigation first
+      if (activePicker && currentPickerItems.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setPickerIndex((i) => (i + 1) % currentPickerItems.length)
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          setPickerIndex((i) => (i <= 0 ? currentPickerItems.length - 1 : i - 1))
+          return
+        }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault()
+          const idx = pickerIndex >= 0 ? pickerIndex : 0
+          if (currentPickerItems[idx]) {
+            handlePickerSelect(currentPickerItems[idx])
+          }
+          return
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          handlePickerClose()
+          return
+        }
+      }
+
       if (suggestions.length > 0) {
         if (e.key === 'ArrowDown') {
           e.preventDefault()
@@ -2046,7 +2199,7 @@ export function AgentPanel() {
         sendMessage()
       }
     },
-    [suggestions, activeSuggestionIdx, sendMessage],
+    [activePicker, currentPickerItems, pickerIndex, handlePickerSelect, handlePickerClose, suggestions, activeSuggestionIdx, sendMessage],
   )
 
   // ─── Message actions ────────────────────────────────────────────
@@ -2322,6 +2475,14 @@ export function AgentPanel() {
           setAtMenuIdx={setAtMenuIdx}
           setAtQuery={setAtQuery}
           selectAtFile={selectAtFile}
+          activePicker={activePicker}
+          pickerItems={currentPickerItems}
+          pickerQuery={pickerQuery}
+          pickerIndex={pickerIndex}
+          setPickerIndex={setPickerIndex}
+          onPickerSelect={handlePickerSelect}
+          onPickerClose={handlePickerClose}
+          pickerTitle={pickerTitle}
           onSend={sendMessage}
           onKeyDown={handleKeyDown}
           onFileDrop={handleFileDrop}

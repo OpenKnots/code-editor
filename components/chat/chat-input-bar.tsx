@@ -14,6 +14,7 @@ import { Icon } from '@iconify/react'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
 import { formatShortcut } from '@/lib/platform'
+import { InlinePicker, type PickerItem } from '@/components/chat/inline-picker'
 
 export interface Suggestion {
   cmd: string
@@ -63,6 +64,14 @@ interface ChatInputBarProps {
   setAtMenuIdx: (v: number | ((i: number) => number)) => void
   setAtQuery: (q: string) => void
   selectAtFile: (path: string) => void
+  activePicker: 'skill' | 'mcp' | 'prompt' | null
+  pickerItems: PickerItem[]
+  pickerQuery: string
+  pickerIndex: number
+  setPickerIndex: (i: number) => void
+  onPickerSelect: (item: PickerItem) => void
+  onPickerClose: () => void
+  pickerTitle: string
   onSend: () => void
   onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void
   onFileDrop: (e: DragEvent<HTMLTextAreaElement>) => void
@@ -148,6 +157,14 @@ export function ChatInputBar({
   setAtMenuIdx,
   setAtQuery,
   selectAtFile,
+  activePicker,
+  pickerItems,
+  pickerQuery,
+  pickerIndex,
+  setPickerIndex,
+  onPickerSelect,
+  onPickerClose,
+  pickerTitle,
   onSend,
   onKeyDown,
   onFileDrop,
@@ -295,6 +312,20 @@ export function ChatInputBar({
       {/* Input */}
       <div className="px-3 pb-3 pt-1 shrink-0">
         <div className="relative">
+          {/* Inline picker */}
+          {activePicker && (
+            <InlinePicker
+              items={pickerItems}
+              visible={activePicker !== null}
+              onSelect={onPickerSelect}
+              onClose={onPickerClose}
+              activeIndex={pickerIndex}
+              setActiveIndex={setPickerIndex}
+              title={pickerTitle}
+              searchQuery={pickerQuery}
+            />
+          )}
+
           {/* @ mention dropdown */}
           {atMenuOpen && atResults.length > 0 && (
             <div className="absolute bottom-full left-0 right-0 mb-1 max-h-[200px] overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl z-50">
