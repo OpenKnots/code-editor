@@ -35,40 +35,42 @@ function NoCodebasePane({
   onOpenFolder: () => void
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-[var(--bg)] px-6 select-none">
-      <div className="flex flex-col items-center gap-4 max-w-[320px]">
-        <div className="w-16 h-16 rounded-2xl bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] border border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] flex items-center justify-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-[var(--bg)] px-6 select-none">
+      <div className="flex flex-col items-center gap-6 max-w-[420px]">
+        <div className="w-20 h-20 rounded-2xl bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] border border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] flex items-center justify-center">
           <Icon
-            icon="lucide:folder-search"
-            width={28}
-            height={28}
-            className="text-[var(--brand)]"
+            icon="lucide:folder-code"
+            width={48}
+            height={48}
+            className="text-[var(--text-muted)]"
           />
         </div>
         <div className="text-center">
-          <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-1.5">
-            No codebase selected
-          </p>
-          <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
-            Open a folder{!isDesktop ? ' or connect a GitHub repo' : ''} to start editing, browsing
-            files, and using the agent.
+          <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-2">
+            Open a project to start coding
+          </h2>
+          <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">
+            Select a local folder or connect a GitHub repository
           </p>
         </div>
-        <div className="flex flex-col items-center gap-2 w-full mt-1">
+        <div className="flex flex-col gap-3 w-full max-w-[300px]">
           <button
             onClick={onOpenFolder}
-            className="flex items-center justify-center gap-2 w-full max-w-[220px] px-4 py-2.5 rounded-xl text-[13px] font-medium bg-[var(--brand)] text-[var(--brand-contrast)] hover:brightness-110 transition-all cursor-pointer shadow-[0_2px_8px_color-mix(in_srgb,var(--brand)_25%,transparent)]"
+            className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-2xl text-[14px] font-medium bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.06)] text-[var(--text-primary)] hover:scale-[1.02] hover:border-[rgba(255,255,255,0.12)] transition-all cursor-pointer"
           >
-            <Icon icon="lucide:folder-open" width={15} height={15} />
+            <Icon icon="lucide:folder-open" width={18} height={18} />
             Open Folder
           </button>
-          <div className="flex items-center gap-3 text-[11px] text-[var(--text-disabled)] mt-1">
-            <span className="flex items-center gap-1">
-              <Icon icon="lucide:command" width={10} height={10} />
-              <Icon icon="lucide:letter-text" width={10} height={10} className="opacity-60" />P for
-              commands
-            </span>
-          </div>
+          <button
+            onClick={() => emit('open-settings')}
+            className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-2xl text-[14px] font-medium bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.06)] text-[var(--text-primary)] hover:scale-[1.02] hover:border-[rgba(255,255,255,0.12)] transition-all cursor-pointer"
+          >
+            <Icon icon="lucide:github" width={18} height={18} />
+            Connect GitHub
+          </button>
+        </div>
+        <div className="text-[10px] text-[var(--text-disabled)] opacity-60 mt-2">
+          Tip: Use ⌘O to quickly open a folder
         </div>
       </div>
     </div>

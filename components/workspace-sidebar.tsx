@@ -172,6 +172,14 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           </button>
 
           <button
+            onClick={() => setView('preview')}
+            className={`activity-bar-btn ${activeView === 'preview' ? 'activity-bar-btn--active' : ''}`}
+            title="Preview"
+          >
+            <Icon icon="lucide:eye" width={24} height={24} />
+          </button>
+
+          <button
             onClick={() => setView('git')}
             className={`activity-bar-btn ${activeView === 'git' ? 'activity-bar-btn--active' : ''}`}
             title={`Source Control (${formatShortcut('meta+3')})`}
@@ -278,6 +286,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
               {([
                 { id: 'chat' as const, icon: 'lucide:message-circle', label: 'Chat' },
                 { id: 'editor' as const, icon: 'lucide:code', label: 'Editor' },
+                { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview' },
                 { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git' },
                 { id: 'mcp' as const, icon: 'lucide:plug', label: 'MCP' },
                 { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills' },

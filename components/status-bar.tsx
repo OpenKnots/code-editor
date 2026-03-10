@@ -75,9 +75,10 @@ function StatusIndicator({ status, agentActive }: { status: string; agentActive:
 
 interface StatusBarProps {
   agentActive: boolean
+  devServerReady?: boolean
 }
 
-export function StatusBar({ agentActive }: StatusBarProps) {
+export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
   const { status } = useGateway()
   const { files, activeFile } = useEditor()
   const layout = useLayout()
@@ -146,6 +147,19 @@ export function StatusBar({ agentActive }: StatusBarProps) {
         </div>
 
         <PluginSlotRenderer slot="status-bar-right" />
+
+        {devServerReady && (
+          <>
+            <span className="shell-status-separator" />
+            <span
+              className="shell-status-item gap-1"
+              title="Dev server running on localhost:3000"
+            >
+              <span className="w-[6px] h-[6px] rounded-full bg-green-500 animate-pulse shrink-0" />
+              <span className="text-[10px]">localhost:3000</span>
+            </span>
+          </>
+        )}
 
         <button
           onClick={() => layout.toggle('terminal')}

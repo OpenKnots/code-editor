@@ -160,6 +160,7 @@ export default function EditorLayout() {
   const [connectionAnim, setConnectionAnim] = useState<'pop' | 'pulse' | null>(null)
   const prevStatusRef = useRef(status)
   const [agentActive, setAgentActive] = useState(false)
+  const [devServerReady, setDevServerReady] = useState(false)
 
   // Overlay modals
   const [quickOpenVisible, setQuickOpenVisible] = useState(false)
@@ -248,6 +249,25 @@ export default function EditorLayout() {
     return on('engine-status', (detail) => {
       setAgentActive(detail?.running ?? false)
     })
+  }, [])
+
+  // ─── Dev server detection ─────────────────────────────
+  useEffect(() => {
+    const checkDevServer = async () => {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 2000)
+        await fetch('http://localhost:3000', { mode: 'no-cors', signal: controller.signal })
+        clearTimeout(timeoutId)
+        setDevServerReady(true)
+      } catch {
+        setDevServerReady(false)
+      }
+    }
+
+    checkDevServer()
+    const interval = setInterval(checkDevServer, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   // ─── Save file handler ─────────────────────────────────
@@ -550,12 +570,12 @@ export default function EditorLayout() {
 
             {/* Gateway status text removed — dot in header is sufficient */}
           </div>
-        ) : (
+        ) : isMacTauri ? (
           <div
             data-tauri-drag-region
-            className={`shell-topbar flex items-center h-8 shrink-0 px-4 gap-2 tauri-drag-region ${isMacTauri ? 'pl-20' : ''}`}
+            className="shell-topbar flex items-center h-8 shrink-0 px-4 gap-2 tauri-drag-region pl-20"
           />
-        )}
+        ) : null}
 
         {showWorkflowEditorTabs && <EditorTabs onTabSelect={() => setView('editor')} />}
 
@@ -768,7 +788,7 @@ export default function EditorLayout() {
         )}
 
         {/* Status bar */}
-        {!isMobile && <StatusBar agentActive={agentActive} />}
+        {!isMobile && <StatusBar agentActive={agentActive} devServerReady={devServerReady} />}
       </div>
 
       {/* Git sidebar panel — Codex-style always-visible right panel */}

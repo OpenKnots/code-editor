@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useView } from '@/context/view-context'
@@ -39,6 +40,10 @@ const GatewayTerminal = dynamic(
   () => import('@/components/gateway-terminal').then((m) => m.GatewayTerminal),
   { ssr: false },
 )
+const SplitPreviewChat = dynamic(
+  () => import('@/components/split-preview-chat').then((m) => m.SplitPreviewChat),
+  { ssr: false },
+)
 
 const VIEW_ICONS: Record<string, { label: string }> = {
   chat: { label: 'Chat' },
@@ -68,12 +73,39 @@ const viewVariants = {
 
 export function ViewRouter() {
   const { activeView, direction, setView } = useView()
+  const [previewDocked, setPreviewDocked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('knot-code:preview-docked') === 'true'
+    }
+    return false
+  })
+  const [previewUrl, setPreviewUrl] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('knot-code:preview-url') || 'http://localhost:3000'
+    }
+    return 'http://localhost:3000'
+  })
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('knot-code:preview-docked', previewDocked.toString())
+    }
+  }, [previewDocked])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('knot-code:preview-url', previewUrl)
+    }
+  }, [previewUrl])
+
+  // Show split view when on chat view AND preview is docked
+  const showSplitView = activeView === 'chat' && previewDocked
 
   return (
     <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
       <AnimatePresence mode="wait" custom={direction} initial={false}>
         <motion.div
-          key={activeView}
+          key={showSplitView ? 'split-view' : activeView}
           custom={direction}
           variants={viewVariants}
           initial="enter"
@@ -82,21 +114,30 @@ export function ViewRouter() {
           className="flex-1 flex min-h-0 min-w-0 w-full overflow-hidden"
         >
           <ErrorBoundary
-            key={activeView}
+            key={showSplitView ? 'split-view' : activeView}
             fallbackLabel={`${VIEW_ICONS[activeView]?.label ?? activeView} failed to render`}
           >
-            {activeView === 'chat' && <AgentPanel />}
-            {activeView === 'editor' && <EditorView />}
-            {activeView === 'preview' && <PreviewPanel />}
-            {activeView === 'git' && <GitView />}
-            {activeView === 'skills' && <SkillsView />}
-            {activeView === 'prompts' && <PromptLibraryView />}
-            {activeView === 'mcp' && <McpLibraryView />}
-            {activeView === 'settings' && <SettingsPanel onBack={() => setView('chat')} />}
-            {activeView === 'terminal' && (
-              <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
-                <GatewayTerminal />
-              </div>
+            {showSplitView ? (
+              <SplitPreviewChat
+                previewUrl={previewUrl}
+                onClose={() => setPreviewDocked(false)}
+              />
+            ) : (
+              <>
+                {activeView === 'chat' && <AgentPanel />}
+                {activeView === 'editor' && <EditorView />}
+                {activeView === 'preview' && <PreviewPanel />}
+                {activeView === 'git' && <GitView />}
+                {activeView === 'skills' && <SkillsView />}
+                {activeView === 'prompts' && <PromptLibraryView />}
+                {activeView === 'mcp' && <McpLibraryView />}
+                {activeView === 'settings' && <SettingsPanel onBack={() => setView('chat')} />}
+                {activeView === 'terminal' && (
+                  <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+                    <GatewayTerminal />
+                  </div>
+                )}
+              </>
             )}
           </ErrorBoundary>
         </motion.div>
