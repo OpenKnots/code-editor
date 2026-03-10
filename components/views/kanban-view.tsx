@@ -18,6 +18,18 @@ interface Subtask {
   done: boolean
 }
 
+interface Comment {
+  id: string
+  text: string
+  createdAt: number
+}
+
+interface Activity {
+  id: string
+  action: string
+  timestamp: number
+}
+
 interface KanbanCard {
   id: string
   title: string
@@ -31,6 +43,8 @@ interface KanbanCard {
   sortOrder: number
   subtasks: Subtask[]
   linkedBranch?: string
+  comments: Comment[]
+  activity: Activity[]
 }
 
 interface KanbanColumn {
@@ -39,6 +53,7 @@ interface KanbanColumn {
   icon: string
   color: string
   collapsed: boolean
+  wipLimit?: number
 }
 
 interface KanbanBoard {
@@ -84,6 +99,19 @@ const PRIORITY_CONFIG = {
   P3: { label: 'Low', color: '#6b7280', icon: 'lucide:arrow-down' },
 }
 
+const COLUMN_ICON_FALLBACKS: Record<string, string> = {
+  backlog: 'lucide:inbox',
+  started: 'lucide:play',
+  'in-progress': 'lucide:play',
+  review: 'lucide:eye',
+  done: 'lucide:check',
+}
+
+function sanitizeColumnIcon(icon: string | undefined, columnId: string): string {
+  if (icon && icon.includes(':')) return icon
+  return COLUMN_ICON_FALLBACKS[columnId] ?? 'lucide:layout-list'
+}
+
 function loadKanbanData(): KanbanData {
   if (typeof window === 'undefined') {
     return {
@@ -105,10 +133,16 @@ function loadKanbanData(): KanbanData {
       const parsed = JSON.parse(stored) as KanbanData
       parsed.boards = parsed.boards.map((b) => ({
         ...b,
+        columns: b.columns.map((col) => ({
+          ...col,
+          icon: sanitizeColumnIcon(col.icon, col.id),
+        })),
         cards: b.cards.map((c) => ({
           ...c,
           sortOrder: c.sortOrder ?? 0,
           subtasks: c.subtasks ?? [],
+          comments: c.comments ?? [],
+          activity: c.activity ?? [],
         })),
       }))
       return parsed
@@ -191,6 +225,11 @@ function CardDetailPanel({
   const [newSubtask, setNewSubtask] = useState('')
   const [columnId, setColumnId] = useState(card.columnId)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [comments, setComments] = useState<Comment[]>(card.comments)
+  const [newComment, setNewComment] = useState('')
+  const [newLabelName, setNewLabelName] = useState('')
+  const [showNewLabel, setShowNewLabel] = useState(false)
+  const [draggedSubtaskId, setDraggedSubtaskId] = useState<string | null>(null)
 
   const save = useCallback(() => {
     onUpdate(card.id, {
@@ -202,6 +241,7 @@ function CardDetailPanel({
       labels: selectedLabels,
       subtasks,
       columnId,
+      comments,
     })
   }, [
     card.id,
@@ -214,6 +254,7 @@ function CardDetailPanel({
     selectedLabels,
     subtasks,
     columnId,
+    comments,
     onUpdate,
   ])
 
@@ -241,6 +282,39 @@ function CardDetailPanel({
     setSubtasks((prev) => prev.filter((s) => s.id !== subId))
   }
 
+  const reorderSubtasks = (fromIndex: number, toIndex: number) => {
+    setSubtasks((prev) => {
+      const result = [...prev]
+      const [removed] = result.splice(fromIndex, 1)
+      result.splice(toIndex, 0, removed)
+      return result
+    })
+  }
+
+  const addComment = () => {
+    if (!newComment.trim()) return
+    const comment: Comment = {
+      id: genId('comment'),
+      text: newComment.trim(),
+      createdAt: Date.now(),
+    }
+    setComments((prev) => [...prev, comment])
+    setNewComment('')
+  }
+
+  const addCustomLabel = (labels: Label[]) => {
+    if (!newLabelName.trim()) return
+    const newLabel: Label = {
+      id: genId('label'),
+      name: newLabelName.trim(),
+      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+    }
+    labels.push(newLabel)
+    setSelectedLabels((prev) => [...prev, newLabel.id])
+    setNewLabelName('')
+    setShowNewLabel(false)
+  }
+
   const dueDateStatus = getDueDateStatus(card.dueDate)
   const subtasksDone = subtasks.filter((s) => s.done).length
   const subtasksTotal = subtasks.length
@@ -253,9 +327,21 @@ function CardDetailPanel({
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
     >
-      {/* Panel Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-6 py-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] truncate">Card Details</h2>
+      {/* Panel Header with Priority Border */}
+      <div
+        className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-6 py-4"
+        style={{
+          borderLeftWidth: '4px',
+          borderLeftColor: PRIORITY_CONFIG[priority].color,
+          borderLeftStyle: 'solid',
+        }}
+      >
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="flex-1 bg-transparent text-lg font-semibold text-[var(--text-primary)] outline-none"
+          placeholder="Card title..."
+        />
         <button
           onClick={onClose}
           className="rounded-lg p-2 text-[var(--text-secondary)] transition hover:bg-[var(--bg)] hover:text-[var(--text-primary)]"
@@ -265,244 +351,366 @@ function CardDetailPanel({
       </div>
 
       {/* Panel Body */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-        {/* Title */}
-        <div>
-          <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-            Title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
-          />
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-            Description
-          </label>
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        {/* Description Section */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon icon="lucide:text" width={16} height={16} className="text-[var(--brand)]" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Description</h3>
+          </div>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             placeholder="Add a description..."
-            className="mt-1 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+            className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
           />
         </div>
 
-        {/* Row: Priority + Column + Assignee */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-              Priority
-            </label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as Priority)}
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
-            >
-              {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
-                <option key={p} value={p}>
-                  {p} — {PRIORITY_CONFIG[p].label}
-                </option>
-              ))}
-            </select>
+        {/* Priority + Column Section */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon icon="lucide:signal" width={16} height={16} className="text-[var(--brand)]" />
+            <Icon icon="lucide:columns" width={16} height={16} className="text-[var(--brand)]" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Priority & Status</h3>
           </div>
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-              Column
-            </label>
-            <select
-              value={columnId}
-              onChange={(e) => setColumnId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
-            >
-              {columns.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-              Assignee
-            </label>
-            <input
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-              placeholder="Name or handle..."
-              className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-              Due Date
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:border-[var(--brand)] ${
-                dueDateStatus === 'overdue'
-                  ? 'border-[#ef4444] bg-[#ef444410] text-[#ef4444]'
-                  : dueDateStatus === 'soon'
-                    ? 'border-[#f59e0b] bg-[#f59e0b10] text-[#f59e0b]'
-                    : 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)]'
-              }`}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-disabled)] mb-1 block">
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as Priority)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              >
+                {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
+                  <option key={p} value={p}>
+                    {p} — {PRIORITY_CONFIG[p].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-disabled)] mb-1 block">
+                Column
+              </label>
+              <select
+                value={columnId}
+                onChange={(e) => setColumnId(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              >
+                {columns.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Labels */}
-        <div>
-          <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-            Labels
-          </label>
-          <div className="mt-2 flex flex-wrap gap-2">
+        {/* Assignee + Due Date Section */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon icon="lucide:user" width={16} height={16} className="text-[var(--brand)]" />
+            <Icon icon="lucide:calendar" width={16} height={16} className="text-[var(--brand)]" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Assignee & Due Date</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-disabled)] mb-1 block">
+                Assignee
+              </label>
+              <input
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+                placeholder="Name..."
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-disabled)] mb-1 block">
+                Due Date
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:border-[var(--brand)] ${
+                  dueDateStatus === 'overdue'
+                    ? 'border-[#ef4444] bg-[#ef444410] text-[#ef4444]'
+                    : dueDateStatus === 'soon'
+                      ? 'border-[#f59e0b] bg-[#f59e0b10] text-[#f59e0b]'
+                      : 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Labels Section */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon icon="lucide:tag" width={16} height={16} className="text-[var(--brand)]" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Labels</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {labels.map((label) => {
               const active = selectedLabels.includes(label.id)
               return (
-                <button
+                <motion.button
                   key={label.id}
                   onClick={() => toggleLabel(label.id)}
-                  className="rounded-full px-3 py-1 text-xs font-medium transition"
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-full px-3 py-1 text-xs font-medium transition-all duration-200"
                   style={{
                     backgroundColor: active ? label.color : 'transparent',
                     color: active ? '#fff' : label.color,
                     border: `1.5px solid ${label.color}`,
+                    opacity: active ? 1 : 0.7,
                   }}
                 >
                   {label.name}
-                </button>
+                </motion.button>
               )
             })}
+            {showNewLabel ? (
+              <div className="flex gap-1">
+                <input
+                  autoFocus
+                  value={newLabelName}
+                  onChange={(e) => setNewLabelName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') addCustomLabel(labels)
+                    if (e.key === 'Escape') setShowNewLabel(false)
+                  }}
+                  placeholder="Label name..."
+                  className="w-28 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-1 text-xs text-[var(--text-primary)] outline-none"
+                />
+                <button
+                  onClick={() => addCustomLabel(labels)}
+                  className="rounded-full border border-[var(--brand)] bg-[var(--brand)] px-2 text-xs text-white"
+                >
+                  <Icon icon="lucide:check" width={12} height={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowNewLabel(true)}
+                className="rounded-full border border-dashed border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--text-disabled)] transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+              >
+                + Add
+              </button>
+            )}
           </div>
         </div>
 
         {/* Linked branch */}
         {card.linkedBranch && (
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-              Linked Branch
-            </label>
-            <div className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)]">
-              <Icon
-                icon="lucide:git-branch"
-                width={14}
-                height={14}
-                className="text-[var(--brand)]"
-              />
-              <span className="font-mono text-xs">{card.linkedBranch}</span>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon icon="lucide:git-branch" width={16} height={16} className="text-[var(--brand)]" />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Linked Branch</h3>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2">
+              <Icon icon="lucide:git-branch" width={14} height={14} className="text-[var(--brand)]" />
+              <span className="font-mono text-xs text-[var(--text-primary)]">{card.linkedBranch}</span>
             </div>
           </div>
         )}
 
-        {/* Subtasks */}
-        <div>
-          <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-disabled)]">
-            Subtasks {subtasksTotal > 0 && `(${subtasksDone}/${subtasksTotal})`}
-          </label>
+        {/* Subtasks Section */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Icon icon="lucide:list-checks" width={16} height={16} className="text-[var(--brand)]" />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                Subtasks {subtasksTotal > 0 && `(${subtasksDone}/${subtasksTotal})`}
+              </h3>
+            </div>
+            {subtasksTotal > 0 && (
+              <span className="text-xs text-[var(--text-disabled)]">
+                {Math.round((subtasksDone / subtasksTotal) * 100)}%
+              </span>
+            )}
+          </div>
           {subtasksTotal > 0 && (
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
-              <div
-                className="h-full rounded-full bg-[var(--brand)] transition-all"
-                style={{ width: `${(subtasksDone / subtasksTotal) * 100}%` }}
+            <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-[var(--border)]">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(subtasksDone / subtasksTotal) * 100}%` }}
+                transition={{ duration: 0.3 }}
+                className="h-full rounded-full bg-[var(--brand)]"
               />
             </div>
           )}
-          <div className="mt-2 space-y-1">
-            {subtasks.map((sub) => (
-              <div
+          <div className="space-y-1">
+            {subtasks.map((sub, index) => (
+              <motion.div
                 key={sub.id}
-                className="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-[var(--bg)]"
+                layout
+                draggable
+                onDragStart={() => setDraggedSubtaskId(sub.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  if (draggedSubtaskId) {
+                    const fromIndex = subtasks.findIndex((s) => s.id === draggedSubtaskId)
+                    const toIndex = index
+                    reorderSubtasks(fromIndex, toIndex)
+                    setDraggedSubtaskId(null)
+                  }
+                }}
+                onDragEnd={() => setDraggedSubtaskId(null)}
+                className="group flex items-center gap-2 rounded-lg px-2 py-2 transition hover:bg-[var(--bg-elevated)] cursor-move"
               >
-                <button onClick={() => toggleSubtask(sub.id)} className="shrink-0">
-                  <Icon
-                    icon={sub.done ? 'lucide:check-square' : 'lucide:square'}
-                    width={16}
-                    height={16}
-                    className={sub.done ? 'text-[var(--brand)]' : 'text-[var(--text-disabled)]'}
-                  />
+                <button
+                  onClick={() => toggleSubtask(sub.id)}
+                  className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full border-2 transition"
+                  style={{
+                    borderColor: sub.done ? 'var(--brand)' : 'var(--border)',
+                    backgroundColor: sub.done ? 'var(--brand)' : 'transparent',
+                  }}
+                >
+                  {sub.done && <Icon icon="lucide:check" width={12} height={12} className="text-white" />}
                 </button>
                 <span
-                  className={`flex-1 text-sm ${sub.done ? 'text-[var(--text-disabled)] line-through' : 'text-[var(--text-primary)]'}`}
+                  className={`flex-1 text-sm transition ${sub.done ? 'text-[var(--text-disabled)] line-through opacity-60' : 'text-[var(--text-primary)]'}`}
                 >
                   {sub.title}
                 </span>
                 <button
                   onClick={() => deleteSubtask(sub.id)}
-                  className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-[var(--text-disabled)] hover:text-[var(--destructive)] transition"
+                  className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-1 text-[var(--text-disabled)] hover:text-[var(--destructive)] transition"
                 >
                   <Icon icon="lucide:x" width={12} height={12} />
                 </button>
-              </div>
+              </motion.div>
             ))}
           </div>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <input
               value={newSubtask}
               onChange={(e) => setNewSubtask(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addSubtask()}
               placeholder="Add subtask..."
-              className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
             />
             <button
               onClick={addSubtask}
-              className="rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-medium text-[var(--brand-contrast)] transition hover:opacity-90"
+              className="rounded-lg bg-[var(--brand)] px-4 py-2 text-xs font-medium text-white transition hover:opacity-90"
             >
               Add
             </button>
           </div>
         </div>
 
-        {/* Meta */}
-        <div className="text-xs text-[var(--text-disabled)]">
-          Created {formatDate(card.createdAt)}
+        {/* Comments Section */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon icon="lucide:message-square" width={16} height={16} className="text-[var(--brand)]" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              Comments ({comments.length})
+            </h3>
+          </div>
+          <div className="space-y-3 mb-3 max-h-48 overflow-y-auto">
+            {comments.map((comment) => (
+              <motion.div
+                key={comment.id}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3"
+              >
+                <p className="text-sm text-[var(--text-primary)] mb-1">{comment.text}</p>
+                <span className="text-xs text-[var(--text-disabled)]">
+                  {formatDate(comment.createdAt)}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addComment()}
+              placeholder="Add a comment..."
+              className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+            />
+            <button
+              onClick={addComment}
+              className="rounded-lg bg-[var(--brand)] px-4 py-2 text-xs font-medium text-white transition hover:opacity-90"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+
+        {/* Activity Log */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon icon="lucide:activity" width={16} height={16} className="text-[var(--brand)]" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Activity</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 text-xs">
+              <Icon icon="lucide:circle" width={8} height={8} className="text-[var(--brand)] mt-1" />
+              <div>
+                <span className="text-[var(--text-secondary)]">Created </span>
+                <span className="text-[var(--text-disabled)]">{formatDate(card.createdAt)}</span>
+              </div>
+            </div>
+            {card.activity?.map((activity) => (
+              <div key={activity.id} className="flex items-start gap-2 text-xs">
+                <Icon icon="lucide:circle" width={8} height={8} className="text-[var(--brand)] mt-1" />
+                <div>
+                  <span className="text-[var(--text-secondary)]">{activity.action} </span>
+                  <span className="text-[var(--text-disabled)]">{formatDate(activity.timestamp)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Panel Footer */}
-      <div className="shrink-0 border-t border-[var(--border)] px-6 py-4 flex items-center justify-between">
-        {confirmDelete ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[var(--destructive)]">Delete this card?</span>
-            <button
-              onClick={() => {
-                onDelete(card.id)
-                onClose()
-              }}
-              className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-            >
-              Confirm
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
+      <div className="shrink-0 border-t border-[var(--border)] px-6 py-4">
+        <div className="flex items-center justify-between">
           <button
-            onClick={() => setConfirmDelete(true)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--destructive)] transition hover:bg-[var(--destructive)]/10"
+            onClick={onClose}
+            className="rounded-xl bg-[var(--brand)] px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
           >
-            <Icon icon="lucide:trash-2" width={14} height={14} />
-            Delete Card
+            Done
           </button>
-        )}
-        <button
-          onClick={onClose}
-          className="rounded-lg bg-[var(--brand)] px-4 py-1.5 text-sm font-medium text-[var(--brand-contrast)] transition hover:opacity-90"
-        >
-          Done
-        </button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--text-secondary)]">Delete card?</span>
+              <button
+                onClick={() => {
+                  onDelete(card.id)
+                  onClose()
+                }}
+                className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-[var(--text-disabled)] transition hover:text-[var(--destructive)]"
+            >
+              <Icon icon="lucide:trash-2" width={14} height={14} />
+              Delete
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   )
@@ -612,6 +820,14 @@ export function KanbanView() {
           sortOrder: maxSort + 1,
           subtasks: [],
           linkedBranch: detail.linkedBranch,
+          comments: [],
+          activity: [
+            {
+              id: genId('activity'),
+              action: 'Created card',
+              timestamp: Date.now(),
+            },
+          ],
         }
         return {
           ...prev,
@@ -695,6 +911,14 @@ export function KanbanView() {
         columnId,
         sortOrder: maxSort + 1,
         subtasks: [],
+        comments: [],
+        activity: [
+          {
+            id: genId('activity'),
+            action: 'Created card',
+            timestamp: Date.now(),
+          },
+        ],
       }
       return {
         ...prev,
@@ -1096,7 +1320,7 @@ export function KanbanView() {
             return (
               <div
                 key={column.id}
-                className="flex flex-col w-80 shrink-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] transition"
+                className="flex flex-col w-80 shrink-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] transition overflow-hidden"
                 style={{
                   minHeight: isCollapsed ? 'auto' : '500px',
                   boxShadow: isDraggedOver ? '0 0 0 2px var(--brand)' : undefined,
@@ -1104,6 +1328,9 @@ export function KanbanView() {
                 onDragOver={(e) => handleDragOver(e, column.id)}
                 onDrop={() => handleDrop(column.id)}
               >
+                {/* Colored accent line at top */}
+                <div className="h-1" style={{ backgroundColor: column.color }} />
+
                 {/* Column Header */}
                 <div className="flex items-center justify-between gap-2 px-4 py-3">
                   {editingColumnId === column.id ? (
@@ -1129,8 +1356,15 @@ export function KanbanView() {
                       <span className="text-base font-semibold text-[var(--text-primary)]">
                         {column.title}
                       </span>
-                      <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[var(--bg)] px-2 text-xs font-bold text-[var(--text-secondary)]">
+                      <span
+                        className={`flex h-6 min-w-[24px] items-center justify-center rounded-full px-2 text-xs font-bold ${
+                          column.wipLimit && cards.length > column.wipLimit
+                            ? 'bg-[#ef4444] text-white'
+                            : 'bg-[var(--bg)] text-[var(--text-secondary)]'
+                        }`}
+                      >
                         {cards.length}
+                        {column.wipLimit && `/${column.wipLimit}`}
                       </span>
                     </button>
                   )}
@@ -1196,41 +1430,23 @@ export function KanbanView() {
                                 borderLeftWidth: '3px',
                               }}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-sm font-medium text-[var(--text-primary)] break-words flex-1">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="text-sm font-semibold text-[var(--text-primary)] break-words flex-1 leading-snug">
                                   {card.title}
                                 </h3>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedCardId(card.id)
-                                    }}
-                                    className="rounded p-1 text-[var(--text-disabled)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+                                {card.assignee && (
+                                  <div
+                                    className="flex shrink-0 items-center justify-center w-7 h-7 rounded-full bg-[var(--brand)] text-white text-xs font-semibold"
+                                    title={card.assignee}
                                   >
-                                    <Icon icon="lucide:edit-2" width={12} height={12} />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      deleteCard(card.id)
-                                    }}
-                                    className="rounded p-1 text-[var(--text-disabled)] hover:bg-[var(--bg-elevated)] hover:text-[var(--destructive)]"
-                                  >
-                                    <Icon icon="lucide:trash-2" width={12} height={12} />
-                                  </button>
-                                </div>
+                                    {card.assignee.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
                               </div>
 
-                              {card.description && (
-                                <p className="mt-2 text-xs text-[var(--text-secondary)] line-clamp-2">
-                                  {card.description}
-                                </p>
-                              )}
-
                               {card.labels.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {card.labels.map((labelId) => {
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {card.labels.slice(0, 3).map((labelId) => {
                                     const label = getLabelById(labelId)
                                     if (!label) return null
                                     return (
@@ -1243,6 +1459,11 @@ export function KanbanView() {
                                       </span>
                                     )
                                   })}
+                                  {card.labels.length > 3 && (
+                                    <span className="rounded-full px-2 py-0.5 text-[10px] font-medium bg-[var(--border)] text-[var(--text-disabled)]">
+                                      +{card.labels.length - 3}
+                                    </span>
+                                  )}
                                 </div>
                               )}
 

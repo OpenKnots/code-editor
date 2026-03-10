@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import type { WorkshopBlueprint, WorkshopStageId } from '@/lib/agent-workshop/types'
@@ -63,7 +63,10 @@ interface WorkshopWizardProps {
   onUpdateBlueprint: (updater: (current: WorkshopBlueprint) => WorkshopBlueprint) => void
   onDeploy: () => void
   onExport: () => void
+  onImport?: () => void
+  onShareLink?: () => void
   onCopyPrompt: () => void
+  onRunEvaluation?: () => void
   renderStageContent: (stageId: WorkshopStageId) => React.ReactNode
 }
 
@@ -72,11 +75,16 @@ export function WorkshopWizard({
   onUpdateBlueprint,
   onDeploy,
   onExport,
+  onImport,
+  onShareLink,
   onCopyPrompt,
+  onRunEvaluation,
   renderStageContent,
 }: WorkshopWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+  const [history, setHistory] = useState<WorkshopBlueprint[]>([blueprint])
+  const [historyIndex, setHistoryIndex] = useState(0)
 
   const currentStage = WIZARD_STEPS[currentStep]
   const isLastStep = currentStep === WIZARD_STEPS.length - 1
@@ -129,11 +137,78 @@ export function WorkshopWizard({
     [completedSteps, currentStep],
   )
 
+  const saveToHistory = useCallback((newBlueprint: WorkshopBlueprint) => {
+    setHistory((prev) => {
+      const newHistory = prev.slice(0, historyIndex + 1)
+      newHistory.push(newBlueprint)
+      return newHistory.slice(-20) // Keep last 20 states
+    })
+    setHistoryIndex((prev) => Math.min(prev + 1, 19))
+  }, [historyIndex])
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      setHistoryIndex((prev) => prev - 1)
+      onUpdateBlueprint(() => history[historyIndex - 1])
+    }
+  }, [historyIndex, history, onUpdateBlueprint])
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex((prev) => prev + 1)
+      onUpdateBlueprint(() => history[historyIndex + 1])
+    }
+  }, [historyIndex, history, onUpdateBlueprint])
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          handleRedo()
+        } else {
+          handleUndo()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleUndo, handleRedo])
+
+  // Track blueprint changes for history
+  useEffect(() => {
+    if (JSON.stringify(blueprint) !== JSON.stringify(history[historyIndex])) {
+      saveToHistory(blueprint)
+    }
+  }, [blueprint])
+
   return (
     <div className="h-full w-full min-h-0 min-w-0 flex flex-col bg-[var(--sidebar-bg)]">
       {/* Progress Bar */}
       <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-4">
         <div className="mx-auto max-w-5xl">
+          {/* Undo/Redo Toolbar */}
+          <div className="flex items-center justify-end gap-2 mb-3">
+            <button
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              title="Undo (⌘Z)"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition hover:border-[var(--brand)] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Icon icon="lucide:undo-2" width={14} height={14} />
+              Undo
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              title="Redo (⌘⇧Z)"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition hover:border-[var(--brand)] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Icon icon="lucide:redo-2" width={14} height={14} />
+              Redo
+            </button>
+          </div>
           <div className="flex items-center justify-between gap-2">
             {WIZARD_STEPS.map((step, index) => {
               const isCompleted = completedSteps.has(index)
@@ -298,6 +373,15 @@ export function WorkshopWizard({
                     <p className="mt-3 text-sm text-[var(--text-secondary)]">
                       {readiness.callout}
                     </p>
+                    {onRunEvaluation && (
+                      <button
+                        onClick={onRunEvaluation}
+                        className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)] font-medium transition hover:bg-[var(--brand)]/20"
+                      >
+                        <Icon icon="lucide:flask-conical" width={16} height={16} />
+                        Run Evaluation
+                      </button>
+                    )}
                   </div>
 
                   {/* System Prompt Preview */}
@@ -329,6 +413,43 @@ export function WorkshopWizard({
                     </details>
                   </div>
 
+                  {/* Share Section */}
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon icon="lucide:share-2" width={18} height={18} className="text-[var(--brand)]" />
+                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                        Share Blueprint
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {onShareLink && (
+                        <button
+                          onClick={onShareLink}
+                          className="flex items-center gap-2 py-2 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-sm text-[var(--text-primary)] transition hover:border-[var(--brand)]"
+                        >
+                          <Icon icon="lucide:link" width={16} height={16} />
+                          Share as Link
+                        </button>
+                      )}
+                      <button
+                        onClick={onExport}
+                        className="flex items-center gap-2 py-2 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-sm text-[var(--text-primary)] transition hover:border-[var(--brand)]"
+                      >
+                        <Icon icon="lucide:download" width={16} height={16} />
+                        Export JSON
+                      </button>
+                      {onImport && (
+                        <button
+                          onClick={onImport}
+                          className="flex items-center gap-2 py-2 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-sm text-[var(--text-primary)] transition hover:border-[var(--brand)]"
+                        >
+                          <Icon icon="lucide:upload" width={16} height={16} />
+                          Import
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Action Buttons */}
                   <div className="flex gap-3">
                     <button
@@ -337,13 +458,6 @@ export function WorkshopWizard({
                     >
                       <Icon icon="lucide:rocket" width={18} height={18} />
                       Deploy to Chat
-                    </button>
-                    <button
-                      onClick={onExport}
-                      className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--text-primary)] font-medium transition hover:border-[var(--brand)]"
-                    >
-                      <Icon icon="lucide:download" width={18} height={18} />
-                      Export
                     </button>
                   </div>
                 </div>

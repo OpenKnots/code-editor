@@ -105,18 +105,32 @@ export function AgentFlow({ blueprint, activeStage, onFocusStage }: AgentFlowPro
                         : 'border-[var(--border)] bg-[var(--bg)]'
                   } ${!isActive ? 'group-hover:border-[var(--brand)]/60 group-hover:shadow-md' : ''}`}
                 >
-                  <Icon
-                    icon={isConfigured ? 'lucide:check-circle-2' : stage.icon}
-                    width={24}
-                    height={24}
-                    className={`transition ${
-                      isActive
-                        ? 'text-[var(--brand)]'
-                        : isConfigured
+                  {isConfigured && !isActive ? (
+                    <div className="relative">
+                      <Icon
+                        icon={stage.icon}
+                        width={24}
+                        height={24}
+                        className="text-[var(--brand)] transition"
+                      />
+                      <div className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-[var(--brand)]">
+                        <Icon icon="lucide:check" width={10} height={10} className="text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <Icon
+                      icon={stage.icon}
+                      width={24}
+                      height={24}
+                      className={`transition ${
+                        isActive
                           ? 'text-[var(--brand)]'
-                          : 'text-[var(--text-disabled)]'
-                    } ${!isActive ? 'group-hover:text-[var(--brand)]' : ''}`}
-                  />
+                          : isConfigured
+                            ? 'text-[var(--brand)]'
+                            : 'text-[var(--text-disabled)]'
+                      } ${!isActive ? 'group-hover:text-[var(--brand)]' : ''}`}
+                    />
+                  )}
                   {isActive && (
                     <div className="absolute inset-0 rounded-2xl bg-[var(--brand)] opacity-20 animate-pulse" />
                   )}

@@ -561,7 +561,10 @@ export function WorkshopView() {
           onUpdateBlueprint={updatePrimaryBlueprint}
           onDeploy={handleDeploy}
           onExport={handleExport}
+          onImport={handleImport}
+          onShareLink={handleShareLink}
           onCopyPrompt={handleCopyPrompt}
+          onRunEvaluation={() => setWorkshopMode('testing')}
           renderStageContent={(stageId) => {
             // Render the existing section content based on stage
             switch (stageId) {
