@@ -5719,30 +5719,7 @@ p {
 }
 
 .input-focus-glow::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(
-    from var(--border-angle, 0deg),
-    transparent 40%,
-    color-mix(in srgb, var(--brand) 40%, transparent) 50%,
-    transparent 60%
-  );
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
-  animation: border-rotate 4s linear infinite;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.input-focus-glow:focus-within::before {
-  opacity: 1;
+  content: none;
 }
 
 /* ─── Progress bar (indeterminate streaming) ───────────────────── */
