@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
 import { Icon } from '@iconify/react'
+import { motion } from 'framer-motion'
 import { KnotLogo } from '@/components/knot-logo'
 import { KnotBackground } from '@/components/knot-background'
 import { ModeSelector } from '@/components/mode-selector'
@@ -37,7 +38,30 @@ const STATIC_SUGGESTIONS = [
     color: '#22c55e',
     bg: 'color-mix(in srgb, #22c55e 8%, transparent)',
   },
+  {
+    icon: 'lucide:sparkles',
+    label: 'Generate a complete component with types, tests, and documentation.',
+    color: '#8b5cf6',
+    bg: 'color-mix(in srgb, #8b5cf6 8%, transparent)',
+  },
 ]
+
+// Animated placeholder texts
+const PLACEHOLDER_TEXTS = [
+  'What shall we build today?',
+  'Describe a feature to scaffold...',
+  'Paste an error to debug...',
+  'Ask about your codebase...',
+]
+
+// Dynamic greeting based on time
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) return 'Good morning'
+  if (hour >= 12 && hour < 17) return 'Good afternoon'
+  if (hour >= 17 && hour < 21) return 'Good evening'
+  return 'Night owl mode'
+}
 
 function detectPrimaryLanguage(files: Array<{ path: string; is_dir: boolean }>): string | null {
   const extCounts: Record<string, number> = {}
@@ -89,6 +113,7 @@ export const ChatHome = memo(function ChatHome({
   const [input, setInput] = useState('')
   const [agentMode, setAgentMode] = useState<AgentMode>('ask')
   const [isFocused, setIsFocused] = useState(false)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { repo, setRepo } = useRepo()
   const local = useLocal()
@@ -194,6 +219,14 @@ export const ChatHome = memo(function ChatHome({
     return () => clearTimeout(t)
   }, [])
 
+  // Cycle placeholder text every 4 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_TEXTS.length)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     const el = inputRef.current
     if (!el) return
@@ -273,29 +306,67 @@ export const ChatHome = memo(function ChatHome({
       })
     }
 
-    return contextCards.slice(0, 3)
+    // Always add the 4th sparkles card for workspace view
+    contextCards.push({
+      icon: 'lucide:sparkles',
+      label: 'Generate a complete component with types, tests, and documentation.',
+      color: '#8b5cf6',
+      bg: 'color-mix(in srgb, #8b5cf6 8%, transparent)',
+    })
+
+    return contextCards.slice(0, 4)
   }, [hasWorkspace, openFiles, local.localTree, branchName])
 
   return (
     <div className="flex-1 overflow-y-auto relative">
       <KnotBackground />
       <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[clamp(2.75rem,8vh,5rem)] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
-        {/* Header — "Let's build" */}
+        {/* Header — Dynamic greeting + gradient tagline */}
         <div className="flex flex-col items-center mb-6 sm:mb-7">
-          <div
-            className={`mb-3 ${
-              status === 'connected' ? 'logo-breathe-connected' : 'logo-breathe-idle'
-            }`}
+          {/* Logo with entrance animation and glow */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-3"
+            style={{ animation: 'logo-glow 4s ease-in-out infinite' }}
           >
             <KnotLogo size={40} color="var(--brand)" />
-          </div>
+          </motion.div>
 
-          <h1 className="text-center text-[28px] sm:text-[32px] font-semibold tracking-[-0.04em] leading-none text-[var(--text-primary)]">
-            Let&apos;s weave
-          </h1>
-          <p className="mt-2 max-w-[28rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]">
+          {/* Dynamic time-based greeting */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-[13px] text-[var(--text-secondary)] mb-2 font-medium"
+          >
+            {getGreeting()}
+          </motion.p>
+
+          {/* Main tagline with gradient */}
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-center text-[28px] sm:text-[32px] font-bold tracking-[-0.04em] leading-none"
+            style={{
+              background: 'linear-gradient(135deg, #f0f0f0 0%, #3b82f6 50%, #8b5cf6 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            What shall we build?
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-2 max-w-[28rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]"
+          >
             Open a project or describe changes, and we&apos;ll help you shape it.
-          </p>
+          </motion.p>
 
           {/* Workspace dropdown — hidden on mobile */}
           <button
@@ -472,44 +543,66 @@ export const ChatHome = memo(function ChatHome({
           </button>
         </div>
 
-        {/* Suggestion cards — hidden on mobile, 3-up desktop */}
-        <div className="codex-suggestion-grid hidden sm:grid grid-cols-3 gap-3 mb-5">
+        {/* Suggestion cards — hidden on mobile, 2x2 grid desktop with staggered animation */}
+        <div className="codex-suggestion-grid hidden sm:grid grid-cols-2 gap-3.5 mb-5">
           {suggestions.map((card, i) => (
-            <button
+            <motion.button
               key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.5,
+                delay: 0.4 + i * 0.08,
+                type: 'spring',
+                stiffness: 400,
+                damping: 30,
+              }}
               onClick={() => onSend(card.label, agentMode)}
-              className="codex-suggestion-card group flex flex-col gap-2.5 p-3.5 sm:p-4 rounded-xl text-left cursor-pointer border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_70%,transparent)] backdrop-blur-sm hover:border-[var(--text-disabled)] transition-all w-full"
+              className="codex-suggestion-card group flex flex-col gap-3 p-4 rounded-[20px] text-left cursor-pointer border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full"
+              style={{
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              }}
             >
+              {/* Icon with colored glow background */}
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: card.bg }}
+                className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: card.bg,
+                  boxShadow: `0 0 20px ${card.bg}`,
+                }}
               >
                 <Icon
                   icon={card.icon}
-                  width={16}
-                  height={16}
+                  width={20}
+                  height={20}
                   style={{ color: card.color }}
-                  className="opacity-80 group-hover:opacity-100 transition-opacity"
+                  className="opacity-90 group-hover:opacity-100 transition-opacity"
                 />
               </div>
-              <p className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] leading-relaxed transition-colors">
+              <p className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] leading-[1.5] transition-colors line-clamp-2">
                 {card.label}
               </p>
-            </button>
+            </motion.button>
           ))}
         </div>
 
-        {/* Composer */}
-        <div
+        {/* Composer with enhanced focus glow */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
           onClick={() => inputRef.current?.focus()}
-          className={`codex-composer rounded-xl border backdrop-blur-sm overflow-hidden transition-all duration-200 ${
+          className={`codex-composer rounded-[20px] border backdrop-blur-sm overflow-hidden transition-all duration-200 ${
             isFocused
-              ? input.trim()
-                ? 'border-[color-mix(in_srgb,var(--brand)_50%,var(--border))]'
-                : 'border-[color-mix(in_srgb,var(--brand)_25%,var(--border))]'
-              : 'border-[var(--border)] hover:border-[color-mix(in_srgb,var(--text-disabled)_60%,var(--border))]'
+              ? 'border-[var(--brand)]'
+              : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.1)]'
           }`}
-          style={{ background: 'color-mix(in srgb, var(--bg-elevated) 80%, transparent)' }}
+          style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            boxShadow: isFocused
+              ? '0 0 0 1px var(--brand), 0 0 20px rgba(59, 130, 246, 0.1)'
+              : '0 4px 16px rgba(0, 0, 0, 0.2)',
+          }}
         >
           <textarea
             ref={inputRef}
@@ -523,10 +616,11 @@ export const ChatHome = memo(function ChatHome({
             placeholder={
               repoShort
                 ? `Ask KnotCode anything, @ to add files, / for commands`
-                : 'Describe what you want to build…'
+                : PLACEHOLDER_TEXTS[placeholderIndex]
             }
             aria-label="Chat input"
-            className="w-full bg-transparent px-4 pt-3.5 pb-2 text-[14px] leading-[1.6] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none resize-none min-h-[48px] max-h-[200px] overflow-y-auto"
+            className="w-full bg-transparent px-4 pt-3.5 pb-2 text-[14px] leading-[1.6] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none resize-none min-h-[48px] max-h-[200px] overflow-y-auto placeholder:transition-opacity placeholder:duration-500"
+            key={placeholderIndex}
           />
 
           {/* Image previews */}
@@ -597,83 +691,98 @@ export const ChatHome = memo(function ChatHome({
                 )}
               </div>
 
-              {/* Send */}
-              <button
+              {/* Send button with enhanced size and animation */}
+              <motion.button
                 onClick={startOrSend}
+                whileTap={{ scale: 0.9 }}
                 aria-label={input.trim() ? 'Send message' : 'Start chat'}
-                className={`codex-send-btn flex items-center justify-center w-8 h-8 rounded-lg transition-all cursor-pointer active:scale-95 ${
+                className={`codex-send-btn flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
                   input.trim()
-                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-[0_0_12px_color-mix(in_srgb,var(--brand)_20%,transparent)]'
-                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_12%,transparent)]'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-[0_0_16px_rgba(59,130,246,0.3)]'
+                    : 'bg-[rgba(255,255,255,0.08)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.12)]'
                 }`}
               >
                 <Icon
                   icon={input.trim() ? 'lucide:arrow-up' : 'lucide:arrow-right'}
-                  width={14}
-                  height={14}
+                  width={16}
+                  height={16}
                 />
-              </button>
+              </motion.button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Workspace setup (no workspace) — desktop only */}
+        {/* Workspace setup (no workspace) — desktop only with glass cards */}
         {!hasWorkspace && (
-          <div className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 hidden sm:block">
-            <div className="h-px bg-[var(--border)]" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 hidden sm:block"
+          >
+            <div className="h-px bg-[rgba(255,255,255,0.06)]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <motion.button
                 onClick={onSelectFolder}
-                className="group flex items-center gap-3 p-3 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_60%,transparent)] text-left cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group flex items-center gap-3 p-4 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
               >
-                <div className="w-8 h-8 rounded-md bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
                   <Icon
                     icon="lucide:folder-open"
-                    width={14}
-                    height={14}
+                    width={20}
+                    height={20}
                     className="text-[var(--text-tertiary)]"
                   />
                 </div>
                 <span className="min-w-0">
-                  <span className="block text-[12px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+                  <span className="block text-[13px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
                     Open Folder
                   </span>
-                  <span className="block text-[10px] text-[var(--text-disabled)] font-mono">
+                  <span className="block text-[11px] text-[var(--text-disabled)] font-mono">
                     local project
                   </span>
                 </span>
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={onCloneRepo}
-                className="group flex items-center gap-3 p-3 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_60%,transparent)] text-left cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group flex items-center gap-3 p-4 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
               >
-                <div className="w-8 h-8 rounded-md bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
                   <Icon
                     icon="lucide:git-branch"
-                    width={14}
-                    height={14}
+                    width={20}
+                    height={20}
                     className="text-[var(--text-tertiary)]"
                   />
                 </div>
                 <span className="min-w-0">
-                  <span className="block text-[12px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+                  <span className="block text-[13px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
                     Clone Repository
                   </span>
-                  <span className="block text-[10px] text-[var(--text-disabled)] font-mono">
+                  <span className="block text-[11px] text-[var(--text-disabled)] font-mono">
                     from GitHub
                   </span>
                 </span>
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Footer — desktop only */}
-        <div className="mt-6 sm:mt-8 hidden sm:flex justify-center">
-          <span className="text-[10px] font-mono tracking-[0.08em] text-[var(--text-disabled)] opacity-40 uppercase">
-            KnotCode
+        {/* Footer — subtle branding */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 1 }}
+          className="mt-6 sm:mt-8 hidden sm:flex justify-center"
+        >
+          <span className="text-[10px] font-mono tracking-[0.08em] text-[var(--text-disabled)] opacity-20 uppercase">
+            Built with KnotCode
           </span>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
