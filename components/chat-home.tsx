@@ -567,7 +567,7 @@ export const ChatHome = memo(function ChatHome({
                 damping: 30,
               }}
               onClick={() => onSend(card.label, agentMode)}
-              className="codex-suggestion-card group flex flex-col gap-3 p-4 rounded-[20px] text-left cursor-pointer border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full"
+              className="codex-suggestion-card group flex flex-col gap-3 p-4 rounded-[20px] text-left cursor-pointer border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full"
               style={{
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
               }}
@@ -604,7 +604,7 @@ export const ChatHome = memo(function ChatHome({
           className={`codex-composer rounded-[20px] border backdrop-blur-sm overflow-hidden transition-all duration-200 ${
             isFocused
               ? 'border-[var(--brand)]'
-              : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.1)]'
+              : 'border-[var(--border)] hover:border-[rgba(255,255,255,0.1)]'
           }`}
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -708,7 +708,7 @@ export const ChatHome = memo(function ChatHome({
                 className={`codex-send-btn flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
                   input.trim()
                     ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-[0_0_16px_rgba(59,130,246,0.3)]'
-                    : 'bg-[rgba(255,255,255,0.08)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.12)]'
+                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.12)]'
                 }`}
               >
                 <Icon
@@ -735,9 +735,9 @@ export const ChatHome = memo(function ChatHome({
                 onClick={onSelectFolder}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center gap-3 p-4 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
+                className="group flex items-center gap-3 p-4 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
               >
-                <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
                   <Icon
                     icon="lucide:folder-open"
                     width={20}
@@ -758,9 +758,9 @@ export const ChatHome = memo(function ChatHome({
                 onClick={onCloneRepo}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center gap-3 p-4 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
+                className="group flex items-center gap-3 p-4 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
               >
-                <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
                   <Icon
                     icon="lucide:git-branch"
                     width={20}

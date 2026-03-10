@@ -25,6 +25,8 @@ import {
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useTheme } from '@/context/theme-context'
+import { useLocal } from '@/context/local-context'
+import { useRepo } from '@/context/repo-context'
 import { MarkdownPreview } from '@/components/markdown-preview'
 import {
   SKILL_FIRST_OVERRIDE_TOKEN,
@@ -383,6 +385,8 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
 export function GatewayTerminal() {
   const { status, sendRequest, onEvent } = useGateway()
   const { terminalBg, terminalBgOpacity } = useTheme()
+  const { rootPath } = useLocal()
+  const { repo } = useRepo()
   const isConnected = status === 'connected'
   const hasBgImage = !!terminalBg
   const terminalStyle = useMemo(
@@ -440,6 +444,29 @@ export function GatewayTerminal() {
       },
     ])
   }, [])
+
+  // Auto-cd when project changes
+  useEffect(() => {
+    if (!rootPath || !sendRequest) return
+
+    // Send cd command to terminal session
+    sendRequest('chat.send', {
+      sessionKey: TERMINAL_SESSION_KEY,
+      message: `cd ${rootPath}`,
+      idempotencyKey: `cd-project-${Date.now()}`,
+    }).catch(() => {})
+
+    // Add system entry showing directory switch
+    setEntries((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        type: 'system',
+        text: `📂 Switched to: ${rootPath}`,
+        timestamp: Date.now(),
+      },
+    ])
+  }, [rootPath, sendRequest])
 
   // Auto-scroll
   useEffect(() => {

@@ -158,7 +158,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('chat')}
             className={`activity-bar-btn ${activeView === 'chat' ? 'activity-bar-btn--active' : ''}`}
-            title={`Chat (${formatShortcut('meta+1')})`}
+            title="Chat (⌘1)"
           >
             <Icon icon="lucide:message-circle" width={24} height={24} />
           </button>
@@ -166,7 +166,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('editor')}
             className={`activity-bar-btn ${activeView === 'editor' ? 'activity-bar-btn--active' : ''}`}
-            title={`Editor (${formatShortcut('meta+2')})`}
+            title="Editor (⌘2)"
           >
             <Icon icon="lucide:code" width={24} height={24} />
           </button>
@@ -174,7 +174,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('preview')}
             className={`activity-bar-btn ${activeView === 'preview' ? 'activity-bar-btn--active' : ''}`}
-            title="Preview"
+            title="Preview (⌘3)"
           >
             <Icon icon="lucide:eye" width={24} height={24} />
           </button>
@@ -182,7 +182,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('git')}
             className={`activity-bar-btn ${activeView === 'git' ? 'activity-bar-btn--active' : ''}`}
-            title={`Source Control (${formatShortcut('meta+3')})`}
+            title="Git (⌘4)"
           >
             <Icon icon="lucide:git-branch" width={24} height={24} />
             {dirtyCount > 0 && (
@@ -193,7 +193,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('mcp')}
             className={`activity-bar-btn ${activeView === 'mcp' ? 'activity-bar-btn--active' : ''}`}
-            title={`MCP (${formatShortcut('meta+4')})`}
+            title="MCP (⌘5)"
           >
             <Icon icon="lucide:plug" width={24} height={24} />
           </button>
@@ -201,7 +201,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('skills')}
             className={`activity-bar-btn ${activeView === 'skills' ? 'activity-bar-btn--active' : ''}`}
-            title={`Skills (${formatShortcut('meta+5')})`}
+            title="Skills (⌘6)"
           >
             <Icon icon="lucide:wand-2" width={24} height={24} />
           </button>
@@ -209,7 +209,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('prompts')}
             className={`activity-bar-btn ${activeView === 'prompts' ? 'activity-bar-btn--active' : ''}`}
-            title="Prompts"
+            title="Prompts (⌘7)"
           >
             <Icon icon="lucide:book-open" width={24} height={24} />
           </button>
@@ -284,24 +284,29 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
             {/* View Navigation */}
             <div className="mt-2 flex flex-col gap-0.5">
               {([
-                { id: 'chat' as const, icon: 'lucide:message-circle', label: 'Chat' },
-                { id: 'editor' as const, icon: 'lucide:code', label: 'Editor' },
-                { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview' },
-                { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git' },
-                { id: 'mcp' as const, icon: 'lucide:plug', label: 'MCP' },
-                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills' },
-                { id: 'prompts' as const, icon: 'lucide:book-open', label: 'Prompts' },
+                { id: 'chat' as const, icon: 'lucide:message-circle', label: 'Chat', shortcut: '⌘1' },
+                { id: 'editor' as const, icon: 'lucide:code', label: 'Editor', shortcut: '⌘2' },
+                { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
+                { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git', shortcut: '⌘4' },
+                { id: 'mcp' as const, icon: 'lucide:plug', label: 'MCP', shortcut: '⌘5' },
+                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘6' },
+                { id: 'prompts' as const, icon: 'lucide:book-open', label: 'Prompts', shortcut: '⌘7' },
               ] as const).map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setView(item.id)}
-                  className={`sidebar-view-nav ${activeView === item.id ? 'sidebar-view-nav--active' : ''}`}
+                  className={`sidebar-view-nav group ${activeView === item.id ? 'sidebar-view-nav--active' : ''}`}
                 >
                   <Icon icon={item.icon} width={16} height={16} className="shrink-0" />
                   <span className="truncate">{item.label}</span>
                   {item.id === 'git' && dirtyCount > 0 && (
                     <span className="ml-auto px-1.5 min-w-[20px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[10px] leading-[18px] font-bold shrink-0">
                       {dirtyCount}
+                    </span>
+                  )}
+                  {item.id !== 'git' && (
+                    <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity">
+                      {item.shortcut}
                     </span>
                   )}
                 </button>

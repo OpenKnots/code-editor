@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
+import { useLocal } from '@/context/local-context'
 import { useLayout } from '@/context/layout-context'
 import { useAppMode } from '@/context/app-mode-context'
 import { PluginSlotRenderer } from '@/context/plugin-context'
@@ -81,6 +82,7 @@ interface StatusBarProps {
 export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
   const { status } = useGateway()
   const { files, activeFile } = useEditor()
+  const { gitInfo } = useLocal()
   const layout = useLayout()
   const { spec: modeSpec } = useAppMode()
   const terminalVisible = layout.isVisible('terminal')
@@ -138,15 +140,29 @@ export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
 
       {/* ── Right: tools & status ── */}
       <div className="flex items-center gap-1.5">
-        <div className="shell-status-item">
-          <SessionPresence compact />
-        </div>
+        {/* Git branch */}
+        {gitInfo?.branch && (
+          <>
+            <span className="shell-status-item gap-1.5" title={`Branch: ${gitInfo.branch}`}>
+              <Icon icon="lucide:git-branch" width={11} height={11} />
+              <span className="text-[10px] font-mono">{gitInfo.branch}</span>
+            </span>
+            <span className="shell-status-separator" />
+          </>
+        )}
 
-        <div className="shell-status-item">
-          <CaffeinateToggle compact />
-        </div>
-
-        <PluginSlotRenderer slot="status-bar-right" />
+        {/* Connection status */}
+        <span
+          className="shell-status-item gap-1.5"
+          title={status === 'connected' ? 'Connected to gateway' : 'Disconnected'}
+        >
+          <span
+            className={`w-[6px] h-[6px] rounded-full shrink-0 ${
+              status === 'connected' ? 'bg-green-500' : 'bg-red-500'
+            }`}
+          />
+          <span className="text-[10px]">{status === 'connected' ? 'Connected' : 'Disconnected'}</span>
+        </span>
 
         {devServerReady && (
           <>
@@ -160,6 +176,18 @@ export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
             </span>
           </>
         )}
+
+        <span className="shell-status-separator" />
+
+        <div className="shell-status-item">
+          <SessionPresence compact />
+        </div>
+
+        <div className="shell-status-item">
+          <CaffeinateToggle compact />
+        </div>
+
+        <PluginSlotRenderer slot="status-bar-right" />
 
         <button
           onClick={() => layout.toggle('terminal')}

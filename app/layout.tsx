@@ -14,6 +14,7 @@ import { ChatAppearanceProvider } from '@/context/chat-appearance-context'
 import { LayoutProvider } from '@/context/layout-context'
 import { ThreadProvider } from '@/context/thread-context'
 import { AppModeProvider } from '@/context/app-mode-context'
+import { ToastProvider } from '@/components/toast'
 import { Suspense } from 'react'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { AppSkeleton } from '@/components/app-skeleton'
@@ -53,7 +54,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                               <PreviewProvider>
                                 <ChatAppearanceProvider>
                                   <PluginProvider>
-                                    <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
+                                    <ToastProvider>
+                                      <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
+                                    </ToastProvider>
                                   </PluginProvider>
                                 </ChatAppearanceProvider>
                               </PreviewProvider>

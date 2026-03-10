@@ -10,6 +10,7 @@ import { useRepo } from '@/context/repo-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { EditorTabs } from '@/components/editor-tabs'
 import { FloatingPanel } from '@/components/floating-panel'
+import { KnotLogo } from '@/components/knot-logo'
 import { formatShortcut } from '@/lib/platform'
 import { isTauri } from '@/lib/tauri'
 import { emit } from '@/lib/events'
@@ -35,8 +36,22 @@ function NoCodebasePane({
   onOpenFolder: () => void
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-[var(--bg)] px-6 select-none">
-      <div className="flex flex-col items-center gap-6 max-w-[420px]">
+    <div
+      className="flex flex-1 flex-col items-center justify-center gap-8 bg-[var(--bg)] px-6 select-none relative overflow-hidden"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)
+        `,
+        backgroundSize: '40px 40px',
+      }}
+    >
+      {/* Logo watermark */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <KnotLogo size={200} className="opacity-[0.03]" />
+      </div>
+
+      <div className="flex flex-col items-center gap-6 max-w-[420px] relative z-10">
         <div className="w-20 h-20 rounded-2xl bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] border border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] flex items-center justify-center">
           <Icon
             icon="lucide:folder-code"
