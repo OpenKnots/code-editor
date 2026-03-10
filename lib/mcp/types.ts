@@ -13,4 +13,5 @@ export interface McpServerConfig {
   args?: string[] // Command arguments for stdio
   env?: Record<string, string> // Environment variables
   enabled: boolean
+  status?: 'running' | 'stopped' | 'error' | 'unknown'
 }

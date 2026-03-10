@@ -25,7 +25,13 @@ import {
   addRecent,
   type SavedRepo,
 } from '@/lib/github-repos-store'
-import { THEME_PRESETS, useTheme, type ThemeMode, type ThemePreset } from '@/context/theme-context'
+import {
+  THEME_PRESETS,
+  useTheme,
+  type ThemeMode,
+  type ThemePreset,
+  type EditorBgStyle,
+} from '@/context/theme-context'
 import {
   getAgentConfig,
   saveAgentConfig,
@@ -37,6 +43,12 @@ const APPEARANCE_MODES: Array<{ id: ThemeMode; label: string; icon: string }> = 
   { id: 'dark', label: 'Dark', icon: 'lucide:moon-star' },
   { id: 'light', label: 'Light', icon: 'lucide:sun-medium' },
   { id: 'system', label: 'System', icon: 'lucide:laptop-minimal' },
+]
+
+const BG_STYLE_OPTIONS: Array<{ id: EditorBgStyle; label: string; icon: string }> = [
+  { id: 'none', label: 'None', icon: 'lucide:circle-off' },
+  { id: 'grid', label: 'Grid', icon: 'lucide:grid-3x3' },
+  { id: 'grid-logos', label: 'Grid + Logos', icon: 'lucide:wallpaper' },
 ]
 
 const THEME_GROUP_LABELS: Record<ThemePreset['group'], string> = {
@@ -58,7 +70,16 @@ function groupThemes() {
  */
 export function SettingsPanel({ onBack }: { onBack: () => void }) {
   const { status, gatewayUrl } = useGateway()
-  const { themeId, setThemeId, mode, setMode } = useTheme()
+  const {
+    themeId,
+    setThemeId,
+    mode,
+    setMode,
+    editorBgStyle,
+    editorBgOpacity,
+    setEditorBgStyle,
+    setEditorBgOpacity,
+  } = useTheme()
   const { token: ghToken, authenticated: ghAuth, setManualToken, clearToken } = useGitHubAuth()
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null)
   const [patInput, setPatInput] = useState('')
@@ -289,6 +310,66 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Editor Background */}
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
+              <Icon icon="lucide:wallpaper" width={14} />
+            </span>
+            <div>
+              <h3 className="text-sm font-medium text-[var(--text-primary)]">Editor Background</h3>
+              <p className="text-[11px] text-[var(--text-secondary)]">
+                Pattern style for empty editor and chat home.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
+              {BG_STYLE_OPTIONS.map((opt) => {
+                const active = editorBgStyle === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setEditorBgStyle(opt.id)}
+                    className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-medium transition cursor-pointer ${
+                      active
+                        ? 'border border-[color-mix(in_srgb,var(--brand)_40%,var(--border))] bg-[color-mix(in_srgb,var(--bg-elevated)_92%,transparent)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]'
+                        : 'border border-transparent text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <Icon icon={opt.icon} width={14} />
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {editorBgStyle !== 'none' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+                  Pattern Opacity
+                </span>
+                <span className="text-[11px] tabular-nums text-[var(--text-disabled)]">
+                  {editorBgOpacity}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                step={5}
+                value={editorBgOpacity}
+                onChange={(e) => setEditorBgOpacity(Number(e.target.value))}
+                className="w-full accent-[var(--brand)] h-1.5 rounded-full appearance-none bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:shadow-[0_0_4px_rgba(0,0,0,0.3)]"
+              />
+            </div>
+          )}
         </section>
 
         {/* System */}

@@ -13,6 +13,7 @@ import {
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type ResolvedMode = 'light' | 'dark'
 export type ThemeId = 'obsidian' | 'neon' | 'catppuccin-mocha' | 'bone' | 'supreme' | 'claude' | string
+export type EditorBgStyle = 'none' | 'grid' | 'dots' | 'gradient' | 'grid-logos'
 
 export interface ThemePreset {
   id: ThemeId
@@ -50,6 +51,10 @@ interface ThemeContextValue {
   terminalBgOpacity: number
   setTerminalBg: (url: string | null) => void
   setTerminalBgOpacity: (v: number) => void
+  editorBgStyle: EditorBgStyle
+  editorBgOpacity: number
+  setEditorBgStyle: (s: EditorBgStyle) => void
+  setEditorBgOpacity: (v: number) => void
   version: number
   bumpVersion: () => void
 }
@@ -105,6 +110,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [bgTint, setBgTintState] = useState(6)
   const [terminalBg, setTerminalBgState] = useState<string | null>(null)
   const [terminalBgOpacity, setTerminalBgOpacityState] = useState(15)
+  const [editorBgStyle, setEditorBgStyleState] = useState<EditorBgStyle>('grid')
+  const [editorBgOpacity, setEditorBgOpacityState] = useState(4)
   const [version, setVersion] = useState(0)
 
   const bumpVersion = useCallback(() => setVersion((v) => v + 1), [])
@@ -132,6 +139,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
       }
       if (savedTermBgOpacity !== null) setTerminalBgOpacityState(Number(savedTermBgOpacity))
+      const savedEdBg = localStorage.getItem('code-editor:editor-bg-style') as EditorBgStyle | null
+      const savedEdBgOp = localStorage.getItem('code-editor:editor-bg-opacity')
+      if (savedEdBg) setEditorBgStyleState(savedEdBg)
+      if (savedEdBgOp !== null) setEditorBgOpacityState(Number(savedEdBgOp))
       document.documentElement.style.setProperty('--theme-bg-intensity', `${tint}%`)
       applyToDOM(tid, rm)
     } catch {}
@@ -201,6 +212,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [])
 
+  const setEditorBgStyle = useCallback((s: EditorBgStyle) => {
+    setEditorBgStyleState(s)
+    try { localStorage.setItem('code-editor:editor-bg-style', s) } catch {}
+  }, [])
+
+  const setEditorBgOpacity = useCallback((v: number) => {
+    const clamped = Math.min(100, Math.max(0, v))
+    setEditorBgOpacityState(clamped)
+    try { localStorage.setItem('code-editor:editor-bg-opacity', String(clamped)) } catch {}
+  }, [])
+
   const value = useMemo<ThemeContextValue>(
     () => ({
       themeId,
@@ -214,6 +236,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       terminalBgOpacity,
       setTerminalBg,
       setTerminalBgOpacity,
+      editorBgStyle,
+      editorBgOpacity,
+      setEditorBgStyle,
+      setEditorBgOpacity,
       version,
       bumpVersion,
     }),
@@ -229,6 +255,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       terminalBgOpacity,
       setTerminalBg,
       setTerminalBgOpacity,
+      editorBgStyle,
+      editorBgOpacity,
+      setEditorBgStyle,
+      setEditorBgOpacity,
       version,
       bumpVersion,
     ],

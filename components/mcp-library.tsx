@@ -10,6 +10,8 @@ import {
   removeMcpServer,
 } from '@/lib/mcp/storage'
 import type { McpServerConfig, McpServerType } from '@/lib/mcp/types'
+import { useGateway } from '@/context/gateway-context'
+import { initMcpGateway } from '@/lib/mcp/gateway'
 
 // ─── MCP Catalog ───────────────────────────────────────────────────────────
 
@@ -640,12 +642,17 @@ function ConfigModal({ open, onClose, entry, existingConfig, onSave, onRemove }:
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export function McpLibrary() {
+  const { sendRequest } = useGateway()
   const [servers, setServers] = useState<McpServerConfig[]>([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<McpCatalogEntry | null>(null)
   const [existingConfig, setExistingConfig] = useState<McpServerConfig | undefined>()
+
+  useEffect(() => {
+    initMcpGateway(sendRequest)
+  }, [sendRequest])
 
   useEffect(() => {
     setServers(getMcpServers())

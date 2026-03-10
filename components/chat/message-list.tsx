@@ -302,7 +302,7 @@ export function MessageList({
           )
         }}
       >
-        {visibleMessages.map((msg) => {
+        {visibleMessages.map((msg, idx) => {
           const t = msg.type ?? 'text'
           const isUser = msg.role === 'user'
           const isSystem = msg.role === 'system'
@@ -310,6 +310,10 @@ export function MessageList({
 
           // Hide system status/tool messages by default (errors always show)
           if (isSystem && !showSystemMessages && t !== 'error') return null
+
+          // Check if previous message is from the same sender for grouping
+          const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null
+          const isGrouped = prevMsg && prevMsg.role === msg.role && !(prevMsg.type === 'error' || t === 'error')
 
           const bubbleClass = isUser
             ? 'bg-[color-mix(in_srgb,var(--brand)_15%,transparent)] text-[var(--text-primary)] rounded-br-sm'
@@ -345,10 +349,10 @@ export function MessageList({
             <div
               key={msg.id}
               className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full animate-fade-in-up`}
-              style={{ animationDuration: '0.2s' }}
+              style={{ animationDuration: '0.2s', marginTop: isGrouped ? '4px' : '12px' }}
             >
               {/* Assistant avatar row */}
-              {isAssistant && (
+              {isAssistant && !isGrouped && (
                 <div className="flex items-center gap-1.5 mb-1">
                   <div className="message-avatar-ring">
                     <KnotLogo size={12} className="text-[var(--brand)]" />

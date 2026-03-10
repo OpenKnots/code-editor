@@ -868,7 +868,7 @@ export function CodeEditor() {
               ? getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()
               : '') || "'JetBrains Mono', monospace",
           fontLigatures: true,
-          minimap: { enabled: false },
+          minimap: { enabled: true, maxColumn: 80, renderCharacters: false },
           scrollBeyondLastLine: false,
           padding: { top: 12, bottom: 12 },
           lineNumbers: 'on',

@@ -1,11 +1,3 @@
-/**
- * MCP Gateway Integration
- *
- * This module provides stub functions for MCP server management via the gateway.
- * Currently, these functions operate on localStorage only.
- * In the future, they will communicate with the gateway via RPC to manage MCP servers.
- */
-
 import type { McpServerConfig } from './types'
 import {
   getMcpServers,
@@ -14,57 +6,83 @@ import {
   toggleMcpServer as toggleMcpServerLocal,
 } from './storage'
 
-/**
- * List all MCP server configurations
- * TODO: In the future, this will query the gateway via RPC
- */
-export async function listMcpServers(): Promise<McpServerConfig[]> {
-  return getMcpServers()
+type SendRequest = (method: string, params?: Record<string, unknown>) => Promise<unknown>
+
+let _sendRequest: SendRequest | null = null
+
+/** Initialize the MCP gateway client with a sendRequest function from gateway context */
+export function initMcpGateway(sendRequest: SendRequest) {
+  _sendRequest = sendRequest
 }
 
-/**
- * Add a new MCP server
- * TODO: In the future, this will send the config to the gateway via RPC
- */
+/** List MCP servers — returns local + gateway status */
+export async function listMcpServers(): Promise<McpServerConfig[]> {
+  const local = getMcpServers()
+  if (!_sendRequest) return local
+
+  try {
+    const resp = await _sendRequest('mcp.list') as { servers?: Array<{ id: string; status: string }> } | undefined
+    if (resp?.servers) {
+      return local.map(s => ({
+        ...s,
+        status: resp.servers?.find(gs => gs.id === s.id)?.status as 'running' | 'stopped' | 'error' | 'unknown' | undefined
+      }))
+    }
+  } catch (e) {
+    console.warn('[MCP Gateway] Failed to fetch server status:', e)
+  }
+  return local
+}
+
+/** Add MCP server locally and sync to gateway */
 export async function addMcpServer(config: McpServerConfig): Promise<McpServerConfig[]> {
   const servers = addMcpServerLocal(config)
-  // TODO: Send to gateway
-  // await gateway.rpc('mcp.add', config)
+  if (_sendRequest) {
+    try {
+      await _sendRequest('mcp.add', {
+        id: config.id,
+        name: config.name,
+        type: config.type,
+        command: config.command,
+        url: config.url,
+        args: config.args,
+        env: config.env,
+      })
+    } catch (e) {
+      console.warn('[MCP Gateway] Failed to add server:', e)
+    }
+  }
   return servers
 }
 
-/**
- * Remove an MCP server
- * TODO: In the future, this will remove the server from the gateway via RPC
- */
+/** Remove MCP server locally and from gateway */
 export async function removeMcpServer(id: string): Promise<McpServerConfig[]> {
   const servers = removeMcpServerLocal(id)
-  // TODO: Send to gateway
-  // await gateway.rpc('mcp.remove', { id })
+  if (_sendRequest) {
+    try { await _sendRequest('mcp.remove', { id }) } catch {}
+  }
   return servers
 }
 
-/**
- * Toggle an MCP server enabled state
- * TODO: In the future, this will toggle the server on the gateway via RPC
- */
+/** Toggle MCP server enabled state locally and on gateway */
 export async function toggleMcpServer(id: string): Promise<McpServerConfig[]> {
   const servers = toggleMcpServerLocal(id)
-  // TODO: Send to gateway
-  // await gateway.rpc('mcp.toggle', { id })
+  const server = servers.find(s => s.id === id)
+  if (_sendRequest && server) {
+    try {
+      await _sendRequest(server.enabled ? 'mcp.start' : 'mcp.stop', { id })
+    } catch {}
+  }
   return servers
 }
 
-/**
- * Sync all MCP server configurations to the gateway
- * TODO: Implement gateway sync via RPC
- */
+/** Sync all local MCP configs to gateway */
 export async function syncMcpServers(): Promise<void> {
+  if (!_sendRequest) return
   const servers = getMcpServers()
-  console.log('[MCP Gateway] Sync to gateway (stub):', servers)
-  // TODO: Implement gateway RPC call
-  // await gateway.rpc('mcp.sync', { servers })
-
-  // For now, just simulate a short delay
-  await new Promise((resolve) => setTimeout(resolve, 300))
+  try {
+    await _sendRequest('mcp.sync', { servers: servers.filter(s => s.enabled) })
+  } catch (e) {
+    console.warn('[MCP Gateway] Sync failed:', e)
+  }
 }

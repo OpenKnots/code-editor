@@ -4157,8 +4157,12 @@ p {
 }
 .prose-chat a {
   color: var(--brand);
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 2px;
+  transition: text-decoration 0.15s ease;
+}
+.prose-chat a:hover {
+  text-decoration: underline;
 }
 .prose-chat table {
   display: block;
