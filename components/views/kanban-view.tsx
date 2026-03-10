@@ -69,7 +69,32 @@ interface KanbanData {
   activeBoard: string
 }
 
+interface KanbanRecommendation {
+  id: string
+  icon: string
+  title: string
+  description: string
+  action: string
+  actionFn: () => void
+  priority: 'high' | 'medium' | 'low'
+  category: 'workflow' | 'hygiene' | 'productivity' | 'suggestion'
+}
+
+interface BoardHealth {
+  score: number
+  color: string
+  breakdown: {
+    wip: number
+    labels: number
+    descriptions: number
+    stale: number
+    overdue: number
+  }
+}
+
 const STORAGE_KEY = 'knot-code:kanban:boards'
+const DISMISSED_RECS_KEY = 'knot-code:kanban:dismissed-recs'
+const REC_PANEL_STATE_KEY = 'knot-code:kanban:rec-panel-collapsed'
 
 const DEFAULT_COLUMNS: KanbanColumn[] = [
   { id: 'backlog', title: 'Backlog', icon: 'lucide:inbox', color: '#6b7280', collapsed: false },
@@ -197,6 +222,296 @@ function formatDateInput(ts?: number) {
   if (!ts) return ''
   const d = new Date(ts)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// ── Board Health Calculation ───────────────────────────────────
+function calculateBoardHealth(
+  cards: KanbanCard[],
+  columns: KanbanColumn[],
+): BoardHealth {
+  if (cards.length === 0) {
+    return {
+      score: 100,
+      color: '#22c55e',
+      breakdown: { wip: 100, labels: 100, descriptions: 100, stale: 100, overdue: 100 },
+    }
+  }
+
+  // WIP ratio (started column should have <= 3 cards)
+  const startedCol = columns.find((c) => c.id === 'started')
+  const wipCards = cards.filter((c) => c.columnId === 'started').length
+  const wipScore = startedCol ? Math.max(0, 100 - (wipCards > 3 ? (wipCards - 3) * 20 : 0)) : 100
+
+  // Label coverage
+  const cardsWithLabels = cards.filter((c) => c.labels.length > 0).length
+  const labelScore = (cardsWithLabels / cards.length) * 100
+
+  // Description coverage
+  const cardsWithDesc = cards.filter((c) => c.description && c.description.trim()).length
+  const descScore = (cardsWithDesc / cards.length) * 100
+
+  // Stale cards (in same column > 7 days)
+  const now = Date.now()
+  const sevenDays = 7 * 24 * 60 * 60 * 1000
+  const staleCards = cards.filter((c) => {
+    const lastActivity = c.activity?.[c.activity.length - 1]?.timestamp || c.createdAt
+    return now - lastActivity > sevenDays && c.columnId !== 'done'
+  }).length
+  const staleScore = Math.max(0, 100 - staleCards * 15)
+
+  // Overdue cards
+  const overdueCards = cards.filter((c) => c.dueDate && c.dueDate < now).length
+  const overdueScore = Math.max(0, 100 - overdueCards * 20)
+
+  const totalScore = (wipScore + labelScore + descScore + staleScore + overdueScore) / 5
+
+  let color = '#22c55e' // green
+  if (totalScore < 50) color = '#ef4444' // red
+  else if (totalScore < 75) color = '#f59e0b' // amber
+
+  return {
+    score: Math.round(totalScore),
+    color,
+    breakdown: {
+      wip: Math.round(wipScore),
+      labels: Math.round(labelScore),
+      descriptions: Math.round(descScore),
+      stale: Math.round(staleScore),
+      overdue: Math.round(overdueScore),
+    },
+  }
+}
+
+// ── Recommendations Generator ───────────────────────────────────
+function generateRecommendations(
+  cards: KanbanCard[],
+  columns: KanbanColumn[],
+  dismissedIds: string[],
+  handlers: {
+    onHighlightColumn: (colId: string) => void
+    onOpenCard: (cardId: string) => void
+    onNewCard: () => void
+    onClearDone: () => void
+    onShowToast: (msg: string) => void
+  },
+): KanbanRecommendation[] {
+  const recs: KanbanRecommendation[] = []
+  const now = Date.now()
+
+  // Helper: find column by ID
+  const findCol = (id: string) => columns.find((c) => c.id === id)
+
+  // Workflow recommendations
+  const startedCards = cards.filter((c) => c.columnId === 'started')
+  if (startedCards.length > 3) {
+    recs.push({
+      id: 'wip-too-high',
+      icon: 'lucide:alert-triangle',
+      title: 'Too much WIP',
+      description: 'Consider finishing current work before starting new tasks. Move some cards back to Backlog.',
+      action: 'View Started',
+      actionFn: () => handlers.onHighlightColumn('started'),
+      priority: 'high',
+      category: 'workflow',
+    })
+  }
+
+  const reviewCards = cards.filter((c) => c.columnId === 'review')
+  if (reviewCards.length > 5) {
+    recs.push({
+      id: 'review-bottleneck',
+      icon: 'lucide:traffic-cone',
+      title: 'Review bottleneck',
+      description: 'Reviews are piling up. Prioritize reviewing before adding new work.',
+      action: 'View Review',
+      actionFn: () => handlers.onHighlightColumn('review'),
+      priority: 'high',
+      category: 'workflow',
+    })
+  }
+
+  const doneCards = cards.filter((c) => c.columnId === 'done')
+  if (doneCards.length > 10) {
+    recs.push({
+      id: 'archive-done',
+      icon: 'lucide:archive',
+      title: 'Archive completed',
+      description: 'You have many completed cards. Consider archiving the Done column.',
+      action: 'Clear Done',
+      actionFn: () => handlers.onClearDone(),
+      priority: 'medium',
+      category: 'workflow',
+    })
+  }
+
+  // Hygiene recommendations
+  const cardsNoLabels = cards.filter((c) => c.labels.length === 0)
+  if (cardsNoLabels.length > 0) {
+    recs.push({
+      id: 'add-labels',
+      icon: 'lucide:tag',
+      title: 'Add labels',
+      description: `${cardsNoLabels.length} card${cardsNoLabels.length > 1 ? 's' : ''} ${cardsNoLabels.length > 1 ? 'have' : 'has'} no labels. Labels help categorize and filter work.`,
+      action: 'Add Labels',
+      actionFn: () => handlers.onOpenCard(cardsNoLabels[0].id),
+      priority: 'medium',
+      category: 'hygiene',
+    })
+  }
+
+  const cardsNoDesc = cards.filter((c) => !c.description || !c.description.trim())
+  if (cardsNoDesc.length > 0) {
+    recs.push({
+      id: 'add-descriptions',
+      icon: 'lucide:file-text',
+      title: 'Add descriptions',
+      description: `${cardsNoDesc.length} card${cardsNoDesc.length > 1 ? 's' : ''} lack descriptions. Good descriptions prevent context loss.`,
+      action: 'Add Description',
+      actionFn: () => handlers.onOpenCard(cardsNoDesc[0].id),
+      priority: 'low',
+      category: 'hygiene',
+    })
+  }
+
+  const sevenDays = 7 * 24 * 60 * 60 * 1000
+  const staleCards = cards.filter((c) => {
+    const lastActivity = c.activity?.[c.activity.length - 1]?.timestamp || c.createdAt
+    return now - lastActivity > sevenDays && c.columnId !== 'done'
+  })
+  if (staleCards.length > 0) {
+    recs.push({
+      id: 'stale-cards',
+      icon: 'lucide:clock',
+      title: 'Stale cards detected',
+      description: `${staleCards.length} card${staleCards.length > 1 ? 's' : ''} haven't moved in over a week. Review if they're blocked.`,
+      action: 'View Card',
+      actionFn: () => handlers.onOpenCard(staleCards[0].id),
+      priority: 'medium',
+      category: 'hygiene',
+    })
+  }
+
+  const highPriorityInBacklog = cards.filter(
+    (c) => (c.priority === 'P0' || c.priority === 'P1') && c.columnId === 'backlog',
+  )
+  if (highPriorityInBacklog.length > 0) {
+    recs.push({
+      id: 'high-priority-backlog',
+      icon: 'lucide:flame',
+      title: 'High priority in backlog',
+      description: `${highPriorityInBacklog.length} high-priority card${highPriorityInBacklog.length > 1 ? 's' : ''} ${highPriorityInBacklog.length > 1 ? 'are' : 'is'} still in Backlog. Consider moving to In Progress.`,
+      action: 'View Card',
+      actionFn: () => handlers.onOpenCard(highPriorityInBacklog[0].id),
+      priority: 'high',
+      category: 'hygiene',
+    })
+  }
+
+  // Productivity recommendations
+  if (cards.length === 0) {
+    recs.push({
+      id: 'get-started',
+      icon: 'lucide:rocket',
+      title: 'Get started',
+      description: 'Add your first card to start tracking work.',
+      action: 'New Card',
+      actionFn: () => handlers.onNewCard(),
+      priority: 'high',
+      category: 'productivity',
+    })
+  }
+
+  if (cards.length > 0 && cards.every((c) => c.columnId === 'done')) {
+    recs.push({
+      id: 'board-clear',
+      icon: 'lucide:party-popper',
+      title: 'Board clear!',
+      description: 'All work is done. Time to plan your next sprint.',
+      action: 'New Card',
+      actionFn: () => handlers.onNewCard(),
+      priority: 'low',
+      category: 'productivity',
+    })
+  }
+
+  const cardsNoDueDate = cards.filter((c) => !c.dueDate && c.columnId !== 'done')
+  if (cardsNoDueDate.length === cards.length && cards.length > 0) {
+    recs.push({
+      id: 'set-deadlines',
+      icon: 'lucide:calendar-clock',
+      title: 'Set deadlines',
+      description: 'None of your cards have due dates. Deadlines help prioritize.',
+      action: 'Learn More',
+      actionFn: () => handlers.onShowToast('Add due dates to cards for better time management.'),
+      priority: 'low',
+      category: 'productivity',
+    })
+  }
+
+  const allSubtasks = cards.flatMap((c) => c.subtasks)
+  const doneSubtasks = allSubtasks.filter((s) => s.done)
+  if (allSubtasks.length > 0 && doneSubtasks.length / allSubtasks.length < 0.5) {
+    recs.push({
+      id: 'subtask-progress-low',
+      icon: 'lucide:list-checks',
+      title: 'Subtask progress low',
+      description: 'Many subtasks remain incomplete. Focus on finishing started work.',
+      action: 'View Cards',
+      actionFn: () => handlers.onShowToast('Review cards with incomplete subtasks.'),
+      priority: 'medium',
+      category: 'productivity',
+    })
+  }
+
+  // Suggestions (always show one)
+  const suggestions: KanbanRecommendation[] = [
+    {
+      id: 'tip-keyboard',
+      icon: 'lucide:keyboard',
+      title: 'Try keyboard shortcuts',
+      description: 'Press N to create a new card, / to search, D to toggle details.',
+      action: 'Got it',
+      actionFn: () => handlers.onShowToast('Keyboard shortcuts can boost your productivity!'),
+      priority: 'low',
+      category: 'suggestion',
+    },
+    {
+      id: 'tip-labels',
+      icon: 'lucide:palette',
+      title: 'Use labels for filtering',
+      description: 'Color-coded labels help you quickly find related work.',
+      action: 'Got it',
+      actionFn: () => handlers.onShowToast('Labels make it easy to organize and filter cards.'),
+      priority: 'low',
+      category: 'suggestion',
+    },
+    {
+      id: 'tip-time',
+      icon: 'lucide:timer',
+      title: 'Track time with due dates',
+      description: 'Add due dates to cards for better time management.',
+      action: 'Got it',
+      actionFn: () => handlers.onShowToast('Due dates help you stay on track.'),
+      priority: 'low',
+      category: 'suggestion',
+    },
+  ]
+
+  // Add one random suggestion if not already dismissed
+  const availableSuggestions = suggestions.filter((s) => !dismissedIds.includes(s.id))
+  if (availableSuggestions.length > 0) {
+    const randomSuggestion =
+      availableSuggestions[Math.floor(Math.random() * availableSuggestions.length)]
+    recs.push(randomSuggestion)
+  }
+
+  // Filter out dismissed recommendations
+  return recs
+    .filter((r) => !dismissedIds.includes(r.id))
+    .sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 }
+      return priorityOrder[a.priority] - priorityOrder[b.priority]
+    })
 }
 
 // ── Card Detail Panel ───────────────────────────────────────────
@@ -327,7 +642,7 @@ function CardDetailPanel({
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
+      className="absolute inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
     >
       {/* Panel Header with Priority Border */}
       <div
@@ -756,6 +1071,199 @@ function CardDetailPanel({
   )
 }
 
+// ── Recommendations Panel ───────────────────────────────────────
+function RecommendationsPanel({
+  recommendations,
+  boardHealth,
+  collapsed,
+  onToggle,
+  onDismiss,
+}: {
+  recommendations: KanbanRecommendation[]
+  boardHealth: BoardHealth
+  collapsed: boolean
+  onToggle: () => void
+  onDismiss: (id: string) => void
+}) {
+  const categoryColors = {
+    workflow: '#3b82f6',
+    hygiene: '#f59e0b',
+    productivity: '#22c55e',
+    suggestion: '#a855f7',
+  }
+
+  const priorityBorderColors = {
+    high: '#ef4444',
+    medium: '#f59e0b',
+    low: '#3b82f6',
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden"
+    >
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-6 py-4 text-left transition hover:bg-[var(--bg)]"
+      >
+        <div className="flex items-center gap-3">
+          <Icon icon="lucide:lightbulb" width={20} height={20} className="text-[var(--brand)]" />
+          <span className="text-base font-semibold text-[var(--text-primary)]">
+            Recommendations
+          </span>
+          {recommendations.length > 0 && (
+            <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[var(--brand)] px-2 text-xs font-bold text-white">
+              {recommendations.length}
+            </span>
+          )}
+
+          {/* Board Health */}
+          <div className="flex items-center gap-2 ml-2">
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: boardHealth.color }}
+              title={`Board Health: ${boardHealth.score}%`}
+            />
+            <span className="text-sm font-medium" style={{ color: boardHealth.color }}>
+              {boardHealth.score}%
+            </span>
+            <div className="relative group">
+              <Icon
+                icon="lucide:info"
+                width={14}
+                height={14}
+                className="text-[var(--text-disabled)] cursor-help"
+              />
+              <div className="absolute left-0 top-full mt-2 z-50 hidden group-hover:block w-64 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 shadow-xl">
+                <h4 className="text-xs font-semibold text-[var(--text-primary)] mb-2">
+                  Health Breakdown
+                </h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-secondary)]">WIP Control:</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {boardHealth.breakdown.wip}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-secondary)]">Label Coverage:</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {boardHealth.breakdown.labels}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-secondary)]">Descriptions:</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {boardHealth.breakdown.descriptions}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-secondary)]">Fresh Cards:</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {boardHealth.breakdown.stale}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-secondary)]">On Time:</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {boardHealth.breakdown.overdue}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Icon
+          icon={collapsed ? 'lucide:chevron-down' : 'lucide:chevron-up'}
+          width={20}
+          height={20}
+          className="text-[var(--text-disabled)]"
+        />
+      </button>
+
+      {/* Recommendations Cards */}
+      {!collapsed && recommendations.length > 0 && (
+        <div className="px-6 pb-4">
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {recommendations.map((rec, index) => (
+              <motion.div
+                key={rec.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="group relative shrink-0 w-72 rounded-xl border bg-[var(--bg)] p-4 backdrop-blur-sm transition hover:shadow-md"
+                style={{
+                  borderLeftWidth: '3px',
+                  borderLeftColor: priorityBorderColors[rec.priority],
+                  borderColor: 'var(--border)',
+                }}
+              >
+                {/* Dismiss button */}
+                <button
+                  onClick={() => onDismiss(rec.id)}
+                  className="absolute top-2 right-2 rounded p-1 text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+                >
+                  <Icon icon="lucide:x" width={14} height={14} />
+                </button>
+
+                {/* Category pill */}
+                <div
+                  className="absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                  style={{ backgroundColor: categoryColors[rec.category] }}
+                >
+                  {rec.category}
+                </div>
+
+                <div className="mt-6 flex items-start gap-3">
+                  <Icon
+                    icon={rec.icon}
+                    width={24}
+                    height={24}
+                    className="shrink-0 text-[var(--brand)]"
+                  />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+                      {rec.title}
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] mb-3 leading-relaxed">
+                      {rec.description}
+                    </p>
+                    <button
+                      onClick={rec.actionFn}
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--brand)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                    >
+                      {rec.action}
+                      <Icon icon="lucide:arrow-right" width={12} height={12} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!collapsed && recommendations.length === 0 && (
+        <div className="px-6 pb-4 text-center">
+          <p className="text-sm text-[var(--text-secondary)]">
+            <Icon
+              icon="lucide:check-circle"
+              width={16}
+              height={16}
+              className="inline mr-2 text-[var(--brand)]"
+            />
+            All caught up! No recommendations at the moment.
+          </p>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
 // ── Column Editor Inline ────────────────────────────────────────
 function ColumnEditor({
   column,
@@ -818,10 +1326,64 @@ export function KanbanView() {
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [boardMenuOpen, setBoardMenuOpen] = useState(false)
   const boardMenuRef = useRef<HTMLDivElement>(null)
+  const [dismissedRecs, setDismissedRecs] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const stored = localStorage.getItem(DISMISSED_RECS_KEY)
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  })
+  const [recPanelCollapsed, setRecPanelCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      const stored = localStorage.getItem(REC_PANEL_STATE_KEY)
+      return stored === 'true'
+    } catch {
+      return false
+    }
+  })
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [highlightedColumn, setHighlightedColumn] = useState<string | null>(null)
 
   useEffect(() => {
     saveKanbanData(data)
   }, [data])
+
+  // Save dismissed recommendations to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(DISMISSED_RECS_KEY, JSON.stringify(dismissedRecs))
+    } catch {
+      /* noop */
+    }
+  }, [dismissedRecs])
+
+  // Save recommendations panel state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(REC_PANEL_STATE_KEY, recPanelCollapsed.toString())
+    } catch {
+      /* noop */
+    }
+  }, [recPanelCollapsed])
+
+  // Clear toast after 3 seconds
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toastMessage])
+
+  // Clear highlighted column after 2 seconds
+  useEffect(() => {
+    if (highlightedColumn) {
+      const timer = setTimeout(() => setHighlightedColumn(null), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [highlightedColumn])
 
   // Agent integration: listen for kanban-create-card events
   useEffect(() => {
@@ -1172,8 +1734,56 @@ export function KanbanView() {
     [activeBoard.labels],
   )
 
+  // ── Recommendations & Board Health ───────────────────────────
+  const boardHealth = useMemo(
+    () => calculateBoardHealth(activeBoard.cards, activeBoard.columns),
+    [activeBoard.cards, activeBoard.columns],
+  )
+
+  const clearDoneColumn = useCallback(() => {
+    if (confirm('Are you sure you want to clear all cards in the Done column?')) {
+      setData((prev) => ({
+        ...prev,
+        boards: prev.boards.map((b) =>
+          b.id === prev.activeBoard ? { ...b, cards: b.cards.filter((c) => c.columnId !== 'done') } : b,
+        ),
+      }))
+      setToastMessage('Done column cleared!')
+    }
+  }, [])
+
+  const recommendations = useMemo(() => {
+    return generateRecommendations(activeBoard.cards, activeBoard.columns, dismissedRecs, {
+      onHighlightColumn: (colId: string) => {
+        setHighlightedColumn(colId)
+        setToastMessage(`Viewing ${activeBoard.columns.find((c) => c.id === colId)?.title || colId} column`)
+      },
+      onOpenCard: (cardId: string) => {
+        setSelectedCardId(cardId)
+      },
+      onNewCard: () => {
+        const firstCol = activeBoard.columns[0]
+        if (firstCol) {
+          setNewCardColumn(firstCol.id)
+        }
+      },
+      onClearDone: clearDoneColumn,
+      onShowToast: (msg: string) => {
+        setToastMessage(msg)
+      },
+    })
+  }, [activeBoard.cards, activeBoard.columns, dismissedRecs, clearDoneColumn])
+
+  const dismissRecommendation = useCallback((id: string) => {
+    setDismissedRecs((prev) => [...prev, id])
+  }, [])
+
+  const toggleRecPanel = useCallback(() => {
+    setRecPanelCollapsed((prev) => !prev)
+  }, [])
+
   return (
-    <div className="h-full w-full flex flex-col min-h-0 bg-[var(--sidebar-bg)]">
+    <div className="relative h-full w-full flex flex-col min-h-0 bg-[var(--sidebar-bg)]">
       {/* Header */}
       <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)] px-6 py-4">
         <div className="flex items-center justify-between gap-4">
@@ -1329,6 +1939,17 @@ export function KanbanView() {
         </div>
       </div>
 
+      {/* Recommendations Panel */}
+      <div className="px-6 pt-4">
+        <RecommendationsPanel
+          recommendations={recommendations}
+          boardHealth={boardHealth}
+          collapsed={recPanelCollapsed}
+          onToggle={toggleRecPanel}
+          onDismiss={dismissRecommendation}
+        />
+      </div>
+
       {/* Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 px-6 py-6">
         <div className="flex gap-4 h-full w-full">
@@ -1336,14 +1957,23 @@ export function KanbanView() {
             const cards = getColumnCards(column.id)
             const isCollapsed = column.collapsed
             const isDraggedOver = draggedOverColumn === column.id
+            const isHighlighted = highlightedColumn === column.id
 
             return (
-              <div
+              <motion.div
                 key={column.id}
+                animate={{
+                  scale: isHighlighted ? 1.02 : 1,
+                  boxShadow: isHighlighted
+                    ? '0 0 0 3px var(--brand), 0 10px 40px rgba(0,0,0,0.2)'
+                    : isDraggedOver
+                      ? '0 0 0 2px var(--brand)'
+                      : undefined,
+                }}
+                transition={{ duration: 0.2 }}
                 className="flex flex-col flex-1 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] transition overflow-hidden"
                 style={{
                   minHeight: isCollapsed ? 'auto' : '500px',
-                  boxShadow: isDraggedOver ? '0 0 0 2px var(--brand)' : undefined,
                 }}
                 onDragOver={(e) => handleDragOver(e, column.id)}
                 onDrop={() => handleDrop(column.id)}
@@ -1605,7 +2235,7 @@ export function KanbanView() {
                     )}
                   </>
                 )}
-              </div>
+              </motion.div>
             )
           })}
         </div>
@@ -1620,7 +2250,7 @@ export function KanbanView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black"
+              className="absolute inset-0 z-40 bg-black"
               onClick={() => setSelectedCardId(null)}
             />
             <CardDetailPanel
@@ -1633,6 +2263,23 @@ export function KanbanView() {
               onClose={() => setSelectedCardId(null)}
             />
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-6 py-3 shadow-2xl backdrop-blur-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Icon icon="lucide:info" width={16} height={16} className="text-[var(--brand)]" />
+              <span className="text-sm font-medium text-[var(--text-primary)]">{toastMessage}</span>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
