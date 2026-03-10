@@ -42,7 +42,7 @@ export function ChatHeader({
 
   return (
     <div className="shrink-0">
-      <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+      <div className="flex items-center justify-between h-10 px-3 border-b border-[var(--border)] bg-[var(--sidebar-bg)]">
         <div className="flex flex-1 min-w-0 items-center gap-2">
           {/* Streaming status indicator */}
           {isStreaming ? (
@@ -58,7 +58,7 @@ export function ChatHeader({
               className="text-[var(--text-tertiary)] shrink-0"
             />
           )}
-          <span className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+          <span className="text-[14px] font-semibold text-[var(--text-primary)] truncate">
             {title || 'Chat'}
           </span>
           {repoName && (
@@ -86,7 +86,7 @@ export function ChatHeader({
         <div className="ml-2 flex shrink-0 items-center gap-1.5">
           {/* Model badge */}
           {modelName && (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-[color-mix(in_srgb,var(--brand)_15%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2 py-0.5 text-[9px] font-mono text-[var(--text-tertiary)]">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-0.5 text-[9px] font-mono text-[var(--text-tertiary)]">
               <Icon icon="lucide:sparkles" width={9} height={9} className="text-[var(--brand)]" />
               <span className="max-w-[90px] truncate">
                 {modelName

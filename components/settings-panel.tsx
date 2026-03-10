@@ -229,7 +229,7 @@ export function SettingsPanel({
         </div>
       )}
 
-      <div className="flex items-center justify-between border-b border-[var(--glass-border)] px-5 py-4">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
         <div>
           <h2 className="text-base font-semibold text-[var(--text-primary)]">Settings</h2>
           <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
@@ -265,7 +265,7 @@ export function SettingsPanel({
               animate={{ y: dragOffset > 0 ? dragOffset : 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-              className="absolute bottom-0 left-0 right-0 flex flex-col rounded-t-2xl border-t border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[var(--shadow-2xl)] backdrop-blur-2xl"
+              className="absolute bottom-0 left-0 right-0 flex flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[var(--shadow-2xl)]"
               style={{
                 maxHeight: '80vh',
                 paddingBottom: 'env(safe-area-inset-bottom)',
@@ -275,8 +275,8 @@ export function SettingsPanel({
             >
               {sheetContent}
 
-              <div className="border-b border-[var(--glass-border)] px-4 py-3">
-                <div className="inline-flex rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+              <div className="border-b border-[var(--border)] px-4 py-3">
+                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1">
                   {[
                     { id: 'connect' as SettingsTab, label: 'Connect', icon: 'lucide:smartphone' },
                     {
@@ -291,10 +291,10 @@ export function SettingsPanel({
                         key={item.id}
                         type="button"
                         onClick={() => setTab(item.id)}
-                        className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                           active
-                            ? 'border border-[color-mix(in_srgb,var(--brand)_40%,var(--border))] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]'
-                            : 'border border-transparent text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                            ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
                         }`}
                       >
                         <Icon icon={item.icon} width={14} />
@@ -309,13 +309,13 @@ export function SettingsPanel({
                 {tab === 'connect' && (
                   <div className="space-y-5">
                     {/* Collapsed connect summary */}
-                    <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+                    <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                       <button
                         onClick={() => setConnectExpanded((v) => !v)}
                         className="w-full flex items-center justify-between cursor-pointer"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                             <Icon icon="lucide:activity" width={14} />
                           </span>
                           <div className="text-left">
@@ -354,7 +354,7 @@ export function SettingsPanel({
                                     e.stopPropagation()
                                     setShowGatewayUrl((v) => !v)
                                   }}
-                                  className="max-w-[220px] truncate rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-primary)] cursor-pointer hover:border-[var(--text-disabled)] transition-colors"
+                                  className="max-w-[220px] truncate rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-primary)] cursor-pointer hover:border-[var(--text-disabled)] transition-colors"
                                 >
                                   {showGatewayUrl ? gatewayUrl : '••••••••'}
                                 </button>
@@ -374,9 +374,9 @@ export function SettingsPanel({
 
                 {tab === 'general' && (
                   <div className="space-y-5">
-                    <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+                    <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                       <div className="mb-4 flex items-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                           <Icon icon="lucide:sparkles" width={14} />
                         </span>
                         <div>
@@ -389,7 +389,7 @@ export function SettingsPanel({
                         </div>
                       </div>
 
-                      <div className="mb-4 rounded-[20px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] p-1.5">
+                      <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1.5">
                         <div className="grid grid-cols-3 gap-1.5">
                           {APPEARANCE_MODES.map((appearanceMode) => {
                             const active = mode === appearanceMode.id
@@ -426,10 +426,10 @@ export function SettingsPanel({
                                     key={preset.id}
                                     type="button"
                                     onClick={() => setThemeId(preset.id)}
-                                    className={`group relative overflow-hidden rounded-[20px] border px-3 py-3 text-left transition ${
+                                    className={`group relative overflow-hidden rounded-xl border px-3 py-3 text-left transition ${
                                       active
-                                        ? 'border-[color-mix(in_srgb,var(--brand)_45%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,var(--bg-elevated))] shadow-[var(--shadow-md)]'
-                                        : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_72%,var(--bg-elevated))] hover:border-[var(--border-hover)] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,var(--bg-elevated))]'
+                                        ? 'border-[var(--brand)] bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)]'
+                                        : 'border-[var(--border)] bg-[var(--bg)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)]'
                                     }`}
                                   >
                                     <div className="mb-3 flex items-center justify-between gap-3">
@@ -468,9 +468,9 @@ export function SettingsPanel({
                       </div>
                     </section>
 
-                    <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+                    <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                       <div className="mb-3 flex items-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                           <Icon icon="lucide:cpu" width={14} />
                         </span>
                         <div>
@@ -484,9 +484,9 @@ export function SettingsPanel({
                     </section>
 
                     {/* Agent Autonomy */}
-                    <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+                    <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                       <div className="mb-3 flex items-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                           <Icon icon="lucide:shield-check" width={14} />
                         </span>
                         <div>
@@ -536,9 +536,9 @@ export function SettingsPanel({
                     </section>
 
                     {/* GitHub Account */}
-                    <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+                    <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                       <div className="mb-3 flex items-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                           <Icon icon="lucide:github" width={14} />
                         </span>
                         <div>
@@ -802,7 +802,7 @@ export function SettingsPanel({
                       )}
                     </section>
 
-                    <section className="rounded-[20px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_72%,transparent)] px-4 py-4 shadow-[var(--shadow-sm)]">
+                    <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="shrink-0 text-[var(--brand)]">
                           <KnotLogo size={28} />
@@ -861,7 +861,7 @@ export function SettingsPanel({
       onClick={onClose}
     >
       <div
-        className="absolute inset-y-0 right-0 left-auto flex w-[400px] max-w-[92vw] flex-col border-l border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[var(--shadow-2xl)] backdrop-blur-2xl"
+        className="absolute inset-y-0 right-0 left-auto flex w-[400px] max-w-[92vw] flex-col border-l border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[var(--shadow-2xl)]"
         style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -870,8 +870,8 @@ export function SettingsPanel({
       >
         {sheetContent}
 
-        <div className="border-b border-[var(--glass-border)] px-4 py-3">
-          <div className="inline-flex rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+        <div className="border-b border-[var(--border)] px-4 py-3">
+          <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1">
             {[
               { id: 'connect' as SettingsTab, label: 'Connect', icon: 'lucide:smartphone' },
               { id: 'general' as SettingsTab, label: 'General', icon: 'lucide:sliders-horizontal' },
@@ -882,10 +882,10 @@ export function SettingsPanel({
                   key={item.id}
                   type="button"
                   onClick={() => setTab(item.id)}
-                  className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                     active
-                      ? 'border border-[color-mix(in_srgb,var(--brand)_40%,var(--border))] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]'
-                      : 'border border-transparent text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                      ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <Icon icon={item.icon} width={14} />
@@ -902,9 +902,9 @@ export function SettingsPanel({
               <MobileConnect />
               <SessionPresence />
 
-              <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+              <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                 <div className="mb-4 flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                     <Icon icon="lucide:activity" width={14} />
                   </span>
                   <div>
@@ -941,7 +941,7 @@ export function SettingsPanel({
                       <span className="pt-0.5 text-[var(--text-secondary)]">Gateway</span>
                       <button
                         onClick={() => setShowGatewayUrl((v) => !v)}
-                        className="max-w-[220px] truncate rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-primary)] cursor-pointer hover:border-[var(--text-disabled)] transition-colors"
+                        className="max-w-[220px] truncate rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-primary)] cursor-pointer hover:border-[var(--text-disabled)] transition-colors"
                       >
                         {showGatewayUrl ? gatewayUrl : '••••••••'}
                       </button>
@@ -954,9 +954,9 @@ export function SettingsPanel({
 
           {tab === 'general' && (
             <div className="space-y-5">
-              <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+              <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                 <div className="mb-4 flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                     <Icon icon="lucide:sparkles" width={14} />
                   </span>
                   <div>
@@ -967,7 +967,7 @@ export function SettingsPanel({
                   </div>
                 </div>
 
-                <div className="mb-4 rounded-[20px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] p-1.5">
+                <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1.5">
                   <div className="grid grid-cols-3 gap-1.5">
                     {APPEARANCE_MODES.map((appearanceMode) => {
                       const active = mode === appearanceMode.id
@@ -1004,10 +1004,10 @@ export function SettingsPanel({
                               key={preset.id}
                               type="button"
                               onClick={() => setThemeId(preset.id)}
-                              className={`group relative overflow-hidden rounded-[20px] border px-3 py-3 text-left transition ${
+                              className={`group relative overflow-hidden rounded-xl border px-3 py-3 text-left transition ${
                                 active
-                                  ? 'border-[color-mix(in_srgb,var(--brand)_45%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,var(--bg-elevated))] shadow-[var(--shadow-md)]'
-                                  : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_72%,var(--bg-elevated))] hover:border-[var(--border-hover)] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,var(--bg-elevated))]'
+                                  ? 'border-[var(--brand)] bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)]'
+                                  : 'border-[var(--border)] bg-[var(--bg)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)]'
                               }`}
                             >
                               <div className="mb-3 flex items-center justify-between gap-3">
@@ -1046,9 +1046,9 @@ export function SettingsPanel({
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+              <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
                     <Icon icon="lucide:cpu" width={14} />
                   </span>
                   <div>
@@ -1061,7 +1061,7 @@ export function SettingsPanel({
                 <CaffeinateToggle />
               </section>
 
-              <section className="rounded-[20px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_72%,transparent)] px-4 py-4 shadow-[var(--shadow-sm)]">
+              <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-4">
                 <div className="flex items-center gap-3">
                   <div className="shrink-0 text-[var(--brand)]">
                     <KnotLogo size={28} />

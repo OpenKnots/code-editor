@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { useThread, THREAD_IDS, type ThreadId } from '@/context/thread-context'
 import { useView } from '@/context/view-context'
+import { useEditor } from '@/context/editor-context'
 import { formatShortcut } from '@/lib/platform'
 import { isTauri } from '@/lib/tauri'
 import { emit, on } from '@/lib/events'
@@ -75,7 +76,8 @@ interface Props {
 export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
   const layout = useLayout()
   const { activeThreadId, setActiveThreadId, maxThreads } = useThread()
-  const { setView } = useView()
+  const { activeView, setView } = useView()
+  const { files } = useEditor()
   const sidebarResize = usePanelResize('sidebar')
   const sidebarWidth = layout.getSize('sidebar')
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
@@ -110,6 +112,8 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
     if (repoName) return repoName.split('/').pop() ?? repoName
     return null
   }, [repoName])
+
+  const dirtyCount = useMemo(() => files.filter((f) => f.dirty).length, [files])
 
   const handleNewThread = useCallback(() => {
     const previews = getThreadPreviews()
@@ -150,60 +154,78 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
     >
       {collapsed ? (
         <>
+          {/* Top: View navigation */}
           <button
-            onClick={onToggle}
-            className="codex-sidebar-icon-btn"
-            title={`Expand sidebar (${formatShortcut('meta+\\')})`}
+            onClick={() => setView('chat')}
+            className={`activity-bar-btn ${activeView === 'chat' ? 'activity-bar-btn--active' : ''}`}
+            title={`Chat (${formatShortcut('meta+1')})`}
           >
-            <Icon icon="lucide:panel-left" width={20} height={20} />
-          </button>
-
-          <button onClick={handleNewThread} className="codex-sidebar-icon-btn" title="New thread">
-            <Icon icon="lucide:plus" width={20} height={20} />
+            <Icon icon="lucide:message-circle" width={24} height={24} />
           </button>
 
           <button
-            onClick={() => emit('open-folder')}
-            className="codex-sidebar-icon-btn"
-            title="Open Folder"
+            onClick={() => setView('editor')}
+            className={`activity-bar-btn ${activeView === 'editor' ? 'activity-bar-btn--active' : ''}`}
+            title={`Editor (${formatShortcut('meta+2')})`}
           >
-            <Icon icon="lucide:folder-open" width={20} height={20} />
+            <Icon icon="lucide:code" width={24} height={24} />
           </button>
 
           <button
-            onClick={() => emit('open-git-panel')}
-            className="codex-sidebar-icon-btn"
-            title="Source Control"
+            onClick={() => setView('git')}
+            className={`activity-bar-btn ${activeView === 'git' ? 'activity-bar-btn--active' : ''}`}
+            title={`Source Control (${formatShortcut('meta+3')})`}
           >
-            <Icon icon="lucide:git-branch" width={20} height={20} />
+            <Icon icon="lucide:git-branch" width={24} height={24} />
+            {dirtyCount > 0 && (
+              <span className="activity-bar-badge">{dirtyCount > 9 ? '9+' : dirtyCount}</span>
+            )}
           </button>
 
+          <button
+            onClick={() => setView('mcp')}
+            className={`activity-bar-btn ${activeView === 'mcp' ? 'activity-bar-btn--active' : ''}`}
+            title={`MCP (${formatShortcut('meta+4')})`}
+          >
+            <Icon icon="lucide:plug" width={24} height={24} />
+          </button>
+
+          <button
+            onClick={() => setView('skills')}
+            className={`activity-bar-btn ${activeView === 'skills' ? 'activity-bar-btn--active' : ''}`}
+            title={`Skills (${formatShortcut('meta+5')})`}
+          >
+            <Icon icon="lucide:wand-2" width={24} height={24} />
+          </button>
+
+          {/* Divider */}
           <div className="flex-1" />
+          <div className="activity-bar-divider" />
 
+          {/* Bottom: Settings & Mode */}
           <button
-            onClick={() => emit('open-settings')}
-            className="codex-sidebar-icon-btn mt-auto"
+            onClick={() => setView('settings')}
+            className={`activity-bar-btn ${activeView === 'settings' ? 'activity-bar-btn--active' : ''}`}
             title="Settings"
           >
-            <Icon icon="lucide:settings" width={18} height={18} />
+            <Icon icon="lucide:settings" width={24} height={24} />
+          </button>
+
+          <button onClick={onToggle} className="activity-bar-btn" title={`Expand sidebar (${formatShortcut('meta+\\')})`}>
+            <Icon icon="lucide:panel-left" width={24} height={24} />
           </button>
         </>
       ) : (
         <>
           <div className={`flex flex-col ${isTauriDesktop ? 'pt-7' : 'pt-3'} px-3`}>
             <div className="codex-sidebar-hero">
-              <div className="flex min-w-0 items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <span className="codex-sidebar-hero__icon">
-                  <Icon icon="lucide:command" width={16} height={16} />
+                  <Icon icon="lucide:command" width={15} height={15} />
                 </span>
-                <div className="min-w-0">
-                  <div className="truncate text-[13px] font-semibold text-[var(--text-primary)]">
-                    {workspaceLabel || 'KnotCode'}
-                  </div>
-                  <div className="truncate text-[11px] text-[var(--text-secondary)]">
-                    {workspaceLabel ? 'Agent-ready workspace' : 'Sleek command center'}
-                  </div>
-                </div>
+                <span className="truncate text-[14px] font-semibold text-[var(--text-primary)]">
+                  {workspaceLabel || 'KnotCode'}
+                </span>
               </div>
               {onToggle && (
                 <button
@@ -217,51 +239,86 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
               )}
             </div>
 
-            {/* New thread button */}
-            <button
-              onClick={handleNewThread}
-              className="codex-sidebar-new-thread flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] font-medium text-[var(--text-primary)] transition-all cursor-pointer w-full"
-            >
-              <Icon
-                icon="lucide:plus"
-                width={16}
-                height={16}
-                className="text-[var(--text-secondary)]"
-              />
-              New thread
-            </button>
-
-            {/* Nav items */}
-            <div className="mt-3 space-y-0.5">
+            <div className="flex items-center gap-1.5 mt-1 mb-1">
               <button
-                onClick={() => setView('skills')}
-                className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
+                onClick={handleNewThread}
+                className="codex-sidebar-new-thread flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[var(--text-primary)] transition-all cursor-pointer"
               >
                 <Icon
-                  icon="lucide:sparkles"
-                  width={15}
-                  height={15}
-                  className="text-[var(--text-tertiary)]"
+                  icon="lucide:circle-plus"
+                  width={16}
+                  height={16}
+                  className="text-[var(--brand)]"
                 />
+                New thread
+              </button>
+              <button
+                onClick={() => emit('open-folder')}
+                className="codex-sidebar-hero__action shrink-0"
+                title="Open Folder"
+              >
+                <Icon icon="lucide:mail" width={15} height={15} />
+              </button>
+            </div>
+
+            {/* View Navigation */}
+            <div className="mt-2 space-y-0.5">
+              <button
+                onClick={() => setView('chat')}
+                className={`sidebar-view-nav ${activeView === 'chat' ? 'sidebar-view-nav--active' : ''}`}
+              >
+                <Icon icon="lucide:message-circle" width={18} height={18} />
+                Chat
+              </button>
+              <button
+                onClick={() => setView('editor')}
+                className={`sidebar-view-nav ${activeView === 'editor' ? 'sidebar-view-nav--active' : ''}`}
+              >
+                <Icon icon="lucide:code" width={18} height={18} />
+                Editor
+              </button>
+              <button
+                onClick={() => setView('git')}
+                className={`sidebar-view-nav ${activeView === 'git' ? 'sidebar-view-nav--active' : ''}`}
+              >
+                <Icon icon="lucide:git-branch" width={18} height={18} />
+                Git
+                {dirtyCount > 0 && (
+                  <span className="ml-auto px-2 min-w-[22px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[11px] leading-[18px] font-bold">
+                    {dirtyCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setView('mcp')}
+                className={`sidebar-view-nav ${activeView === 'mcp' ? 'sidebar-view-nav--active' : ''}`}
+              >
+                <Icon icon="lucide:plug" width={18} height={18} />
+                MCP
+              </button>
+              <button
+                onClick={() => setView('skills')}
+                className={`sidebar-view-nav ${activeView === 'skills' ? 'sidebar-view-nav--active' : ''}`}
+              >
+                <Icon icon="lucide:wand-2" width={18} height={18} />
                 Skills
               </button>
             </div>
           </div>
 
           {/* Threads section */}
-          <div className="mt-4 px-3 flex-1 overflow-y-auto min-h-0">
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-disabled)] font-medium mb-2 font-mono px-1">
+          <div className="mt-3 px-3 flex-1 overflow-y-auto min-h-0">
+            <p className="codex-sidebar-section-label">
               Threads
             </p>
 
-            {/* Workspace groups */}
             {workspaceLabel && (
-              <div className="mb-3">
+              <div className="mb-2">
                 <button
                   onClick={() => emit('open-folder')}
-                  className="codex-sidebar-workspace flex items-center gap-2 px-2 py-1.5 text-[11px] text-[var(--text-tertiary)] font-medium cursor-pointer transition-colors w-full"
+                  className="codex-sidebar-workspace flex items-center gap-2 px-2 py-1.5 text-[11px] text-[var(--text-tertiary)] font-medium cursor-pointer transition-colors w-full rounded-md"
                 >
-                  <Icon icon="lucide:folder" width={12} height={12} />
+                  <Icon icon="lucide:folder" width={13} height={13} />
                   <span className="truncate">{workspaceLabel}</span>
                   <Icon
                     icon="lucide:chevron-down"
@@ -271,20 +328,19 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                   />
                 </button>
 
-                {/* Thread entries under this workspace */}
-                <div className="mt-0.5 space-y-0.5">
+                <div className="mt-0.5 space-y-px">
                   {threads.map((thread) => (
                     <button
                       key={thread.id}
                       onClick={() => handleSelectThread(thread.id)}
                       className={`codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer w-full ${
                         activeThreadId === thread.id
-                          ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
-                          : 'hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]'
+                          ? 'bg-[var(--bg-subtle)] text-[var(--text-primary)]'
+                          : 'hover:bg-[var(--bg-subtle)]'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
+                        <div className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
                           {thread.title}
                         </div>
                       </div>
@@ -298,19 +354,19 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
             )}
 
             {!workspaceLabel && threads.length > 0 && (
-              <div className="space-y-0.5">
+              <div className="space-y-px">
                 {threads.map((thread) => (
                   <button
                     key={thread.id}
                     onClick={() => handleSelectThread(thread.id)}
                     className={`codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer w-full ${
                       activeThreadId === thread.id
-                        ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
-                        : 'hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]'
+                        ? 'bg-[var(--bg-subtle)] text-[var(--text-primary)]'
+                        : 'hover:bg-[var(--bg-subtle)]'
                     }`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="text-[12px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
+                      <div className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
                         {thread.title}
                       </div>
                     </div>
@@ -323,26 +379,50 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
             )}
 
             {threads.length === 0 && (
-              <p className="text-[11px] text-[var(--text-disabled)] px-2 py-4 text-center">
+              <p className="text-[12px] text-[var(--text-disabled)] px-2 py-4 text-center">
                 No conversations yet
               </p>
             )}
           </div>
 
           {/* Bottom section */}
-          <div className="px-3 pb-3 pt-2 border-t border-[var(--border)] shrink-0">
+          <div className="px-3 pb-3 pt-2 border-t border-[var(--border)] shrink-0 space-y-0.5">
             <button
               onClick={() => emit('open-settings')}
-              className="codex-sidebar-nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[13px] text-[var(--text-secondary)] transition-all cursor-pointer w-full"
+              className="codex-sidebar-nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
             >
-              <Icon
-                icon="lucide:settings"
-                width={15}
-                height={15}
-                className="text-[var(--text-tertiary)]"
-              />
+              <Icon icon="lucide:settings" width={18} height={18} />
               Settings
             </button>
+            <button
+              onClick={() => window.open('https://github.com/OpenKnots/code-editor', '_blank')}
+              className="codex-sidebar-nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
+            >
+              <Icon icon="lucide:life-buoy" width={18} height={18} />
+              Get Help
+            </button>
+            <button
+              onClick={() => emit('focus-agent-input')}
+              className="codex-sidebar-nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full"
+            >
+              <Icon icon="lucide:search" width={18} height={18} />
+              Search
+            </button>
+
+            {/* User / workspace footer */}
+            <div className="codex-sidebar-user-footer mt-2 flex items-center gap-2.5 px-2 py-2.5 rounded-lg cursor-default">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-[12px] font-semibold text-[var(--text-secondary)]">
+                {(workspaceLabel || 'K').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-medium text-[var(--text-primary)]">
+                  {workspaceLabel || 'KnotCode'}
+                </div>
+                <div className="truncate text-[11px] text-[var(--text-tertiary)]">
+                  Agent workspace
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Resize handle */}

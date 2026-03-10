@@ -547,8 +547,8 @@ function TerminalPane({
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
       {/* Header (single-terminal mode) — hidden in center/TUI mode */}
       {!hideHeader && (
-        <div className="flex items-center h-9 bg-[var(--bg-secondary)] border-b border-[var(--border)] px-2 gap-1 shrink-0">
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-wider mr-2 shrink-0">
+        <div className="flex items-center h-10 bg-[var(--sidebar-bg)] border-b border-[var(--border)] px-3 gap-1.5 shrink-0">
+          <span className="text-[13px] font-medium text-[var(--text-secondary)] mr-2 shrink-0">
             Terminal
           </span>
 
@@ -561,7 +561,7 @@ function TerminalPane({
                 session.manualClose = false
                 void createTerminal()
               }}
-              className="ml-1 p-1 rounded hover:bg-[color-mix(in_srgb,var(--color-deletions)_15%,transparent)] text-[var(--text-secondary)] hover:text-[var(--color-deletions)] transition-colors shrink-0"
+              className="ml-1 p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--color-deletions)] transition-colors shrink-0"
               title="Restart terminal"
             >
               <Icon icon="lucide:rotate-ccw" width={13} height={13} />
@@ -571,7 +571,7 @@ function TerminalPane({
           {onToggleFloating && (
             <button
               onClick={onToggleFloating}
-              className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
+              className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
               title={floating ? 'Dock terminal' : 'Float terminal'}
             >
               <Icon icon={floating ? 'lucide:pin' : 'lucide:app-window'} width={13} height={13} />

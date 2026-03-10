@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import type { McpServerConfig, McpServerType } from '@/lib/mcp/types'
 import {
@@ -10,15 +10,22 @@ import {
   toggleMcpServer,
   syncMcpServers,
 } from '@/lib/mcp/gateway'
+import {
+  MCP_SUGGESTIONS,
+  MCP_CATEGORY_LABELS,
+  MCP_CATEGORY_ICONS,
+  type McpCategory,
+  type McpSuggestion,
+} from '@/lib/mcp/suggestions'
 
-/**
- * MCP Settings Component
- * Allows users to configure MCP (Model Context Protocol) servers
- */
 export function McpSettings() {
   const [servers, setServers] = useState<McpServerConfig[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<McpCategory | 'all'>('all')
+  const [addingSuggestion, setAddingSuggestion] = useState<string | null>(null)
   const [formData, setFormData] = useState<{
     name: string
     type: McpServerType
@@ -35,10 +42,41 @@ export function McpSettings() {
     env: '',
   })
 
-  // Load servers on mount
   useEffect(() => {
     listMcpServers().then(setServers)
   }, [])
+
+  const installedNames = useMemo(
+    () => new Set(servers.map((s) => s.name.toLowerCase())),
+    [servers],
+  )
+
+  const categories = useMemo(() => {
+    const cats = new Set<McpCategory>()
+    MCP_SUGGESTIONS.forEach((s) => cats.add(s.category))
+    return Array.from(cats)
+  }, [])
+
+  const filteredSuggestions = useMemo(() => {
+    let results = [...MCP_SUGGESTIONS]
+
+    if (selectedCategory !== 'all') {
+      results = results.filter((s) => s.category === selectedCategory)
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      results = results.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q) ||
+          MCP_CATEGORY_LABELS[s.category].toLowerCase().includes(q),
+      )
+    }
+
+    results.sort((a, b) => b.popularity - a.popularity)
+    return results
+  }, [searchQuery, selectedCategory])
 
   const handleSync = useCallback(async () => {
     setSyncing(true)
@@ -115,6 +153,37 @@ export function McpSettings() {
     }
   }, [formData])
 
+  const handleAddSuggestion = useCallback(
+    async (suggestion: McpSuggestion) => {
+      if (installedNames.has(suggestion.name.toLowerCase())) return
+      setAddingSuggestion(suggestion.id)
+
+      try {
+        const config: McpServerConfig = {
+          id: `mcp-${Date.now()}`,
+          name: suggestion.name,
+          type: suggestion.type,
+          enabled: true,
+        }
+
+        if (suggestion.type === 'stdio') {
+          config.command = suggestion.command
+          config.args = suggestion.args
+        } else {
+          config.url = suggestion.url
+        }
+
+        const updated = await addMcpServer(config)
+        setServers(updated)
+      } catch (err) {
+        console.error('Failed to add MCP server:', err)
+      } finally {
+        setAddingSuggestion(null)
+      }
+    },
+    [installedNames],
+  )
+
   return (
     <div className="space-y-5">
       {/* MCP Servers Section */}
@@ -186,7 +255,7 @@ export function McpSettings() {
             />
             <p className="text-[12px] text-[var(--text-secondary)]">No MCP servers configured</p>
             <p className="mt-1 text-[11px] text-[var(--text-disabled)]">
-              Add a server to get started
+              Add a server or browse popular suggestions below
             </p>
           </div>
         )}
@@ -325,6 +394,158 @@ export function McpSettings() {
             {syncing ? 'Syncing...' : 'Sync to Gateway'}
           </button>
         </div>
+      </section>
+
+      {/* Browse Suggestions Section */}
+      <section className="rounded-[24px] border border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] p-4 shadow-[var(--shadow-sm)]">
+        <button
+          onClick={() => setShowSuggestions(!showSuggestions)}
+          className="flex w-full items-center gap-2 cursor-pointer"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+            <Icon icon="lucide:store" width={14} />
+          </span>
+          <div className="flex-1 text-left">
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">Browse Popular MCPs</h3>
+            <p className="text-[11px] text-[var(--text-secondary)]">
+              {MCP_SUGGESTIONS.length} popular servers — one-click install
+            </p>
+          </div>
+          <Icon
+            icon={showSuggestions ? 'lucide:chevron-up' : 'lucide:chevron-down'}
+            width={16}
+            className="text-[var(--text-disabled)]"
+          />
+        </button>
+
+        {showSuggestions && (
+          <div className="mt-4 space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Icon
+                icon="lucide:search"
+                width={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search servers..."
+                className="w-full rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] py-2 pl-9 pr-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none transition focus:border-[var(--brand)]"
+              />
+            </div>
+
+            {/* Category Pills */}
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition cursor-pointer ${
+                  selectedCategory === 'all'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)]'
+                    : 'border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)]'
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)]'
+                      : 'border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)]'
+                  }`}
+                >
+                  <Icon icon={MCP_CATEGORY_ICONS[cat]} width={10} />
+                  {MCP_CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+
+            {/* Results Count */}
+            <p className="text-[11px] text-[var(--text-disabled)]">
+              {filteredSuggestions.length} server{filteredSuggestions.length !== 1 ? 's' : ''}
+              {selectedCategory !== 'all' && ` in ${MCP_CATEGORY_LABELS[selectedCategory]}`}
+              {searchQuery.trim() && ` matching "${searchQuery.trim()}"`}
+            </p>
+
+            {/* Suggestion Cards */}
+            <div className="max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
+              {filteredSuggestions.map((suggestion) => {
+                const isInstalled = installedNames.has(suggestion.name.toLowerCase())
+                const isAdding = addingSuggestion === suggestion.id
+
+                return (
+                  <div
+                    key={suggestion.id}
+                    className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-3 py-2.5 transition hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] text-[var(--text-secondary)]">
+                      <Icon icon={suggestion.icon} width={15} />
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[13px] font-medium text-[var(--text-primary)]">
+                          {suggestion.name}
+                        </p>
+                        <span className="rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--text-disabled)]">
+                          {suggestion.type}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] leading-snug text-[var(--text-secondary)]">
+                        {suggestion.description}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleAddSuggestion(suggestion)}
+                      disabled={isInstalled || isAdding}
+                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition cursor-pointer ${
+                        isInstalled
+                          ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 cursor-default'
+                          : isAdding
+                            ? 'border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] text-[var(--text-disabled)]'
+                            : 'border border-[var(--brand)]/30 bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] text-[var(--brand)] hover:bg-[color-mix(in_srgb,var(--brand)_16%,transparent)]'
+                      }`}
+                      title={isInstalled ? 'Already installed' : `Install ${suggestion.name}`}
+                    >
+                      {isInstalled ? (
+                        <span className="flex items-center gap-1">
+                          <Icon icon="lucide:check" width={12} />
+                          Added
+                        </span>
+                      ) : isAdding ? (
+                        <Icon icon="lucide:loader-2" width={12} className="animate-spin" />
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Icon icon="lucide:plus" width={12} />
+                          Add
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )
+              })}
+
+              {filteredSuggestions.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-4 py-6 text-center">
+                  <Icon
+                    icon="lucide:search-x"
+                    width={24}
+                    className="mx-auto mb-2 text-[var(--text-disabled)]"
+                  />
+                  <p className="text-[12px] text-[var(--text-secondary)]">No servers found</p>
+                  <p className="mt-1 text-[11px] text-[var(--text-disabled)]">
+                    Try a different search or category
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   )

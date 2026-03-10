@@ -66,8 +66,8 @@ function FileRow({
       }}
       className={`codex-git-file group flex items-center gap-2 px-3 py-1.5 rounded-md text-left w-full transition-colors cursor-pointer ${
         isSelected
-          ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]'
-          : 'hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)]'
+          ? 'bg-[var(--bg-subtle)]'
+          : 'hover:bg-[var(--bg-subtle)]'
       }`}
     >
       <span
@@ -244,7 +244,7 @@ export function GitSidebarPanel() {
             onClick={() => setTab('uncommitted')}
             className={`codex-git-tab px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
               tab === 'uncommitted'
-                ? 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]'
+                ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]'
                 : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
             }`}
           >
@@ -254,7 +254,7 @@ export function GitSidebarPanel() {
             onClick={() => setTab('staged')}
             className={`codex-git-tab px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
               tab === 'staged'
-                ? 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]'
+                ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]'
                 : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
             }`}
           >
@@ -267,7 +267,7 @@ export function GitSidebarPanel() {
             }}
             className={`codex-git-tab px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
               tab === 'review'
-                ? 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]'
+                ? 'text-[var(--text-primary)] bg-[var(--bg-subtle)]'
                 : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
             }`}
           >

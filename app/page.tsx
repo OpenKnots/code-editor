@@ -160,12 +160,6 @@ export default function EditorLayout() {
   const [flashedTab, setFlashedTab] = useState<ViewId | null>(null)
   const [connectionAnim, setConnectionAnim] = useState<'pop' | 'pulse' | null>(null)
   const prevStatusRef = useRef(status)
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const tabContainerRef = useRef<HTMLDivElement>(null)
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({
-    left: 0,
-    width: 0,
-  })
   const [agentActive, setAgentActive] = useState(false)
 
   // Overlay modals
@@ -242,18 +236,6 @@ export default function EditorLayout() {
       }
     }
   }, [local.remoteRepo, local.gitInfo?.branch]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Sliding tab indicator measurement ─────────────────
-  useLayoutEffect(() => {
-    const idx = visibleViews.indexOf(activeView)
-    const tab = tabRefs.current[idx]
-    const container = tabContainerRef.current
-    if (tab && container) {
-      const cRect = container.getBoundingClientRect()
-      const tRect = tab.getBoundingClientRect()
-      setIndicatorStyle({ left: tRect.left - cRect.left, width: tRect.width })
-    }
-  }, [activeView, sidebarCollapsed, visibleViews])
 
   // ─── Connection state transitions ─────────────────────
   useEffect(() => {
@@ -581,123 +563,8 @@ export default function EditorLayout() {
         ) : (
           <div
             data-tauri-drag-region
-            className={`shell-topbar flex items-center h-10 shrink-0 px-4 gap-2 tauri-drag-region ${isMacTauri && sidebarCollapsed ? 'pl-20' : ''}`}
-          >
-            {/* Folder-style tab strip — hidden in TUI mode */}
-            {!modeSpec.hideTabs && (
-              <div ref={tabContainerRef} className="folder-tab-strip tauri-no-drag">
-                {visibleViews.map((v, i) => {
-                  const isActive = activeView === v
-                  return (
-                    <motion.button
-                      key={v}
-                      ref={(el) => {
-                        tabRefs.current[i] = el
-                      }}
-                      onClick={() => setView(v)}
-                      className={`folder-tab ${isActive ? 'folder-tab--active' : ''} ${flashedTab === v ? 'folder-tab--flash' : ''}`}
-                      style={
-                        {
-                          '--color': isActive ? 'var(--text-primary)' : 'var(--text-disabled)',
-                        } as React.CSSProperties
-                      }
-                      title={`${VIEW_ICONS[v].label} (\u2318${i + 1})`}
-                      whileTap={{ scale: 0.95 }}
-                      layout
-                    >
-                      <span className="flex items-center gap-2">
-                        <Icon
-                          icon={VIEW_ICONS[v].icon}
-                          width={14}
-                          height={14}
-                          className="folder-tab__icon"
-                        />
-                        <span className="hidden sm:inline">{VIEW_ICONS[v].label}</span>
-                        {v === 'git' && dirtyCount > 0 && (
-                          <span className="px-2 min-w-[22px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[11px] leading-[22px] font-bold animate-badge-pop">
-                            {dirtyCount}
-                          </span>
-                        )}
-                      </span>
-                    </motion.button>
-                  )
-                })}
-                <motion.span
-                  className="folder-tab-strip__slider"
-                  animate={{
-                    left: indicatorStyle.left + 6,
-                    width: Math.max(0, indicatorStyle.width - 12),
-                  }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  style={{ '--opacity': indicatorStyle.width > 0 ? 1 : 0 } as React.CSSProperties}
-                />
-              </div>
-            )}
-
-            {/* Codex-style header with Open + Commit dropdowns when tabs are hidden */}
-            {modeSpec.hideTabs && (
-              <div className="flex items-center gap-1.5 tauri-no-drag">
-                {/* Open dropdown */}
-                <button
-                  onClick={() => emit('open-folder')}
-                  className="codex-header-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-                >
-                  <Icon icon="lucide:folder-open" width={14} height={14} />
-                  Open
-                  <Icon icon="lucide:chevron-down" width={10} height={10} className="opacity-50" />
-                </button>
-
-                <span className="text-[var(--text-disabled)] text-[11px]">&middot;</span>
-
-                {/* Commit dropdown */}
-                <button
-                  onClick={() => setView('git')}
-                  className="codex-header-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-                >
-                  <Icon icon="lucide:git-commit-horizontal" width={14} height={14} />
-                  Commit
-                  <Icon icon="lucide:chevron-down" width={10} height={10} className="opacity-50" />
-                </button>
-              </div>
-            )}
-
-            <div className="flex-1 tauri-drag-region" data-tauri-drag-region />
-
-            {/* Mode switcher — 3D pill group */}
-            <div className="shell-mode-switcher tauri-no-drag">
-              {MODE_BUTTONS.map((m, index) => (
-                <button
-                  key={m.id}
-                  onClick={() => setMode(m.id)}
-                  className={`shell-mode-button ${mode === m.id ? 'shell-mode-button--active' : ''}`}
-                  title={`${m.label} mode (${formatShortcut(`meta+shift+${index + 1}`)})`}
-                >
-                  <Icon icon={m.icon} width={13} height={13} />
-                </button>
-              ))}
-            </div>
-
-            {/* Change count badges */}
-            {dirtyCount > 0 && (
-              <div className="tauri-no-drag flex items-center gap-1.5 mr-1">
-                <span className="codex-header-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--color-additions,#22c55e)] bg-[color-mix(in_srgb,var(--color-additions,#22c55e)_10%,transparent)]">
-                  +{dirtyCount}
-                </span>
-                <span className="codex-header-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--color-deletions,#ef4444)] bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_10%,transparent)]">
-                  -{dirtyCount}
-                </span>
-              </div>
-            )}
-
-            {/* Settings */}
-            <button
-              onClick={() => setSettingsVisible(true)}
-              className="shell-utility-button tauri-no-drag"
-              title="Settings"
-            >
-              <Icon icon="lucide:settings" width={15} height={15} className="animate-gear-sway" />
-            </button>
-          </div>
+            className={`shell-topbar flex items-center h-8 shrink-0 px-4 gap-2 tauri-drag-region ${isMacTauri ? 'pl-20' : ''}`}
+          />
         )}
 
         {showWorkflowEditorTabs && <EditorTabs onTabSelect={() => setView('editor')} />}

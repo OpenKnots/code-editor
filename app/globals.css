@@ -3370,7 +3370,7 @@ p {
 
 .shell-sidebar--expanded {
   background: var(--shell-panel-bg);
-  border-radius: 28px;
+  border-radius: 20px;
   box-shadow: var(--shell-panel-shadow);
 }
 
@@ -3388,53 +3388,145 @@ p {
   width: 40px;
   height: 40px;
   border: 1px solid transparent;
-  border-radius: 16px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
   transition:
-    transform 180ms ease,
     color 180ms ease,
     border-color 180ms ease,
     background 180ms ease;
 }
 
 .codex-sidebar-icon-btn:hover {
-  transform: translateY(-1px);
   color: var(--text-primary);
-  border-color: var(--shell-chip-border);
-  background: var(--shell-chip-hover);
+  background: var(--bg-subtle);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Activity Bar — VS Code-style sidebar navigation (collapsed state)
+   ══════════════════════════════════════════════════════════════════ */
+.activity-bar-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  transition: all 180ms ease;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.activity-bar-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.activity-bar-btn--active {
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.activity-bar-btn--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 24px;
+  background: var(--brand);
+  border-radius: 0 2px 2px 0;
+}
+
+.activity-bar-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--brand-contrast);
+  background: var(--brand);
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.activity-bar-divider {
+  width: 32px;
+  height: 1px;
+  background: var(--border);
+  margin: 8px auto;
+  flex-shrink: 0;
+}
+
+/* Expanded sidebar view navigation */
+.sidebar-view-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: all 180ms ease;
+  cursor: pointer;
+  position: relative;
+  text-align: left;
+}
+
+.sidebar-view-nav:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-view-nav--active {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+.sidebar-view-nav--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 18px;
+  background: var(--brand);
+  border-radius: 0 2px 2px 0;
 }
 
 .codex-sidebar-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  padding: 0.9rem 0.95rem;
-  border: 1px solid var(--shell-chip-border);
-  border-radius: 22px;
-  background:
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--brand) 10%, transparent),
-      transparent 34%
-    ),
-    color-mix(in srgb, var(--shell-chip-bg) 92%, transparent);
-  box-shadow: var(--shadow-sm);
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
 }
 
 .codex-sidebar-hero__icon {
   display: flex;
-  width: 38px;
-  height: 38px;
+  width: 28px;
+  height: 28px;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--brand) 12%, transparent);
-  color: var(--brand);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
 }
 
 .codex-sidebar-hero__action {
@@ -3444,28 +3536,42 @@ p {
   width: 32px;
   height: 32px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-disabled);
   cursor: pointer;
   transition:
     color 180ms ease,
-    border-color 180ms ease,
     background 180ms ease;
 }
 
 .codex-sidebar-hero__action:hover {
   color: var(--text-primary);
-  border-color: var(--shell-chip-border);
-  background: var(--shell-chip-hover);
+  background: var(--bg-subtle);
+}
+
+.codex-sidebar-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-disabled);
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.codex-sidebar-user-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
 }
 
 .codex-sidebar-workspace {
-  border-radius: 14px;
+  border-radius: 8px;
 }
 
 .codex-sidebar-workspace:hover {
-  background: var(--shell-chip-hover);
+  background: var(--bg-subtle);
   color: var(--text-primary);
 }
 
@@ -5983,61 +6089,47 @@ p {
 }
 
 .codex-sidebar-new-thread {
-  border: 1px solid var(--shell-chip-border);
-  background:
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--brand) 10%, transparent),
-      transparent 32%
-    ),
-    color-mix(in srgb, var(--shell-chip-bg) 92%, transparent);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
 }
 
 .codex-sidebar-new-thread:hover {
-  transform: translateY(-0.5px);
-  border-color: color-mix(in srgb, var(--brand) 24%, var(--shell-chip-border));
-  box-shadow: var(--shadow-md);
+  background: var(--bg-subtle);
 }
 
 .codex-sidebar-nav-item {
-  border: 1px solid transparent;
+  /* no border on default state */
 }
 
 .codex-sidebar-nav-item:hover {
-  border-color: var(--shell-chip-border);
-  background: var(--shell-chip-hover);
+  background: var(--bg-subtle);
 }
 
 .codex-sidebar-thread {
-  border: 1px solid transparent;
-  backdrop-filter: blur(10px);
+  /* clean, no blur */
 }
 .codex-sidebar-thread:hover {
-  border-color: var(--shell-chip-border);
+  background: var(--bg-subtle);
 }
 
 /* ─── Codex Layout: Git Sidebar Panel ────────────────────── */
 
 .codex-git-sidebar {
   position: relative;
-  background: color-mix(in srgb, var(--shell-panel-bg) 94%, transparent);
-  border-radius: 0 24px 24px 0;
+  background: var(--shell-panel-bg);
+  border-radius: 0 16px 16px 0;
   overflow: hidden;
-  backdrop-filter: blur(16px) saturate(135%);
-  -webkit-backdrop-filter: blur(16px) saturate(135%);
 }
 
 .codex-git-tab {
-  border: 1px solid transparent;
   transition: all 150ms;
 }
 .codex-git-tab:hover {
-  border-color: var(--border);
+  background: var(--bg-subtle);
 }
 
 .codex-git-file {
-  border: 1px solid transparent;
+  /* clean, no border */
 }
 .codex-git-file:hover {
   border-color: var(--border);
@@ -6067,7 +6159,7 @@ p {
 }
 
 .codex-git-bottom-bar {
-  background: color-mix(in srgb, var(--bg-elevated) 95%, transparent);
+  background: var(--bg-elevated);
 }
 
 /* ─── Codex Layout: Header ───────────────────────────────── */

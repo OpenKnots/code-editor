@@ -1,4 +1,14 @@
-export type SkillSourceId = 'obra/superpowers' | 'vercel-labs/skills'
+export type SkillSourceId =
+  | 'obra/superpowers'
+  | 'vercel-labs/skills'
+  | 'vercel-labs/agent-skills'
+  | 'vercel-labs/agent-browser'
+  | 'neondatabase/agent-skills'
+  | 'conorluddy/ios-simulator-skill'
+  | 'stripe/ai'
+  | 'huggingface/skills'
+  | 'elevenlabs/skills'
+  | 'google/skills'
 
 export type SkillProviderId = 'gateway' | 'openai' | 'anthropic' | 'generic'
 

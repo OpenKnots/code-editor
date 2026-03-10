@@ -95,6 +95,9 @@ export interface AppEvents {
 
   // Threads (sidebar list refresh when chat persists)
   'threads-updated': void
+
+  // Prompt library
+  'prompt-use': { text: string }
 }
 
 // ─── Typed wrappers ──────────────────────────────────────
