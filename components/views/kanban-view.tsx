@@ -59,13 +59,13 @@ const STORAGE_KEY = 'knot-code:kanban:boards'
 const DEFAULT_COLUMNS: KanbanColumn[] = [
   { id: 'backlog', title: 'Backlog', icon: 'lucide:inbox', color: '#6b7280', collapsed: false },
   {
-    id: 'in-progress',
-    title: 'In Progress',
+    id: 'started',
+    title: 'Started',
     icon: 'lucide:play',
     color: '#3b82f6',
     collapsed: false,
   },
-  { id: 'review', title: 'Review', icon: 'lucide:eye', color: '#f59e0b', collapsed: false },
+  { id: 'review', title: 'Reviewing', icon: 'lucide:eye', color: '#f59e0b', collapsed: false },
   { id: 'done', title: 'Done', icon: 'lucide:check', color: '#22c55e', collapsed: false },
 ]
 
@@ -78,10 +78,10 @@ const DEFAULT_LABELS: Label[] = [
 ]
 
 const PRIORITY_CONFIG = {
-  P0: { label: 'Critical', color: '#ef4444' },
-  P1: { label: 'High', color: '#f97316' },
-  P2: { label: 'Medium', color: '#eab308' },
-  P3: { label: 'Low', color: '#6b7280' },
+  P0: { label: 'Critical', color: '#ef4444', icon: 'lucide:alert-triangle' },
+  P1: { label: 'High', color: '#f97316', icon: 'lucide:arrow-up' },
+  P2: { label: 'Medium', color: '#eab308', icon: 'lucide:minus' },
+  P3: { label: 'Low', color: '#6b7280', icon: 'lucide:arrow-down' },
 }
 
 function loadKanbanData(): KanbanData {
@@ -1119,9 +1119,12 @@ export function KanbanView() {
                       onClick={() => toggleColumn(column.id)}
                       className="flex flex-1 items-center gap-2 text-left"
                     >
-                      <span
-                        className="h-3 w-3 rounded-full shrink-0"
-                        style={{ backgroundColor: column.color }}
+                      <Icon
+                        icon={column.icon}
+                        width={16}
+                        height={16}
+                        className="shrink-0"
+                        style={{ color: column.color }}
                       />
                       <span className="text-base font-semibold text-[var(--text-primary)]">
                         {column.title}
@@ -1260,7 +1263,10 @@ export function KanbanView() {
 
                               <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-disabled)]">
                                 <div className="flex items-center gap-2">
-                                  <span>{PRIORITY_CONFIG[card.priority].label}</span>
+                                  <span className="flex items-center gap-0.5" style={{ color: PRIORITY_CONFIG[card.priority].color }}>
+                                    <Icon icon={PRIORITY_CONFIG[card.priority].icon} width={10} height={10} />
+                                    {PRIORITY_CONFIG[card.priority].label}
+                                  </span>
                                   {card.assignee && (
                                     <span className="flex items-center gap-1">
                                       <Icon icon="lucide:user" width={10} height={10} />

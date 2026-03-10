@@ -217,9 +217,9 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('workshop')}
             className={`activity-bar-btn ${activeView === 'workshop' ? 'activity-bar-btn--active' : ''}`}
-            title="Agent Workshop"
+            title="Workshop (⌘9)"
           >
-            <Icon icon="lucide:flask-conical" width={24} height={24} />
+            <Icon icon="lucide:hammer" width={24} height={24} />
           </button>
 
           <button
@@ -320,9 +320,9 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                   { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
                   {
                     id: 'workshop' as const,
-                    icon: 'lucide:flask-conical',
+                    icon: 'lucide:hammer',
                     label: 'Workshop',
-                    shortcut: '',
+                    shortcut: '⌘9',
                   },
                   {
                     id: 'agent-builder' as const,

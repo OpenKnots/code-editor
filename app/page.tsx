@@ -91,7 +91,7 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   terminal: { icon: 'lucide:terminal', label: 'Terminal' },
   kanban: { icon: 'lucide:kanban', label: 'Kanban' },
   mcp: { icon: 'lucide:plug', label: 'MCP' },
-  workshop: { icon: 'lucide:flask-conical', label: 'Workshop' },
+  workshop: { icon: 'lucide:hammer', label: 'Workshop' },
   'agent-builder': { icon: 'lucide:bot', label: 'Agent Builder' },
 }
 
