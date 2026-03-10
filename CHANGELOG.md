@@ -1,5 +1,115 @@
 # Changelog
 
+## [1.9.0] — 2026-03-10
+
+### ✨ Highlights
+
+**Knot Code 1.9 is the biggest single-release update in the editor's history** — 21 commits, ~9,000+ lines of new code, shipping a completely redesigned home screen, VS Code-style navigation, a full Kanban board, a transformed Agent Builder Workshop, 8 new tactical themes, and dozens of UX polish improvements.
+
+### 🏠 Redesigned Home Screen
+- **Ambient gradient background** — Blue-purple radial glow on true black with animated grain texture
+- **Dynamic greeting** — Time-aware greetings ("Good morning", "Night owl mode" at 3 AM)
+- **Gradient tagline** — "What shall we build?" in blue→purple gradient text
+- **Animated logo** — Entrance fade-in with continuous glow pulse
+- **Glass suggestion cards** — 2×2 grid with staggered spring entrance animations
+- **Premium composer** — Focus glow ring, cycling placeholder animation
+
+### 🧭 VS Code-Style Navigation
+- **Sidebar activity bar** — Collapsed icons with 2px brand-color active indicator
+- **Expanded nav** — Labeled buttons with keyboard shortcuts on hover (⌘1-⌘9)
+- **Top tab bar removed** — Zero wasted vertical space
+- **View cycle toggle** — Mobile pill bar cycling Chat → Editor → Terminal
+- **View transitions** — Subtle 150ms fade between views via AnimatePresence
+
+### 📋 Kanban Board (NEW)
+- **4 default columns** — Backlog, In Progress, Review, Done
+- **Rich cards** — Title, description, priority (P0-P3), labels, assignee, due dates, subtasks
+- **Drag & drop** — HTML5 native with visual drop indicators
+- **Card detail panel** — Glass card sections, custom checkboxes, progress bars, comments, activity log
+- **Multiple boards** — Create, rename, switch between boards
+- **WIP limits** — Column warnings when work-in-progress exceeds threshold
+- **Label system** — 5 built-in (bug, feature, docs, refactor, urgent) + custom labels
+- **Persistence** — Full localStorage persistence across sessions
+
+### 🏗️ Agent Builder Workshop (TRANSFORMED)
+- **Template Gallery** — 12 beautiful agent templates (Code Reviewer, PR Agent, DevOps Bot, etc.)
+- **Step-by-step Wizard** — 7-stage guided flow with progress bar and validation
+- **Live Preview** — Real-time system prompt + config JSON with token count
+- **Readiness Ring** — Circular SVG progress indicator with color-coded status
+- **Quick Deploy** — One-click deploy agent to Chat with custom system prompt
+- **Undo/Redo** — 20-state blueprint history (⌘Z / ⌘⇧Z)
+- **Share & Export** — Share as link (base64 URL), export/import JSON blueprints
+- **Agent Flow** — Visual pipeline with checkmarks on configured stages
+- **Evaluation integration** — "Run Evaluation" button from review step
+
+### 🎨 Themes
+- **Claude theme** (NEW DEFAULT) — True black (#000), blue accent (#3b82f6), premium squircle borders
+- **Field Manual collection** (8 NEW themes):
+  - 🌿 Field Manual — OD green, typewriter font, earth tones
+  - ⚓ Navy Ops — Deep navy, steel blue, submarine console
+  - 🏜️ Desert Storm — Sand/amber, warm desert palette
+  - 🔳 Blackout — True black, grayscale only, OPSEC mode
+  - ❄️ Arctic White — Ice gray, frost blue, polar ops
+  - 👁️ Recon (NVG) — ALL green phosphor, night vision goggles
+  - 📡 SIGINT — ALL amber/gold, vintage CRT terminal
+  - ✈️ Air Force HUD — Cyan heads-up display, cockpit glass
+- **Lazy loading** — Manual themes loaded on-demand via dynamic import
+- **Customizable editor background** — Grid, dots, gradient, or grid-logos patterns
+
+### 🔌 MCP Library (NEW)
+- **Marketplace view** — Standalone view replacing Settings-embedded MCP tab (⌘5)
+- **20 servers** — PostgreSQL, Filesystem, Brave Search, GitHub, Slack, Linear, SQLite, Memory, Puppeteer, Fetch, Redis, MongoDB, Notion, Google Drive, Docker, Sentry, Supabase, Vercel, Cloudflare, Stripe
+- **Custom Server** — Add your own MCP server with custom command/URL
+- **Category filtering** — All, Installed, Featured, Databases, APIs, Developer, Custom
+- **Gateway RPC wiring** — Real mcp.list/add/remove/start/stop/sync calls
+
+### 💬 Chat Improvements
+- **Inline pickers** — Type `/skill`, `/mcp`, or `/prompt` to see picker popup with search
+- **Contextual help** — Empty picker states show setup instructions instead of "No items found"
+- **Inline diff toolbar** — VS Code-style floating toolbar with per-hunk Undo/Keep (⌘Y/⌘N)
+- **Message grouping** — Reduced spacing for consecutive same-sender messages
+- **Link hover underlines** — Links show underline only on hover
+- **Removed ugly focus glow** — Replaced rotating conic-gradient border with clean transition
+
+### 🖥️ Editor Enhancements
+- **Breadcrumbs** — File path navigation above editor with clickable segments
+- **Monaco minimap** — Code overview enabled (maxColumn 80, renderCharacters false)
+- **Empty state redesign** — "Open a project to start coding" with glass card action buttons
+- **Grid pattern background** — Subtle 40px grid with faint KnotLogo watermark
+- **Preview split panel** — Cursor-style preview + chat side-by-side with draggable divider
+
+### 🔧 Developer Experience
+- **Terminal auto-cd** — Terminal automatically changes directory when project switches
+- **Dev server detection** — Green indicator when localhost:3000 is reachable
+- **Toast notification system** — Provider + useToast() hook, glass cards, bottom-right stack
+- **Status bar** — Git branch, gateway status, dev server pill
+- **Skills hidden on mobile** — Accessible on desktop only
+- **Terminal event fix** — Added runId/idemKey fallbacks for gateway event matching
+
+### 🐛 Bug Fixes
+- Fixed 12 unused imports/variables in agent-panel.tsx
+- Fixed React hook dependency warnings
+- Fixed YouTube status bar missing TrackInfo fields
+- Fixed markdown preview Date.now() in useMemo → useEffect with ref
+- Fixed sidebar nav horizontal layout → proper vertical stack
+- Removed empty shell-topbar wasted space
+
+### 📊 By the Numbers
+- **21 commits** in a single session
+- **~9,000+ lines** of new code
+- **5 new views** — MCP Library, Kanban, Workshop, Preview Split, Template Gallery
+- **8 new themes** — Field Manual tactical collection
+- **20 MCP servers** in catalog
+- **12 agent templates** in Workshop
+- **0 TypeScript errors** — All changes pass strict mode
+
+## [1.8.0] — 2026-03-09
+
+### Added
+
+- **MCP Settings** — Gateway-side MCP server management UI
+- **Skills tab** — Hidden on mobile, visible on desktop
+
 ## [1.7.0] — 2026-03-09
 
 ### Added
