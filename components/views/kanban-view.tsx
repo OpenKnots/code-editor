@@ -206,25 +206,22 @@ const CARD_TEMPLATES: CardTemplate[] = [
 ]
 
 // ── Board Templates ────────────────────────────────────────────
+interface BoardTemplateCard {
+  title: string
+  description?: string
+  labels: string[]
+  priority: Priority
+  subtasks: string[]
+  columnId: string
+}
+
 interface BoardTemplate {
   id: string
   name: string
   icon: string
   description: string
   columns: Omit<KanbanColumn, 'collapsed'>[]
-  cards: Omit<
-    KanbanCard,
-    | 'id'
-    | 'createdAt'
-    | 'sortOrder'
-    | 'comments'
-    | 'activity'
-    | 'assignee'
-    | 'dueDate'
-    | 'linkedBranch'
-    | 'subtasks'
-  > &
-    { subtasks: string[] }[]
+  cards: BoardTemplateCard[]
 }
 
 const BOARD_TEMPLATES: BoardTemplate[] = [
@@ -309,12 +306,7 @@ const BOARD_TEMPLATES: BoardTemplate[] = [
         title: 'Critical crash on startup',
         priority: 'P0',
         labels: ['bug'],
-        subtasks: [
-          { id: genId('sub'), title: 'Reproduce', done: false },
-          { id: genId('sub'), title: 'Identify root cause', done: false },
-          { id: genId('sub'), title: 'Write fix', done: false },
-          { id: genId('sub'), title: 'Add regression test', done: false },
-        ],
+        subtasks: ['Reproduce', 'Identify root cause', 'Write fix', 'Add regression test'],
         columnId: 'reported',
       },
       {
@@ -364,12 +356,7 @@ const BOARD_TEMPLATES: BoardTemplate[] = [
         title: 'Run dependency audit (npm audit)',
         priority: 'P0',
         labels: ['urgent'],
-        subtasks: [
-          { id: genId('sub'), title: 'Run scan', done: false },
-          { id: genId('sub'), title: 'Review critical', done: false },
-          { id: genId('sub'), title: 'Review high', done: false },
-          { id: genId('sub'), title: 'Review moderate', done: false },
-        ],
+        subtasks: ['Run scan', 'Review critical', 'Review high', 'Review moderate'],
         columnId: 'scan',
       },
       {
@@ -433,12 +420,7 @@ const BOARD_TEMPLATES: BoardTemplate[] = [
         title: 'Unit tests for auth module',
         priority: 'P1',
         labels: ['feature'],
-        subtasks: [
-          { id: genId('sub'), title: 'Login flow', done: false },
-          { id: genId('sub'), title: 'Register flow', done: false },
-          { id: genId('sub'), title: 'Password reset', done: false },
-          { id: genId('sub'), title: 'Token refresh', done: false },
-        ],
+        subtasks: ['Login flow', 'Register flow', 'Password reset', 'Token refresh'],
         columnId: 'untested',
       },
       {
@@ -502,24 +484,14 @@ const BOARD_TEMPLATES: BoardTemplate[] = [
         title: 'Run full test suite',
         priority: 'P0',
         labels: ['urgent'],
-        subtasks: [
-          { id: genId('sub'), title: 'Unit tests', done: false },
-          { id: genId('sub'), title: 'Integration tests', done: false },
-          { id: genId('sub'), title: 'E2E tests', done: false },
-          { id: genId('sub'), title: 'Smoke tests', done: false },
-        ],
+        subtasks: ['Unit tests', 'Integration tests', 'E2E tests', 'Smoke tests'],
         columnId: 'testing',
       },
       {
         title: 'Build release assets',
         priority: 'P1',
         labels: ['feature'],
-        subtasks: [
-          { id: genId('sub'), title: 'macOS DMG', done: false },
-          { id: genId('sub'), title: 'Windows MSI', done: false },
-          { id: genId('sub'), title: 'Linux AppImage', done: false },
-          { id: genId('sub'), title: 'Linux DEB', done: false },
-        ],
+        subtasks: ['macOS DMG', 'Windows MSI', 'Linux AppImage', 'Linux DEB'],
         columnId: 'building',
       },
       {
@@ -640,12 +612,7 @@ const BOARD_TEMPLATES: BoardTemplate[] = [
         title: 'Set up CI/CD pipeline',
         priority: 'P0',
         labels: ['urgent'],
-        subtasks: [
-          { id: genId('sub'), title: 'GitHub Actions', done: false },
-          { id: genId('sub'), title: 'Build step', done: false },
-          { id: genId('sub'), title: 'Test step', done: false },
-          { id: genId('sub'), title: 'Deploy step', done: false },
-        ],
+        subtasks: ['GitHub Actions', 'Build step', 'Test step', 'Deploy step'],
         columnId: 'backlog',
       },
       {
@@ -2354,7 +2321,11 @@ export function KanbanView() {
       description: card.description,
       labels: card.labels,
       priority: card.priority,
-      subtasks: card.subtasks,
+      subtasks: card.subtasks.map((title) => ({
+        id: genId('sub'),
+        title,
+        done: false,
+      })),
       columnId: `${boardId}-${card.columnId}`,
       sortOrder: index,
       createdAt: Date.now(),
