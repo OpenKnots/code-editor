@@ -54,6 +54,7 @@ const BG_STYLE_OPTIONS: Array<{ id: EditorBgStyle; label: string; icon: string }
 const THEME_GROUP_LABELS: Record<ThemePreset['group'], string> = {
   core: 'Core',
   tweakcn: 'Extras',
+  manual: 'Field Manual',
 }
 
 function groupThemes() {

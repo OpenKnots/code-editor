@@ -19,7 +19,7 @@ export interface ThemePreset {
   id: ThemeId
   label: string
   color: string
-  group: 'core' | 'tweakcn'
+  group: 'core' | 'tweakcn' | 'manual'
 }
 
 export const THEME_PRESETS: ThemePreset[] = [
@@ -37,6 +37,14 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: 'voodoo', label: 'VooDoo', color: '#8b5cf6', group: 'core' },
   { id: 'cybernord', label: 'CyberNord', color: '#00ff41', group: 'tweakcn' },
   { id: 'prettypink', label: 'PrettyPink', color: '#F5A9B8', group: 'core' },
+  { id: 'field-manual', label: 'Field Manual', color: '#4a6b2a', group: 'manual' },
+  { id: 'navy-ops', label: 'Navy Ops', color: '#4682b4', group: 'manual' },
+  { id: 'desert-storm', label: 'Desert Storm', color: '#c2a87d', group: 'manual' },
+  { id: 'blackout', label: 'Blackout', color: '#cc0000', group: 'manual' },
+  { id: 'arctic-white', label: 'Arctic White', color: '#7ab8d4', group: 'manual' },
+  { id: 'recon-green', label: 'Recon (NVG)', color: '#00ff41', group: 'manual' },
+  { id: 'sigint', label: 'SIGINT', color: '#ffa500', group: 'manual' },
+  { id: 'air-force', label: 'Air Force HUD', color: '#00d4ff', group: 'manual' },
 ]
 
 interface ThemeContextValue {
@@ -92,6 +100,24 @@ function ensureExtraThemes(themeId: string) {
   import(/* webpackChunkName: "themes-extra" */ '@/app/themes-extra.css').catch(() => {})
 }
 
+const MANUAL_THEMES = new Set([
+  'field-manual',
+  'navy-ops',
+  'desert-storm',
+  'blackout',
+  'arctic-white',
+  'recon-green',
+  'sigint',
+  'air-force',
+])
+let manualThemesLoaded = false
+
+function ensureManualThemes(themeId: string) {
+  if (manualThemesLoaded || !MANUAL_THEMES.has(themeId)) return
+  manualThemesLoaded = true
+  import(/* webpackChunkName: "themes-manual" */ '@/app/themes-manual.css').catch(() => {})
+}
+
 function applyToDOM(themeId: string, resolved: ResolvedMode) {
   const el = document.documentElement
   el.setAttribute('data-theme', themeId)
@@ -101,6 +127,7 @@ function applyToDOM(themeId: string, resolved: ResolvedMode) {
     el.classList.remove('dark')
   }
   ensureExtraThemes(themeId)
+  ensureManualThemes(themeId)
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

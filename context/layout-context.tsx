@@ -727,8 +727,10 @@ export function useLayout() {
 // ─── Resize Hook ────────────────────────────────────────
 // Drag-to-resize for any panel, handles mouse events
 
+const COLLAPSE_THRESHOLD = 180
+
 export function usePanelResize(panel: PanelId) {
-  const { resize, getSize, panelDef } = useLayout()
+  const { resize, getSize, panelDef, hide } = useLayout()
   const def = panelDef(panel)
   const [resizing, setResizing] = useState(false)
 
@@ -738,23 +740,28 @@ export function usePanelResize(panel: PanelId) {
       const startPos = def.axis === 'horizontal' ? e.clientX : e.clientY
       const startSize = getSize(panel)
       setResizing(true)
+      let lastRawSize = startSize
 
       const onMove = (ev: MouseEvent) => {
         const currentPos = def.axis === 'horizontal' ? ev.clientX : ev.clientY
         const invertDelta =
           panel === 'chat' || panel === 'terminal' || panel === 'plugins' || panel === 'gitPanel'
         const delta = invertDelta ? startPos - currentPos : currentPos - startPos
-        resize(panel, startSize + delta)
+        lastRawSize = startSize + delta
+        resize(panel, lastRawSize)
       }
       const onUp = () => {
         setResizing(false)
+        if (lastRawSize < COLLAPSE_THRESHOLD) {
+          hide(panel)
+        }
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
       }
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
     },
-    [panel, def.axis, getSize, resize],
+    [panel, def.axis, getSize, resize, hide],
   )
 
   return { onResizeStart, resizing }

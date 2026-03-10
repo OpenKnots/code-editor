@@ -59,7 +59,6 @@ function parseYouTubeUrl(input: string): PlaylistInfo | null {
 }
 
 function buildEmbedUrl(info: PlaylistInfo): string {
-  // Use youtube-nocookie.com to avoid Error 153 with non-HTTP origins (tauri://)
   const base =
     info.type === 'playlist'
       ? `https://www.youtube-nocookie.com/embed/videoseries?list=${info.id}`
@@ -68,8 +67,11 @@ function buildEmbedUrl(info: PlaylistInfo): string {
   url.searchParams.set('enablejsapi', '1')
   url.searchParams.set('playsinline', '1')
   url.searchParams.set('rel', '0')
-  // Set origin to the localhost server for postMessage API
-  url.searchParams.set('origin', `http://127.0.0.1:3080`)
+  const origin =
+    typeof window !== 'undefined' && window.location.protocol.startsWith('http')
+      ? window.location.origin
+      : 'http://127.0.0.1:3080'
+  url.searchParams.set('origin', origin)
   return url.toString()
 }
 
@@ -179,6 +181,9 @@ export function YouTubePlayer() {
     } catch {}
   }, [muted])
 
+  const playerReadyRef = useRef(false)
+  const pendingVolumeSync = useRef(false)
+
   const sendPlayerCommand = useCallback((func: string, args: unknown[] = []) => {
     const playerWindow = iframeRef.current?.contentWindow
     if (!playerWindow) return
@@ -193,6 +198,10 @@ export function YouTubePlayer() {
   }, [])
 
   const syncPlayerVolume = useCallback(() => {
+    if (!playerReadyRef.current) {
+      pendingVolumeSync.current = true
+      return
+    }
     sendPlayerCommand('setVolume', [volume])
     if (muted || volume === 0) {
       sendPlayerCommand('mute')
@@ -202,10 +211,37 @@ export function YouTubePlayer() {
   }, [sendPlayerCommand, volume, muted])
 
   useEffect(() => {
-    if (!current) return
+    const handleMessage = (event: MessageEvent) => {
+      if (typeof event.data !== 'string') return
+      try {
+        const data = JSON.parse(event.data)
+        if (data.event === 'initialDelivery' || data.event === 'onReady') {
+          playerReadyRef.current = true
+          if (pendingVolumeSync.current) {
+            pendingVolumeSync.current = false
+            syncPlayerVolume()
+          }
+        }
+        if (data.event === 'infoDelivery' && data.info) {
+          if (typeof data.info.playerState === 'number') {
+            if (data.info.playerState === 1) setIsPlaying(true)
+            else if (data.info.playerState === 2) setIsPlaying(false)
+          }
+        }
+      } catch {}
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [syncPlayerVolume])
+
+  useEffect(() => {
+    if (!current) {
+      playerReadyRef.current = false
+      return
+    }
     const timer = window.setTimeout(() => {
       syncPlayerVolume()
-    }, 120)
+    }, 200)
     return () => window.clearTimeout(timer)
   }, [current, volume, muted, syncPlayerVolume])
 
@@ -483,7 +519,15 @@ export function YouTubePlayer() {
                 allowFullScreen
                 loading="lazy"
                 title={`YouTube ${current.label}`}
-                onLoad={syncPlayerVolume}
+                onLoad={() => {
+                  const win = iframeRef.current?.contentWindow
+                  if (!win) return
+                  win.postMessage(
+                    JSON.stringify({ event: 'listening', id: 1 }),
+                    '*',
+                  )
+                  setTimeout(syncPlayerVolume, 500)
+                }}
               />
             </div>
           </div>

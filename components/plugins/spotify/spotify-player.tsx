@@ -156,7 +156,28 @@ export function SpotifyPlayer() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device_ids: [device_id], play: false }),
-      }).catch(() => {})
+      })
+        .then(() => {
+          // Auto-start Liked Songs as default playlist
+          return spotifyFetch('/me/tracks?limit=50&market=US')
+        })
+        .then(async (res) => {
+          if (!res.ok) return
+          const data = await res.json()
+          const uris = (data.items ?? [])
+            .map((item: { track?: { uri?: string } }) => item.track?.uri)
+            .filter(Boolean) as string[]
+          if (uris.length === 0) return
+          // Only start if nothing is already playing
+          const state = await player.getCurrentState()
+          if (state) return
+          await spotifyFetch(`/me/player/play?device_id=${device_id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uris }),
+          })
+        })
+        .catch(() => {})
     })
     player.addListener('not_ready', () => setDeviceId(null))
     player.addListener('player_state_changed', (state: Spotify.PlayerState) => {

@@ -408,6 +408,18 @@ export const MCP_SUGGESTIONS: McpSuggestion[] = [
     popularity: 78,
   },
   {
+    id: 'sug-github-to-mcp',
+    name: 'GitHub to MCP',
+    description:
+      'Convert any GitHub repo into an MCP server — auto-extract tools from OpenAPI, GraphQL, and REST APIs',
+    type: 'stdio',
+    category: 'developer-tools',
+    command: 'npx',
+    args: ['-y', '@nirholas/github-to-mcp'],
+    icon: 'lucide:arrow-right-left',
+    popularity: 65,
+  },
+  {
     id: 'sug-e2b',
     name: 'E2B',
     description: 'Run code in secure cloud sandboxes — isolated execution for AI-generated code',
