@@ -91,6 +91,8 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   terminal: { icon: 'lucide:terminal', label: 'Terminal' },
   kanban: { icon: 'lucide:kanban', label: 'Kanban' },
   mcp: { icon: 'lucide:plug', label: 'MCP' },
+  workshop: { icon: 'lucide:flask-conical', label: 'Workshop' },
+  'agent-builder': { icon: 'lucide:bot', label: 'Agent Builder' },
 }
 
 /** Primary view cycle: Chat → Editor → Terminal */
@@ -136,9 +138,7 @@ export default function EditorLayout() {
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
   const mobileViewTabs = useMemo(() => {
     // On mobile, curate tabs to useful views + always include settings
-    const mobile = visibleViews.filter(
-      (v) => !['preview', 'diff', 'skills', 'prompts'].includes(v),
-    )
+    const mobile = visibleViews.filter((v) => !['preview', 'diff', 'skills', 'prompts'].includes(v))
     if (!mobile.includes('terminal')) mobile.push('terminal')
     return mobile.slice(0, 5)
   }, [visibleViews])

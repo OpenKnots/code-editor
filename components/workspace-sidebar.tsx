@@ -214,6 +214,22 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
             <Icon icon="lucide:kanban" width={24} height={24} />
           </button>
 
+          <button
+            onClick={() => setView('workshop')}
+            className={`activity-bar-btn ${activeView === 'workshop' ? 'activity-bar-btn--active' : ''}`}
+            title="Agent Workshop"
+          >
+            <Icon icon="lucide:flask-conical" width={24} height={24} />
+          </button>
+
+          <button
+            onClick={() => setView('agent-builder')}
+            className={`activity-bar-btn ${activeView === 'agent-builder' ? 'activity-bar-btn--active' : ''}`}
+            title="Agent Builder"
+          >
+            <Icon icon="lucide:bot" width={24} height={24} />
+          </button>
+
           {/* Divider */}
           <div className="flex-1" />
           <div className="activity-bar-divider" />
@@ -283,15 +299,39 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
 
             {/* View Navigation */}
             <div className="mt-2 flex flex-col gap-0.5">
-              {([
-                { id: 'chat' as const, icon: 'lucide:message-circle', label: 'Chat', shortcut: '⌘1' },
-                { id: 'editor' as const, icon: 'lucide:code', label: 'Editor', shortcut: '⌘2' },
-                { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
-                { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git', shortcut: '⌘4' },
-                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘5' },
-                { id: 'prompts' as const, icon: 'lucide:book-open', label: 'Prompts', shortcut: '⌘6' },
-                { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
-              ] as const).map((item) => (
+              {(
+                [
+                  {
+                    id: 'chat' as const,
+                    icon: 'lucide:message-circle',
+                    label: 'Chat',
+                    shortcut: '⌘1',
+                  },
+                  { id: 'editor' as const, icon: 'lucide:code', label: 'Editor', shortcut: '⌘2' },
+                  { id: 'preview' as const, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
+                  { id: 'git' as const, icon: 'lucide:git-branch', label: 'Git', shortcut: '⌘4' },
+                  { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘5' },
+                  {
+                    id: 'prompts' as const,
+                    icon: 'lucide:book-open',
+                    label: 'Prompts',
+                    shortcut: '⌘6',
+                  },
+                  { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
+                  {
+                    id: 'workshop' as const,
+                    icon: 'lucide:flask-conical',
+                    label: 'Workshop',
+                    shortcut: '',
+                  },
+                  {
+                    id: 'agent-builder' as const,
+                    icon: 'lucide:bot',
+                    label: 'Agent Builder',
+                    shortcut: '',
+                  },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setView(item.id)}

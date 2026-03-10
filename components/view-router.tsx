@@ -44,6 +44,14 @@ const SplitPreviewChat = dynamic(
   () => import('@/components/split-preview-chat').then((m) => m.SplitPreviewChat),
   { ssr: false },
 )
+const WorkshopView = dynamic(
+  () => import('@/components/views/workshop-view').then((m) => m.WorkshopView),
+  { ssr: false },
+)
+const AgentBuilderView = dynamic(
+  () => import('@/components/views/agent-builder-view').then((m) => m.AgentBuilderView),
+  { ssr: false },
+)
 
 const VIEW_ICONS: Record<string, { label: string }> = {
   chat: { label: 'Chat' },
@@ -55,6 +63,8 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   prompts: { label: 'Prompts' },
   settings: { label: 'Settings' },
   terminal: { label: 'Terminal' },
+  workshop: { label: 'Workshop' },
+  'agent-builder': { label: 'Agent Builder' },
 }
 
 const viewVariants = {
@@ -118,10 +128,7 @@ export function ViewRouter() {
             fallbackLabel={`${VIEW_ICONS[activeView]?.label ?? activeView} failed to render`}
           >
             {showSplitView ? (
-              <SplitPreviewChat
-                previewUrl={previewUrl}
-                onClose={() => setPreviewDocked(false)}
-              />
+              <SplitPreviewChat previewUrl={previewUrl} onClose={() => setPreviewDocked(false)} />
             ) : (
               <>
                 {activeView === 'chat' && <AgentPanel />}
@@ -131,6 +138,8 @@ export function ViewRouter() {
                 {activeView === 'kanban' && <KanbanView />}
                 {activeView === 'skills' && <SkillsView />}
                 {activeView === 'prompts' && <PromptLibraryView />}
+                {activeView === 'workshop' && <WorkshopView />}
+                {activeView === 'agent-builder' && <AgentBuilderView />}
                 {activeView === 'settings' && <SettingsPanel onBack={() => setView('chat')} />}
                 {activeView === 'terminal' && (
                   <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">

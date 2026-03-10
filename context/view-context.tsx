@@ -23,6 +23,8 @@ export type ViewId =
   | 'mcp'
   | 'settings'
   | 'terminal'
+  | 'workshop'
+  | 'agent-builder'
 
 const VIEW_ORDER: ViewId[] = [
   'chat',
@@ -33,6 +35,8 @@ const VIEW_ORDER: ViewId[] = [
   'skills',
   'prompts',
   'mcp',
+  'workshop',
+  'agent-builder',
   'settings',
   'terminal',
 ]
