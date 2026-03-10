@@ -1331,7 +1331,7 @@ export function KanbanView() {
 
       {/* Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 px-6 py-6">
-        <div className="flex gap-4 h-full min-w-max">
+        <div className="flex gap-4 h-full w-full">
           {activeBoard.columns.map((column) => {
             const cards = getColumnCards(column.id)
             const isCollapsed = column.collapsed
@@ -1340,7 +1340,7 @@ export function KanbanView() {
             return (
               <div
                 key={column.id}
-                className="flex flex-col w-80 shrink-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] transition overflow-hidden"
+                className="flex flex-col flex-1 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] transition overflow-hidden"
                 style={{
                   minHeight: isCollapsed ? 'auto' : '500px',
                   boxShadow: isDraggedOver ? '0 0 0 2px var(--brand)' : undefined,
