@@ -526,7 +526,14 @@ export function makeConnectRequest(
       role: "operator",
       scopes: ["operator.read", "operator.write", "operator.admin"],
       caps: [],
-      auth: { password, ...(storedToken ? { token: storedToken } : {}) },
+      auth: {
+        password,
+        // Gateway auth.mode can be token or password. The gateway checks
+        // auth.token when mode is token and auth.password when mode is
+        // password, so send the credential as both to cover either mode.
+        // A stored device token (from prior pairing) takes precedence.
+        token: storedToken || password || undefined,
+      },
       ...(device ? { device } : {}),
     },
   };

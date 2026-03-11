@@ -47,15 +47,19 @@ describe('makeRequest', () => {
 })
 
 describe('makeConnectRequest', () => {
-  it('creates a connect request with password', () => {
+  it('creates a connect request with password and token', () => {
     const req = makeConnectRequest('secret123')
     expect(req.method).toBe('connect')
-    expect((req.params as Record<string, unknown>).auth).toEqual({ password: 'secret123' })
+    const auth = (req.params as Record<string, unknown>).auth as Record<string, unknown>
+    expect(auth.password).toBe('secret123')
+    // Token is also sent so gateway auth.mode "token" works
+    expect(auth.token).toBe('secret123')
   })
 
-  it('includes stored token when provided', () => {
+  it('prefers stored device token over password for token field', () => {
     const req = makeConnectRequest('pass', undefined, 'saved-token')
     const auth = (req.params as Record<string, unknown>).auth as Record<string, unknown>
+    expect(auth.password).toBe('pass')
     expect(auth.token).toBe('saved-token')
   })
 })
@@ -86,9 +90,7 @@ describe('computeUsageStats', () => {
 
   it('handles snake_case field names', () => {
     const stats = computeUsageStats({
-      records: [
-        { usage: { input_tokens: 500, output_tokens: 250 } },
-      ],
+      records: [{ usage: { input_tokens: 500, output_tokens: 250 } }],
     })
     expect(stats.totalInputTokens).toBe(500)
     expect(stats.totalOutputTokens).toBe(250)
@@ -106,9 +108,7 @@ describe('computeUsageStats', () => {
     const stats = computeUsageStats({
       records: [],
       aggregates: {
-        daily: [
-          { date: '2025-01-01', tokens: 1000, cost: 0.05 },
-        ],
+        daily: [{ date: '2025-01-01', tokens: 1000, cost: 0.05 }],
       },
     })
     expect(stats.daily).toHaveLength(1)
@@ -190,6 +190,8 @@ describe('formatSchedule', () => {
 
   it('formats cron schedule', () => {
     expect(formatSchedule({ kind: 'cron', expr: '0 * * * *' })).toBe('0 * * * *')
-    expect(formatSchedule({ kind: 'cron', expr: '0 9 * * 1', tz: 'US/Eastern' })).toBe('0 9 * * 1 (US/Eastern)')
+    expect(formatSchedule({ kind: 'cron', expr: '0 9 * * 1', tz: 'US/Eastern' })).toBe(
+      '0 9 * * 1 (US/Eastern)',
+    )
   })
 })

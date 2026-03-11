@@ -122,31 +122,49 @@ pub struct GatewayConfig {
 
 #[tauri::command]
 pub fn engine_gateway_config() -> Result<GatewayConfig, String> {
-    // Read ~/.openclaw/openclaw.json for gateway port and password
+    // Read ~/.openclaw/openclaw.json for gateway port and auth token.
+    // OpenClaw nests these under a "gateway" key:
+    //   { "gateway": { "port": 18789, "auth": { "mode": "token", "token": "..." } } }
+    // Fall back to top-level keys for flat configs or legacy layouts.
     let home = std::env::var("HOME").unwrap_or_default();
     let config_path = std::path::PathBuf::from(&home).join(".openclaw/openclaw.json");
 
     if !config_path.exists() {
-        return Err("Config not found".to_string());
+        return Err("Config not found: ~/.openclaw/openclaw.json".to_string());
     }
 
     let content = std::fs::read_to_string(&config_path)
         .map_err(|e| format!("Failed to read config: {}", e))?;
 
-    let config: serde_json::Value =
+    let root: serde_json::Value =
         serde_json::from_str(&content).map_err(|e| format!("Failed to parse config: {}", e))?;
 
-    // Extract port (default 18789) and password
-    let port = config.get("port").and_then(|v| v.as_u64()).unwrap_or(18789);
+    // Prefer gateway.* sub-object; fall back to top-level for flat configs
+    let gateway = root.get("gateway").unwrap_or(&root);
 
-    let password = config
+    let port = gateway
+        .get("port")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(18789);
+
+    // OpenClaw uses "token" (with auth.mode: "token") as the primary auth method.
+    // Also check "password" for legacy/alternative auth modes.
+    let token_from_config = gateway
         .get("auth")
-        .and_then(|a| a.get("password"))
-        .and_then(|p| p.as_str())
+        .and_then(|a| a.get("token").or_else(|| a.get("password")))
+        .and_then(|v| v.as_str())
         .unwrap_or("");
+
+    // Also check OPENCLAW_GATEWAY_TOKEN env var as final fallback,
+    // matching how the gateway itself resolves the token at runtime.
+    let password = if token_from_config.is_empty() {
+        std::env::var("OPENCLAW_GATEWAY_TOKEN").unwrap_or_default()
+    } else {
+        token_from_config.to_string()
+    };
 
     Ok(GatewayConfig {
         url: format!("ws://127.0.0.1:{}", port),
-        password: password.to_string(),
+        password,
     })
 }
