@@ -162,29 +162,43 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                 const signedAt = Date.now()
                 const existingToken = loadDeviceToken(identity.deviceId, role)
 
-                const authPayload = buildDeviceAuthPayload({
-                  deviceId: identity.deviceId,
-                  clientId: 'gateway-client',
-                  clientMode: 'ui',
-                  role,
-                  scopes,
-                  signedAtMs: signedAt,
-                  token: existingToken,
-                  nonce,
-                })
-                const signature = await signPayload(identity.privateKey, authPayload)
+                // When we have a stored device token from a prior successful pairing,
+                // send full device identity with cryptographic signature.
+                // On first connect (no stored token), skip device auth entirely and
+                // rely on token/password-only auth. This avoids the signature mismatch
+                // where the client signs with an empty token field but the server
+                // reconstructs the payload using auth.token (the gateway token).
+                // After a successful token-only connect, the gateway issues a
+                // deviceToken that gets stored for subsequent connections.
+                let connectReq: ReturnType<typeof makeConnectRequest>
+                if (existingToken) {
+                  const authPayload = buildDeviceAuthPayload({
+                    deviceId: identity.deviceId,
+                    clientId: 'gateway-client',
+                    clientMode: 'ui',
+                    role,
+                    scopes,
+                    signedAtMs: signedAt,
+                    token: existingToken,
+                    nonce,
+                  })
+                  const signature = await signPayload(identity.privateKey, authPayload)
 
-                const connectReq = makeConnectRequest(
-                  password,
-                  {
-                    id: identity.deviceId,
-                    publicKey: identity.publicKeyBase64Url,
-                    signature,
-                    signedAt,
-                    ...(nonce ? { nonce } : {}),
-                  },
-                  existingToken ?? undefined,
-                )
+                  connectReq = makeConnectRequest(
+                    password,
+                    {
+                      id: identity.deviceId,
+                      publicKey: identity.publicKeyBase64Url,
+                      signature,
+                      signedAt,
+                      ...(nonce ? { nonce } : {}),
+                    },
+                    existingToken,
+                  )
+                } else {
+                  // First connection: token-only, no device block
+                  connectReq = makeConnectRequest(password)
+                }
 
                 ws.send(JSON.stringify(connectReq))
 
