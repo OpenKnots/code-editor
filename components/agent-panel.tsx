@@ -463,12 +463,16 @@ function AgentConnectPrompt() {
                     type="text"
                     value={sshForm.identityPath}
                     onChange={(e) => updateSshForm('identityPath', e.target.value)}
-                    placeholder="Identity file (optional)"
+                    placeholder="Identity file"
                     className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
                   />
+                  <p className="px-1 text-[10px] text-[var(--text-disabled)]">
+                    Required unless this host already works through your local SSH agent or
+                    `~/.ssh/config`.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
