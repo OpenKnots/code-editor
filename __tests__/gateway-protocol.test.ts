@@ -50,7 +50,10 @@ describe('makeConnectRequest', () => {
   it('creates a connect request with password', () => {
     const req = makeConnectRequest('secret123')
     expect(req.method).toBe('connect')
-    expect((req.params as Record<string, unknown>).auth).toEqual({ password: 'secret123' })
+    expect((req.params as Record<string, unknown>).auth).toEqual({
+      password: 'secret123',
+      token: 'secret123',
+    })
   })
 
   it('includes stored token when provided', () => {

@@ -62,8 +62,7 @@ fn create_editor_window(app: &tauri::AppHandle) -> tauri::Result<()> {
         // is the fallback. Either prevents raw transparency from tauri.conf.json.
         if window_vibrancy::apply_mica(&window, None).is_err() {
             log::warn!("Mica not available, falling back to Acrylic");
-            window_vibrancy::apply_acrylic(&window, Some((18, 18, 18, 200)))
-                .ok();
+            window_vibrancy::apply_acrylic(&window, Some((18, 18, 18, 200))).ok();
         }
     }
 
@@ -88,7 +87,8 @@ pub fn run() {
     let builder = builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_window_state::Builder::new().build())
-        .manage(TerminalState::new());
+        .manage(TerminalState::new())
+        .manage(engine::SshTunnelManager::default());
 
     let builder = builder.setup(|app| {
         #[cfg(not(target_os = "ios"))]
@@ -131,10 +131,7 @@ pub fn run() {
                                 setExtendedLayoutIncludesOpaqueBars: true
                             ];
                             // preferredStatusBarStyle = .lightContent (1)
-                            let _: () = objc2::msg_send![
-                                vc_ptr,
-                                setNeedsStatusBarAppearanceUpdate
-                            ];
+                            let _: () = objc2::msg_send![vc_ptr, setNeedsStatusBarAppearanceUpdate];
                         }
                     }
                 });
@@ -158,6 +155,9 @@ pub fn run() {
         engine::engine_stop,
         engine::engine_restart,
         engine::engine_gateway_config,
+        engine::ssh_tunnel_start,
+        engine::ssh_tunnel_stop,
+        engine::ssh_tunnel_status,
         local_fs::local_read_tree,
         local_fs::local_read_file,
         local_fs::local_read_file_base64,
@@ -208,7 +208,11 @@ fn setup_desktop_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>
     use tauri::{Emitter, Manager};
 
     let app_menu = SubmenuBuilder::new(app, "Knot Code")
-        .item(&PredefinedMenuItem::about(app, Some("About Knot Code"), None)?)
+        .item(&PredefinedMenuItem::about(
+            app,
+            Some("About Knot Code"),
+            None,
+        )?)
         .separator()
         .item(&PredefinedMenuItem::services(app, None)?)
         .separator()
@@ -320,9 +324,7 @@ fn setup_desktop_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>
     let docs_item = MenuItemBuilder::new("Documentation")
         .id("help_docs")
         .build(app)?;
-    let help_menu = SubmenuBuilder::new(app, "Help")
-        .item(&docs_item)
-        .build()?;
+    let help_menu = SubmenuBuilder::new(app, "Help").item(&docs_item).build()?;
 
     let menu = MenuBuilder::new(app)
         .item(&app_menu)
@@ -366,8 +368,13 @@ fn setup_desktop_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>
     {
         use window_vibrancy::apply_vibrancy;
         let window = app.get_webview_window("main").unwrap();
-        apply_vibrancy(&window, window_vibrancy::NSVisualEffectMaterial::Sidebar, None, None)
-            .ok();
+        apply_vibrancy(
+            &window,
+            window_vibrancy::NSVisualEffectMaterial::Sidebar,
+            None,
+            None,
+        )
+        .ok();
     }
 
     #[cfg(target_os = "windows")]
@@ -375,8 +382,7 @@ fn setup_desktop_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>
         let window = app.get_webview_window("main").unwrap();
         if window_vibrancy::apply_mica(&window, None).is_err() {
             log::warn!("Mica not available, falling back to Acrylic");
-            window_vibrancy::apply_acrylic(&window, Some((18, 18, 18, 200)))
-                .ok();
+            window_vibrancy::apply_acrylic(&window, Some((18, 18, 18, 200))).ok();
         }
     }
 

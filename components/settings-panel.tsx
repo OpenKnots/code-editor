@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useCallback } from 'react'
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { MobileConnect } from './mobile-connect'
@@ -9,6 +9,7 @@ import { CaffeinateToggle } from './caffeinate-toggle'
 import { KnotLogo } from './knot-logo'
 import { useGateway } from '@/context/gateway-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
+import { isTauri, tauriInvoke } from '@/lib/tauri'
 import {
   fetchAuthenticatedUser,
   startDeviceFlow,
@@ -66,12 +67,28 @@ function groupThemes() {
   }))
 }
 
+type SshTunnelConfig = {
+  destination: string
+  sshPort?: number
+  localPort?: number
+  remotePort?: number
+  identityPath?: string | null
+}
+
+type SshTunnelStatus = {
+  active: boolean
+  pid: number | null
+  localUrl: string | null
+  config: SshTunnelConfig | null
+}
+
 /**
  * Settings Panel — single scrollable view for the left sidepanel.
  * All sections inline, Connect at the bottom.
  */
 export function SettingsPanel({ onBack }: { onBack: () => void }) {
-  const { status, gatewayUrl } = useGateway()
+  const { status, gatewayUrl, disconnect } = useGateway()
+  const isDesktopTauri = typeof window !== 'undefined' && isTauri()
   const {
     themeId,
     setThemeId,
@@ -98,6 +115,9 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [repoSearch, setRepoSearch] = useState('')
   const [showGatewayUrl, setShowGatewayUrl] = useState(false)
+  const [sshTunnelStatus, setSshTunnelStatus] = useState<SshTunnelStatus | null>(null)
+  const [sshTunnelBusy, setSshTunnelBusy] = useState(false)
+  const [sshTunnelError, setSshTunnelError] = useState<string | null>(null)
   const [approvalTier, setApprovalTierState] = useState<ApprovalTier>(() => {
     try {
       return getAgentConfig()?.approvalTier ?? 'ask-all'
@@ -118,6 +138,41 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
       saveAgentConfig({ ...cfg, approvalTier: tier })
     } catch {}
   }, [])
+
+  const refreshSshTunnelStatus = useCallback(async () => {
+    if (!isDesktopTauri) return
+    try {
+      const nextStatus = await tauriInvoke<SshTunnelStatus>('ssh_tunnel_status', {})
+      setSshTunnelStatus(nextStatus)
+      setSshTunnelError(null)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load SSH tunnel status.'
+      setSshTunnelError(message)
+    }
+  }, [isDesktopTauri])
+
+  useEffect(() => {
+    refreshSshTunnelStatus()
+  }, [refreshSshTunnelStatus, status])
+
+  const handleStopSshTunnel = useCallback(async () => {
+    if (!isDesktopTauri) return
+
+    setSshTunnelBusy(true)
+    setSshTunnelError(null)
+    try {
+      if (status === 'connected' || status === 'connecting' || status === 'authenticating') {
+        disconnect()
+      }
+      const nextStatus = await tauriInvoke<SshTunnelStatus>('ssh_tunnel_stop', {})
+      setSshTunnelStatus(nextStatus)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to stop SSH tunnel.'
+      setSshTunnelError(message)
+    } finally {
+      setSshTunnelBusy(false)
+    }
+  }, [disconnect, isDesktopTauri, status])
 
   const ghTokenRef = useRef(ghToken)
   if (ghTokenRef.current !== ghToken) {
@@ -735,6 +790,55 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
                 >
                   {showGatewayUrl ? gatewayUrl : '••••••••'}
                 </button>
+              </div>
+            )}
+
+            {(status === 'connected' || status === 'connecting' || status === 'authenticating') && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[var(--text-secondary)]">Session</span>
+                <button
+                  onClick={disconnect}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--danger)_28%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-3 py-1.5 text-[11px] font-medium text-[var(--danger)] transition-colors hover:border-[color-mix(in_srgb,var(--danger)_44%,transparent)] hover:bg-[color-mix(in_srgb,var(--danger)_14%,transparent)]"
+                >
+                  <Icon icon="lucide:plug-zap" width={12} />
+                  Disconnect gateway
+                </button>
+              </div>
+            )}
+
+            {sshTunnelStatus?.active && (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="pt-0.5 text-[var(--text-secondary)]">SSH tunnel</span>
+                  <div className="max-w-[220px] text-right">
+                    <div className="truncate rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-primary)]">
+                      {sshTunnelStatus.localUrl ?? 'Forwarded localhost'}
+                    </div>
+                    {sshTunnelStatus.config?.destination && (
+                      <p className="mt-1 truncate text-[10px] text-[var(--text-disabled)]">
+                        {sshTunnelStatus.config.destination}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[var(--text-secondary)]">Port forward</span>
+                  <button
+                    onClick={handleStopSshTunnel}
+                    disabled={sshTunnelBusy}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--warning)_28%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-1.5 text-[11px] font-medium text-[var(--warning)] transition-colors hover:border-[color-mix(in_srgb,var(--warning)_44%,transparent)] hover:bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Icon icon="lucide:shield-off" width={12} />
+                    {sshTunnelBusy ? 'Stopping tunnel...' : 'Stop tunnel'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {sshTunnelError && (
+              <div className="rounded-lg border border-[color-mix(in_srgb,var(--warning)_22%,transparent)] bg-[color-mix(in_srgb,var(--warning)_8%,transparent)] px-3 py-2 text-[11px] text-[var(--warning)]">
+                {sshTunnelError}
               </div>
             )}
           </div>

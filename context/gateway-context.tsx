@@ -161,6 +161,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                 const scopes = ['operator.read', 'operator.write', 'operator.admin']
                 const signedAt = Date.now()
                 const existingToken = loadDeviceToken(identity.deviceId, role)
+                const authTokenForSignature = existingToken ?? (password.trim() || null)
 
                 const authPayload = buildDeviceAuthPayload({
                   deviceId: identity.deviceId,
@@ -169,7 +170,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                   role,
                   scopes,
                   signedAtMs: signedAt,
-                  token: existingToken,
+                  token: authTokenForSignature,
                   nonce,
                 })
                 const signature = await signPayload(identity.privateKey, authPayload)

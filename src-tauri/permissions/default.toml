@@ -46,6 +46,21 @@ description = "Allows reading the gateway configuration"
 commands.allow = ["engine_gateway_config"]
 
 [[permission]]
+identifier = "allow-ssh-tunnel-start"
+description = "Allows starting an SSH tunnel for remote gateway forwarding"
+commands.allow = ["ssh_tunnel_start"]
+
+[[permission]]
+identifier = "allow-ssh-tunnel-stop"
+description = "Allows stopping an active SSH tunnel"
+commands.allow = ["ssh_tunnel_stop"]
+
+[[permission]]
+identifier = "allow-ssh-tunnel-status"
+description = "Allows reading SSH tunnel status"
+commands.allow = ["ssh_tunnel_status"]
+
+[[permission]]
 identifier = "allow-local-read-tree"
 description = "Allows reading the file tree of a local directory"
 commands.allow = ["local_read_tree"]

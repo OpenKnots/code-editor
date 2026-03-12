@@ -509,6 +509,7 @@ export function makeConnectRequest(
   device?: DeviceBlock,
   storedToken?: string
 ): GatewayRequest {
+  const authSecret = password.trim();
   return {
     type: "req",
     id: makeId(),
@@ -526,7 +527,10 @@ export function makeConnectRequest(
       role: "operator",
       scopes: ["operator.read", "operator.write", "operator.admin"],
       caps: [],
-      auth: { password, ...(storedToken ? { token: storedToken } : {}) },
+      auth: {
+        ...(authSecret ? { password: authSecret, token: authSecret } : {}),
+        ...(storedToken ? { token: storedToken } : {}),
+      },
       ...(device ? { device } : {}),
     },
   };

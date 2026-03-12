@@ -26,7 +26,7 @@ import { DiffViewer } from '@/components/diff-viewer'
 import { parseEditProposals, type EditProposal } from '@/lib/edit-parser'
 import { diffEngine } from '@/lib/streaming-diff'
 import { handleChatEvent, type ChatMessage, type StreamState } from '@/lib/chat-stream'
-import { isTauri } from '@/lib/tauri'
+import { isTauri, tauriInvoke } from '@/lib/tauri'
 import {
   buildEditorPatchSnippet,
   generateCommitMessageWithGateway,
@@ -65,18 +65,269 @@ import {
 
 // ChatMessage type imported from @/lib/chat-stream
 
+type SshTunnelConfig = {
+  destination: string
+  sshPort?: number
+  localPort?: number
+  remotePort?: number
+  identityPath?: string | null
+}
+
+type SshTunnelStatus = {
+  active: boolean
+  pid: number | null
+  localUrl: string | null
+  config: SshTunnelConfig | null
+}
+
+type SshTunnelForm = {
+  destination: string
+  sshPort: string
+  localPort: string
+  remotePort: string
+  identityPath: string
+}
+
+type TunnelHealthState = {
+  state: 'idle' | 'checking' | 'ok' | 'error'
+  message: string
+}
+
+const SSH_TUNNEL_STORAGE_KEY = 'code-editor:ssh-tunnel-config'
+const DEFAULT_SSH_TUNNEL_FORM: SshTunnelForm = {
+  destination: '',
+  sshPort: '22',
+  localPort: '28789',
+  remotePort: '18789',
+  identityPath: '',
+}
+
+function loadSshTunnelForm(): SshTunnelForm {
+  try {
+    const raw = localStorage.getItem(SSH_TUNNEL_STORAGE_KEY)
+    if (!raw) return DEFAULT_SSH_TUNNEL_FORM
+    const parsed = JSON.parse(raw) as Partial<SshTunnelForm>
+    return {
+      destination: parsed.destination ?? DEFAULT_SSH_TUNNEL_FORM.destination,
+      sshPort: parsed.sshPort ?? DEFAULT_SSH_TUNNEL_FORM.sshPort,
+      localPort: parsed.localPort ?? DEFAULT_SSH_TUNNEL_FORM.localPort,
+      remotePort: parsed.remotePort ?? DEFAULT_SSH_TUNNEL_FORM.remotePort,
+      identityPath: parsed.identityPath ?? DEFAULT_SSH_TUNNEL_FORM.identityPath,
+    }
+  } catch {
+    return DEFAULT_SSH_TUNNEL_FORM
+  }
+}
+
+function getUnknownErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) return message
+  }
+  return fallback
+}
+
+function getHealthUrlFromWs(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol === 'ws:') parsed.protocol = 'http:'
+    if (parsed.protocol === 'wss:') parsed.protocol = 'https:'
+    parsed.pathname = '/health'
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
 function AgentConnectPrompt() {
   const { status, error, connect } = useGateway()
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth <= 768
+  const isDesktopTauri = typeof window !== 'undefined' && isTauri() && !isMobileDevice
   const [url, setUrl] = useState(isMobileDevice ? '' : 'ws://localhost:18789')
   const [password, setPassword] = useState('')
+  const [sshMode, setSshMode] = useState(false)
+  const [sshForm, setSshForm] = useState<SshTunnelForm>(() =>
+    typeof window === 'undefined' ? DEFAULT_SSH_TUNNEL_FORM : loadSshTunnelForm(),
+  )
+  const [sshStatus, setSshStatus] = useState<SshTunnelStatus | null>(null)
+  const [sshBusy, setSshBusy] = useState(false)
+  const [sshError, setSshError] = useState<string | null>(null)
+  const [tunnelHealth, setTunnelHealth] = useState<TunnelHealthState>({
+    state: 'idle',
+    message: '',
+  })
 
   const isConnecting = status === 'connecting' || status === 'authenticating'
+  const gatewayError = error?.toLowerCase() ?? ''
+  const pairingRequired = gatewayError.includes('pairing required')
+  const gatewayTokenMissing =
+    gatewayError.includes('gateway token missing') || gatewayError.includes('unauthorized')
 
   const handleConnect = () => {
     if (!url.trim()) return
     connect(url.trim(), password)
   }
+
+  const refreshSshStatus = useCallback(async () => {
+    if (!isDesktopTauri) return null
+    try {
+      const nextStatus = await tauriInvoke<SshTunnelStatus>('ssh_tunnel_status', {})
+      if (!nextStatus) return null
+      setSshStatus(nextStatus)
+      if (nextStatus.active && nextStatus.localUrl) {
+        setSshMode(true)
+        setUrl(nextStatus.localUrl)
+        setSshForm((prev) => ({
+          ...prev,
+          localPort: nextStatus.config?.localPort
+            ? String(nextStatus.config.localPort)
+            : prev.localPort,
+        }))
+      }
+      return nextStatus
+    } catch {
+      return null
+    }
+  }, [isDesktopTauri])
+
+  useEffect(() => {
+    refreshSshStatus()
+  }, [refreshSshStatus])
+
+  useEffect(() => {
+    if (!isDesktopTauri) return
+    try {
+      localStorage.setItem(SSH_TUNNEL_STORAGE_KEY, JSON.stringify(sshForm))
+    } catch {}
+  }, [isDesktopTauri, sshForm])
+
+  const updateSshForm = useCallback((key: keyof SshTunnelForm, value: string) => {
+    setSshForm((prev) => ({ ...prev, [key]: value }))
+  }, [])
+
+  const handleStartSshTunnel = useCallback(async () => {
+    if (!isDesktopTauri) return
+
+    const destination = sshForm.destination.trim()
+    const sshPort = Number.parseInt(sshForm.sshPort, 10)
+    const localPort = Number.parseInt(sshForm.localPort, 10)
+    const remotePort = Number.parseInt(sshForm.remotePort, 10)
+
+    if (!destination) {
+      setSshError('SSH destination is required.')
+      return
+    }
+    if ([sshPort, localPort, remotePort].some((value) => Number.isNaN(value) || value <= 0)) {
+      setSshError('SSH, local, and remote ports must be positive numbers.')
+      return
+    }
+
+    setSshBusy(true)
+    setSshError(null)
+    try {
+      const nextStatus = await tauriInvoke<SshTunnelStatus>('ssh_tunnel_start', {
+        config: {
+          destination,
+          sshPort,
+          localPort,
+          remotePort,
+          identityPath: sshForm.identityPath.trim() || null,
+        },
+      })
+      if (!nextStatus?.localUrl) {
+        throw new Error('SSH tunnel started without a forwarded local URL.')
+      }
+      setSshStatus(nextStatus)
+      setSshMode(true)
+      setUrl(nextStatus.localUrl)
+      setSshForm((prev) => ({
+        ...prev,
+        localPort: nextStatus.config?.localPort
+          ? String(nextStatus.config.localPort)
+          : prev.localPort,
+      }))
+    } catch (err) {
+      setSshError(getUnknownErrorMessage(err, 'Failed to start SSH tunnel.'))
+    } finally {
+      setSshBusy(false)
+    }
+  }, [isDesktopTauri, sshForm])
+
+  const handleStopSshTunnel = useCallback(async () => {
+    if (!isDesktopTauri) return
+    setSshBusy(true)
+    setSshError(null)
+    try {
+      const nextStatus = await tauriInvoke<SshTunnelStatus>('ssh_tunnel_stop', {})
+      setSshStatus(nextStatus)
+      if (url === sshStatus?.localUrl) {
+        setUrl('ws://localhost:18789')
+      }
+      setTunnelHealth({ state: 'idle', message: '' })
+    } catch (err) {
+      setSshError(getUnknownErrorMessage(err, 'Failed to stop SSH tunnel.'))
+    } finally {
+      setSshBusy(false)
+    }
+  }, [isDesktopTauri, sshStatus?.localUrl, url])
+
+  useEffect(() => {
+    if (!sshStatus?.active || !sshStatus.localUrl) {
+      setTunnelHealth({ state: 'idle', message: '' })
+      return
+    }
+
+    const healthUrl = getHealthUrlFromWs(sshStatus.localUrl)
+    if (!healthUrl) {
+      setTunnelHealth({
+        state: 'error',
+        message: 'Tunnel started, but the forwarded gateway URL could not be verified.',
+      })
+      return
+    }
+
+    const controller = new AbortController()
+    setTunnelHealth({
+      state: 'checking',
+      message: 'Checking the forwarded gateway health endpoint…',
+    })
+
+    fetch(healthUrl, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Health check returned ${response.status}`)
+        const payload = (await response.json().catch(() => null)) as {
+          ok?: boolean
+          status?: string
+        } | null
+        if (payload?.ok) {
+          setTunnelHealth({
+            state: 'ok',
+            message: 'Tunnel OK. Enter the gateway auth token and connect.',
+          })
+          return
+        }
+        setTunnelHealth({
+          state: 'ok',
+          message: 'Tunnel is forwarding traffic. Enter the gateway auth token and connect.',
+        })
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return
+        setTunnelHealth({
+          state: 'error',
+          message:
+            err instanceof Error
+              ? `Tunnel is up, but /health failed: ${err.message}`
+              : 'Tunnel is up, but the forwarded gateway did not respond to /health.',
+        })
+      })
+
+    return () => controller.abort()
+  }, [sshStatus?.active, sshStatus?.localUrl])
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center text-center px-6">
@@ -108,62 +359,239 @@ function AgentConnectPrompt() {
       ) : (
         <>
           <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">
-            Connect to Gateway
+            {sshMode ? 'Connect to Remote Gateway' : 'Connect to Gateway'}
           </h3>
           <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-6 max-w-[280px]">
-            {isMobileDevice
-              ? 'Enter your gateway address to start chatting.'
-              : 'Make sure OpenClaw is running on this machine.'}
+            {sshMode
+              ? 'Start the SSH tunnel first, then enter the OpenClaw gateway token for the remote host.'
+              : isMobileDevice
+                ? 'Enter your gateway address to start chatting.'
+                : 'Make sure OpenClaw is running on this machine.'}
           </p>
 
           <div className="w-full max-w-[340px] space-y-3">
-            {/* URL input */}
-            <div className="relative">
-              <Icon
-                icon="lucide:globe"
-                width={15}
-                height={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
-              />
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleConnect()
-                }}
-                placeholder={isMobileDevice ? 'wss://your-gateway.ts.net' : 'ws://localhost:18789'}
-                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-              />
+            {isDesktopTauri && (
+              <button
+                type="button"
+                onClick={() => setSshMode((prev) => !prev)}
+                className="w-full flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2.5 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Icon icon="lucide:waypoints" width={13} height={13} />
+                  Use SSH tunnel
+                </span>
+                <Icon
+                  icon={sshMode ? 'lucide:chevron-up' : 'lucide:chevron-down'}
+                  width={13}
+                  height={13}
+                />
+              </button>
+            )}
+
+            {isDesktopTauri && sshMode && (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-2.5 text-left">
+                <div className="grid grid-cols-3 gap-2 text-[10px]">
+                  {[
+                    { step: '1', title: 'Start tunnel', active: !sshStatus?.active },
+                    {
+                      step: '2',
+                      title: 'Enter token',
+                      active: sshStatus?.active && !pairingRequired,
+                    },
+                    { step: '3', title: 'Approve device', active: pairingRequired },
+                  ].map((item) => (
+                    <div
+                      key={item.step}
+                      className={`rounded-lg border px-2 py-1.5 ${
+                        item.active
+                          ? 'border-[color-mix(in_srgb,var(--brand)_35%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] text-[var(--text-primary)]'
+                          : 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)]'
+                      }`}
+                    >
+                      <p className="font-semibold">Step {item.step}</p>
+                      <p className="mt-0.5">{item.title}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-2">
+                  <div className="relative">
+                    <Icon
+                      icon="lucide:server"
+                      width={14}
+                      height={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+                    />
+                    <input
+                      type="text"
+                      value={sshForm.destination}
+                      onChange={(e) => updateSshForm('destination', e.target.value)}
+                      placeholder="SSH destination (user@host or alias)"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
+                      autoCapitalize="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={sshForm.sshPort}
+                      onChange={(e) => updateSshForm('sshPort', e.target.value)}
+                      placeholder="SSH port"
+                      className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={sshForm.localPort}
+                      onChange={(e) => updateSshForm('localPort', e.target.value)}
+                      placeholder="Local port"
+                      className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={sshForm.remotePort}
+                      onChange={(e) => updateSshForm('remotePort', e.target.value)}
+                      placeholder="Gateway port"
+                      className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={sshForm.identityPath}
+                    onChange={(e) => updateSshForm('identityPath', e.target.value)}
+                    placeholder="Identity file (optional)"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)]"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleStartSshTunnel}
+                    disabled={sshBusy}
+                    className="flex-1 py-2.5 rounded-lg text-[12px] font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: 'var(--brand)',
+                      color: 'var(--brand-contrast, #fff)',
+                    }}
+                  >
+                    {sshBusy ? 'Starting…' : 'Start tunnel'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStopSshTunnel}
+                    disabled={!sshStatus?.active || sshBusy}
+                    className="px-3 py-2.5 rounded-lg border border-[var(--border)] text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Stop
+                  </button>
+                </div>
+
+                {sshStatus?.active && sshStatus.localUrl && (
+                  <div className="rounded-lg bg-[var(--bg)] border border-[var(--border)] px-3 py-2 text-[11px] text-[var(--text-secondary)]">
+                    <p className="font-medium text-[var(--text-primary)]">Tunnel active</p>
+                    <p className="mt-0.5 font-mono break-all">{sshStatus.localUrl}</p>
+                    <div className="mt-1 flex items-start gap-2">
+                      <Icon
+                        icon={
+                          tunnelHealth.state === 'ok'
+                            ? 'lucide:badge-check'
+                            : tunnelHealth.state === 'error'
+                              ? 'lucide:triangle-alert'
+                              : 'lucide:loader-circle'
+                        }
+                        width={12}
+                        height={12}
+                        className={`mt-0.5 shrink-0 ${
+                          tunnelHealth.state === 'ok'
+                            ? 'text-[var(--color-additions,#22c55e)]'
+                            : tunnelHealth.state === 'error'
+                              ? 'text-[var(--warning,#eab308)]'
+                              : 'text-[var(--text-disabled)] animate-spin'
+                        }`}
+                      />
+                      <p className="text-[var(--text-disabled)]">
+                        {tunnelHealth.message ||
+                          'SSH auth uses your local SSH config and agent. Interactive password prompts are not supported in-app.'}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-[var(--text-disabled)]">
+                      SSH auth uses your local SSH config and agent. Interactive password prompts
+                      are not supported in-app.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-1 text-left">
+              <label className="block text-[11px] font-medium text-[var(--text-secondary)]">
+                {sshMode ? 'Forwarded gateway URL' : 'Gateway URL'}
+              </label>
+              <div className="relative">
+                <Icon
+                  icon="lucide:globe"
+                  width={15}
+                  height={15}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+                />
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleConnect()
+                  }}
+                  placeholder={
+                    isMobileDevice ? 'wss://your-gateway.ts.net' : 'ws://localhost:18789'
+                  }
+                  className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  readOnly={sshMode && Boolean(sshStatus?.active)}
+                />
+              </div>
             </div>
 
-            {/* Password input */}
-            <div className="relative">
-              <Icon
-                icon="lucide:lock"
-                width={15}
-                height={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleConnect()
-                }}
-                placeholder="Password (optional)"
-                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
-              />
+            <div className="space-y-1 text-left">
+              <label className="block text-[11px] font-medium text-[var(--text-secondary)]">
+                Gateway auth token
+              </label>
+              <div className="relative">
+                <Icon
+                  icon="lucide:lock"
+                  width={15}
+                  height={15}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleConnect()
+                  }}
+                  placeholder="OpenClaw gateway token or password"
+                  className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
+                />
+              </div>
+              <p className="text-[10px] text-[var(--text-disabled)]">
+                This is the OpenClaw gateway secret from the remote host, not your SSH password.
+              </p>
             </div>
 
             {/* Connect button */}
             <button
               onClick={handleConnect}
-              disabled={!url.trim()}
+              disabled={!url.trim() || (sshMode && !sshStatus?.active)}
               className="w-full py-3.5 rounded-xl text-[14px] font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: url.trim() ? 'var(--brand)' : 'var(--bg-subtle)',
@@ -174,7 +602,7 @@ function AgentConnectPrompt() {
             </button>
 
             {/* Desktop retry */}
-            {!isMobileDevice && (
+            {!isMobileDevice && !sshMode && (
               <button
                 onClick={() => connect('ws://localhost:18789', '')}
                 className="w-full flex items-center justify-center gap-2 py-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
@@ -192,6 +620,39 @@ function AgentConnectPrompt() {
               <span>{error}</span>
             </div>
           )}
+          {sshError && (
+            <div className="flex items-start gap-2 mt-3 py-2.5 px-3.5 rounded-lg bg-[color-mix(in_srgb,var(--warning,#eab308)_10%,transparent)] border border-[color-mix(in_srgb,var(--warning,#eab308)_20%,transparent)] text-[12px] text-[var(--warning,#eab308)] max-w-[340px] text-left">
+              <Icon
+                icon="lucide:triangle-alert"
+                width={14}
+                height={14}
+                className="shrink-0 mt-0.5"
+              />
+              <span>{sshError}</span>
+            </div>
+          )}
+          {pairingRequired && (
+            <div className="mt-3 w-full max-w-[340px] rounded-lg border border-[color-mix(in_srgb,var(--warning,#eab308)_25%,transparent)] bg-[color-mix(in_srgb,var(--warning,#eab308)_10%,transparent)] px-3.5 py-3 text-left text-[12px] text-[var(--text-secondary)]">
+              <p className="font-medium text-[var(--text-primary)]">Device approval required</p>
+              <p className="mt-1">
+                On the remote host, approve this Mac once, then click Connect again:
+              </p>
+              <code className="mt-2 block rounded bg-[var(--bg)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
+                openclaw devices list
+              </code>
+              <code className="mt-2 block rounded bg-[var(--bg)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
+                openclaw devices approve &lt;request-id&gt;
+              </code>
+            </div>
+          )}
+          {gatewayTokenMissing && !pairingRequired && (
+            <div className="mt-3 w-full max-w-[340px] rounded-lg border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_7%,transparent)] px-3.5 py-3 text-left text-[12px] text-[var(--text-secondary)]">
+              <p className="font-medium text-[var(--text-primary)]">Gateway token required</p>
+              <p className="mt-1">
+                Enter the OpenClaw gateway secret from the remote host config, then connect again.
+              </p>
+            </div>
+          )}
 
           {/* Tips */}
           {isMobileDevice && (
@@ -205,13 +666,21 @@ function AgentConnectPrompt() {
             </div>
           )}
           {!isMobileDevice && (
-            <p className="mt-4 text-[11px] text-[var(--text-disabled)]">
-              Run{' '}
-              <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
-                openclaw gateway start
-              </code>{' '}
-              to start
-            </p>
+            <div className="mt-4 text-[11px] text-[var(--text-disabled)] space-y-1">
+              <p>
+                Run{' '}
+                <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
+                  openclaw gateway start
+                </code>{' '}
+                for local use.
+              </p>
+              {isDesktopTauri && (
+                <p>
+                  For remote hosts, start an SSH tunnel here and connect through the forwarded
+                  localhost port.
+                </p>
+              )}
+            </div>
           )}
         </>
       )}
