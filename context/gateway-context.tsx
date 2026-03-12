@@ -52,7 +52,7 @@ interface GatewayContextValue {
   status: ConnectionStatus
   snapshot: GatewaySnapshot | null
   error: string | null
-  connect: (url: string, password: string) => void
+  connect: (url: string, credential: string) => void
   disconnect: () => void
   reconnect: () => void
   sendRequest: (method: string, params?: Record<string, unknown>) => Promise<unknown>
@@ -81,7 +81,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
   const listenersRef = useRef<Map<string, Set<EventCallback>>>(new Map())
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reconnectAttemptRef = useRef(0)
-  const credentialsRef = useRef<{ url: string; password: string } | null>(null)
+  const credentialsRef = useRef<{ url: string; credential: string } | null>(null)
   const intentionalDisconnectRef = useRef(false)
   const deviceIdentityRef = useRef<DeviceIdentity | null>(null)
   const connectedRef = useRef(false)
@@ -114,7 +114,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
 
   // Core connect logic
   const doConnect = useCallback(
-    (url: string, password: string) => {
+    (url: string, credential: string) => {
       cleanup()
       intentionalDisconnectRef.current = false
       setError(null)
@@ -185,7 +185,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                   const signature = await signPayload(identity.privateKey, authPayload)
 
                   connectReq = makeConnectRequest(
-                    password,
+                    credential,
                     {
                       id: identity.deviceId,
                       publicKey: identity.publicKeyBase64Url,
@@ -197,7 +197,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
                   )
                 } else {
                   // First connection: token-only, no device block
-                  connectReq = makeConnectRequest(password)
+                  connectReq = makeConnectRequest(credential)
                 }
 
                 ws.send(JSON.stringify(connectReq))
@@ -274,7 +274,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
               const shouldRemember = localStorage.getItem(STORAGE_REMEMBER) !== 'false'
               if (shouldRemember) {
                 localStorage.setItem(STORAGE_URL, url)
-                localStorage.setItem(STORAGE_PASS, password)
+                localStorage.setItem(STORAGE_PASS, credential)
               }
             } catch {}
             return
@@ -348,7 +348,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000)
           reconnectTimerRef.current = setTimeout(() => {
             if (credentialsRef.current) {
-              doConnect(credentialsRef.current.url, credentialsRef.current.password)
+              doConnect(credentialsRef.current.url, credentialsRef.current.credential)
             }
           }, delay)
         }
@@ -359,12 +359,12 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
 
   // Public connect
   const connect = useCallback(
-    (url: string, password: string) => {
-      credentialsRef.current = { url, password }
+    (url: string, credential: string) => {
+      credentialsRef.current = { url, credential }
       setGatewayUrl(url)
       reconnectAttemptRef.current = 0
       connectedRef.current = false
-      doConnect(url, password)
+      doConnect(url, credential)
     },
     [doConnect],
   )
@@ -392,14 +392,14 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
     if (creds) {
       cleanup()
       reconnectAttemptRef.current = 0
-      doConnect(creds.url, creds.password)
+      doConnect(creds.url, creds.credential)
       return
     }
     try {
       const url = localStorage.getItem(STORAGE_URL)
       const pass = localStorage.getItem(STORAGE_PASS)
       if (url && pass) {
-        credentialsRef.current = { url, password: pass }
+        credentialsRef.current = { url, credential: pass }
         setGatewayUrl(url)
         cleanup()
         doConnect(url, pass)
@@ -469,7 +469,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
         const url = localStorage.getItem(STORAGE_URL)
         const pass = localStorage.getItem(STORAGE_PASS)
         if (url && pass) {
-          credentialsRef.current = { url, password: pass }
+          credentialsRef.current = { url, credential: pass }
           setGatewayUrl(url)
           doConnect(url, pass)
           return
@@ -479,7 +479,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       // 2. On desktop (Tauri), read gateway config directly from ~/.openclaw/openclaw.json
       if (isTauri()) {
         try {
-          const config = await tauriInvoke<{ url: string; password: string }>(
+          const config = await tauriInvoke<{ url: string; credential: string }>(
             'engine_gateway_config',
             {},
           )
@@ -489,13 +489,13 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
           const status = await tauriInvoke<{ running: boolean }>('engine_status', {})
           if (cancelled) return
 
-          if (status?.running && config.url && config.password) {
-            credentialsRef.current = { url: config.url, password: config.password }
+          if (status?.running && config.url && config.credential) {
+            credentialsRef.current = { url: config.url, credential: config.credential }
             setGatewayUrl(config.url)
             // Save to localStorage so future reconnects are instant
             localStorage.setItem(STORAGE_URL, config.url)
-            localStorage.setItem(STORAGE_PASS, config.password)
-            doConnect(config.url, config.password)
+            localStorage.setItem(STORAGE_PASS, config.credential)
+            doConnect(config.url, config.credential)
             return
           }
         } catch {
@@ -512,7 +512,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => null)
         if (cancelled) return
         if (probe && probe.ok) {
-          credentialsRef.current = { url: localUrl, password: '' }
+          credentialsRef.current = { url: localUrl, credential: '' }
           setGatewayUrl(localUrl)
           localStorage.setItem(STORAGE_URL, localUrl)
           localStorage.setItem(STORAGE_PASS, '')

@@ -117,7 +117,7 @@ pub fn engine_restart() -> Result<String, String> {
 #[derive(Clone, Serialize)]
 pub struct GatewayConfig {
     pub url: String,
-    pub password: String,
+    pub credential: String,
 }
 
 #[tauri::command]
@@ -157,7 +157,7 @@ pub fn engine_gateway_config() -> Result<GatewayConfig, String> {
 
     // Also check OPENCLAW_GATEWAY_TOKEN env var as final fallback,
     // matching how the gateway itself resolves the token at runtime.
-    let password = if token_from_config.is_empty() {
+    let credential = if token_from_config.is_empty() {
         std::env::var("OPENCLAW_GATEWAY_TOKEN").unwrap_or_default()
     } else {
         token_from_config.to_string()
@@ -165,6 +165,6 @@ pub fn engine_gateway_config() -> Result<GatewayConfig, String> {
 
     Ok(GatewayConfig {
         url: format!("ws://127.0.0.1:{}", port),
-        password,
+        credential,
     })
 }
