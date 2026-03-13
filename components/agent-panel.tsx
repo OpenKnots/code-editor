@@ -473,6 +473,26 @@ function AgentConnectPrompt() {
                     Required unless this host already works through your local SSH agent or
                     `~/.ssh/config`.
                   </p>
+                  <details className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[10px] text-[var(--text-secondary)]">
+                    <summary className="cursor-pointer list-none font-medium text-[var(--text-primary)]">
+                      How to create an identity file
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <p>Create a key on your Mac:</p>
+                      <pre className="overflow-x-auto rounded-md bg-[var(--bg-elevated)] px-2 py-1 font-mono text-[10px] text-[var(--text-primary)]">
+                        ssh-keygen -t ed25519 -C "you@example.com"
+                      </pre>
+                      <p>This usually creates `~/.ssh/id_ed25519` and `~/.ssh/id_ed25519.pub`.</p>
+                      <p>Copy the public key to the remote host:</p>
+                      <pre className="overflow-x-auto rounded-md bg-[var(--bg-elevated)] px-2 py-1 font-mono text-[10px] text-[var(--text-primary)]">
+                        ssh-copy-id -i ~/.ssh/id_ed25519.pub user@host
+                      </pre>
+                      <p>
+                        Then enter the private key path here, for example `
+                        /Users/you/.ssh/id_ed25519`.
+                      </p>
+                    </div>
+                  </details>
                 </div>
 
                 <div className="flex items-center gap-2">

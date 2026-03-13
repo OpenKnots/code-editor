@@ -253,6 +253,51 @@ fn build_local_url(local_port: u16) -> String {
 }
 
 #[cfg(not(target_os = "ios"))]
+fn explain_ssh_tunnel_error(details: &str, config: &SshTunnelConfig) -> String {
+    let normalized = details.to_lowercase();
+
+    if normalized.contains("host key verification failed") {
+        return format!(
+            "SSH host verification failed. Connect to {} once in Terminal to trust the host key, then try again. {}",
+            config.destination, details
+        );
+    }
+
+    if normalized.contains("permission denied (publickey,password)")
+        || normalized.contains("permission denied (publickey)")
+        || normalized.contains("permission denied")
+    {
+        if config.identity_path.is_none() {
+            return format!(
+                "SSH authentication failed. Add an Identity file, or make sure this host already works through your local ssh-agent or ~/.ssh/config. {}",
+                details
+            );
+        }
+
+        return format!(
+            "SSH authentication failed with the selected Identity file. Verify that the key path is correct and that the public key is authorized on the remote host. {}",
+            details
+        );
+    }
+
+    if normalized.contains("could not resolve hostname") {
+        return format!(
+            "SSH could not resolve the host. Check the destination or your ~/.ssh/config alias. {}",
+            details
+        );
+    }
+
+    if normalized.contains("connection refused") || normalized.contains("operation timed out") {
+        return format!(
+            "SSH could not reach the remote host. Check the SSH port, host, and network access. {}",
+            details
+        );
+    }
+
+    details.to_string()
+}
+
+#[cfg(not(target_os = "ios"))]
 fn pick_available_local_port(preferred_port: u16) -> Result<u16, String> {
     const MAX_PORT_SEARCH: u16 = 24;
 
@@ -360,7 +405,7 @@ pub fn ssh_tunnel_start(
         }
         let details = stderr.trim();
         if !details.is_empty() {
-            return Err(details.to_string());
+            return Err(explain_ssh_tunnel_error(details, &config));
         }
         return Err(format!(
             "SSH tunnel exited immediately with status {}",
