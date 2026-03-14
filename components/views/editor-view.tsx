@@ -356,28 +356,25 @@ export function EditorView() {
               transition={PANEL_SPRING}
               className="absolute inset-y-0 left-0 z-50 w-[min(92vw,360px)] bg-[var(--sidebar-bg)] border-r border-[var(--border)] flex flex-col"
             >
-              <div className="flex items-center justify-between h-10 px-3 border-b border-[var(--border)] shrink-0 bg-[var(--bg-elevated)]">
-                <button
-                  onClick={() => local.openFolder()}
-                  className="flex items-center gap-1.5 min-w-0 rounded-md px-1 py-0.5 -mx-1 hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer group"
-                  title={local.rootPath ?? 'Open folder'}
-                >
+              <div className="flex items-center justify-between h-11 px-4 border-b border-[var(--border)] shrink-0 bg-[var(--bg-elevated)]">
+                <div className="min-w-0 flex items-center gap-2">
                   <Icon
-                    icon="lucide:folder-open"
-                    width={13}
-                    height={13}
-                    className="text-[var(--brand)] shrink-0 group-hover:scale-110 transition-transform"
+                    icon="lucide:folder"
+                    width={15}
+                    height={15}
+                    className="text-[var(--brand)] shrink-0"
                   />
-                  <span className="text-[11px] font-bold text-[var(--text-disabled)] group-hover:text-[var(--text-secondary)] truncate uppercase tracking-wider transition-colors">
+                  <span className="truncate text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                     {local.rootPath?.split('/').pop() ||
-                      (repo ? repo.repo.split('/').pop() : 'Explorer')}
+                      (repo ? repo.repo.split('/').pop() : 'Files')}
                   </span>
-                </button>
+                </div>
                 <button
                   onClick={() => layout.hide('tree')}
-                  className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer shrink-0"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--text-tertiary)] transition hover:bg-[var(--bg-subtle)] cursor-pointer shrink-0"
+                  aria-label="Close files"
                 >
-                  <Icon icon="lucide:x" width={14} height={14} />
+                  <Icon icon="lucide:x" width={16} height={16} />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">

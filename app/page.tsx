@@ -131,13 +131,9 @@ export default function EditorLayout() {
   const useCenteredTerminal = modeSpec.terminalCenter && activeView === 'editor'
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
   const mobileViewTabs = useMemo(() => {
-    // On mobile/iOS portrait, keep all primary screens reachable.
-    const preferred: ViewId[] = ['chat', 'editor', 'github', 'builder', 'git', 'terminal']
-    const base = preferred.filter((v) => v === 'terminal' || visibleViews.includes(v))
-    const overflow = visibleViews.filter(
-      (v) => !base.includes(v) && !['preview', 'diff', 'settings'].includes(v),
-    )
-    return [...base, ...overflow]
+    // On mobile/iOS, keep only required primary destinations in the tab bar.
+    const preferred: ViewId[] = ['chat', 'editor', 'github', 'git', 'terminal']
+    return preferred.filter((v) => v === 'terminal' || visibleViews.includes(v))
   }, [visibleViews])
   const activeViewMeta = VIEW_ICONS[activeView] ?? {
     icon: 'lucide:layout-panel-top',
@@ -524,10 +520,20 @@ export default function EditorLayout() {
               minHeight: isMobileLandscape && keyboardOffset > 0 ? 38 : 44,
             }}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                aria-label="Open workspace drawer"
+                title="Workspace"
+              >
+                <Icon icon="lucide:panel-left" width={18} height={18} />
+              </button>
+
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[17px] font-semibold text-[var(--text-primary)] tracking-tight">
+                  <span className="truncate text-[17px] font-semibold text-[var(--text-primary)] tracking-tight">
                     {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                   </span>
                   <span
@@ -542,21 +548,6 @@ export default function EditorLayout() {
                 </div>
               </div>
 
-              {!modeSpec.terminalCenter && (
-                <button
-                  type="button"
-                  onClick={() => layout.toggle('terminal')}
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
-                    terminalVisible
-                      ? 'border-[color-mix(in_srgb,var(--brand)_36%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
-                      : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
-                  }`}
-                  title={`${terminalVisible ? 'Hide' : 'Show'} terminal`}
-                >
-                  <Icon icon="lucide:terminal" width={18} height={18} />
-                </button>
-              )}
-
               {isMobileLandscape && keyboardOffset > 0 && (
                 <button
                   type="button"
@@ -567,15 +558,6 @@ export default function EditorLayout() {
                   Done
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => setView('settings')}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
-                title="Settings"
-              >
-                <Icon icon="lucide:settings-2" width={18} height={18} />
-              </button>
             </div>
 
             {/* Gateway status text removed — dot in header is sufficient */}
@@ -795,15 +777,30 @@ export default function EditorLayout() {
                 )
               })}
 
-              {/* More views overflow */}
               <motion.button
                 type="button"
                 onClick={() => setView('settings')}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center justify-center w-10 h-10 rounded-full text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors touch-manipulation"
+                className={`relative shrink-0 flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-medium transition-all duration-200 touch-manipulation ${
+                  activeView === 'settings'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast)] shadow-[0_4px_16px_color-mix(in_srgb,var(--brand)_30%,transparent)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                }`}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
+                aria-label="Settings"
               >
-                <Icon icon="lucide:more-horizontal" width={18} height={18} />
+                <Icon icon="lucide:settings-2" width={18} height={18} />
+                {activeView === 'settings' && (
+                  <motion.span
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 'auto', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden whitespace-nowrap"
+                  >
+                    Settings
+                  </motion.span>
+                )}
               </motion.button>
             </div>
           </div>

@@ -921,14 +921,16 @@ export function GatewayTerminal() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setEntries([])}
-          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-          title="Clear terminal"
-        >
-          <Icon icon="lucide:trash-2" width={12} height={12} />
-          <span>{isMobile ? 'Clear' : 'Clear'}</span>
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setEntries([])}
+            className="flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+            title="Clear terminal"
+          >
+            <Icon icon="lucide:trash-2" width={12} height={12} />
+            <span>Clear</span>
+          </button>
+        )}
       </div>
       {/* Output */}
       <div
@@ -1015,7 +1017,7 @@ export function GatewayTerminal() {
               <button
                 type="button"
                 onClick={dismissKeyboard}
-                className="shrink-0 rounded-xl border border-white/10 px-2 py-1 text-[10px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)]"
+                className="flex min-h-[44px] shrink-0 items-center rounded-xl border border-white/10 px-3 text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)]"
                 title="Hide keyboard"
               >
                 Done
@@ -1026,7 +1028,7 @@ export function GatewayTerminal() {
             type="button"
             onClick={() => void handleSubmit()}
             disabled={!isConnected || sending || !input.trim()}
-            className="shrink-0 rounded-2xl bg-[var(--brand)] px-3 py-2 text-[12px] font-semibold text-[var(--brand-contrast)] shadow-[0_10px_30px_color-mix(in_srgb,var(--brand)_28%,transparent)] transition disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[44px] shrink-0 rounded-2xl bg-[var(--brand)] px-4 py-2 text-[12px] font-semibold text-[var(--brand-contrast)] shadow-[0_10px_30px_color-mix(in_srgb,var(--brand)_28%,transparent)] transition disabled:cursor-not-allowed disabled:opacity-40"
           >
             Run
           </button>

@@ -209,6 +209,7 @@ export function MessageList({
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const { chatFontSize, chatFontCss } = useChatAppearance()
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
 
   const visibleMessages = useMemo(
     () => messages.filter((m) => !isSystemPromptMessage(m)),
@@ -418,17 +419,19 @@ export function MessageList({
                     </div>
                   )}
 
-                  <div className={`relative min-w-0 ${isUser ? 'max-w-[85%]' : 'w-full'}`}>
-                    {/* Ellipsis menu trigger */}
-                    <button
-                      onClick={() => setMenuOpenId((prev) => (prev === msg.id ? null : msg.id))}
-                      className={`absolute ${isUser ? '-left-5' : '-right-5'} top-0.5 p-0.5 rounded text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer ${menuOpenId === msg.id ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'}`}
-                    >
-                      <Icon icon="lucide:ellipsis" width={13} height={13} />
-                    </button>
+                  <div className={`relative min-w-0 w-full max-w-full`}>
+                    {/* Context menu trigger — desktop only to keep mobile chat focused on reading + sending */}
+                    {!isMobile && (
+                      <button
+                        onClick={() => setMenuOpenId((prev) => (prev === msg.id ? null : msg.id))}
+                        className={`absolute ${isUser ? '-left-5' : '-right-5'} top-0.5 p-0.5 rounded text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer ${menuOpenId === msg.id ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'}`}
+                      >
+                        <Icon icon="lucide:ellipsis" width={13} height={13} />
+                      </button>
+                    )}
 
                     {/* Context menu */}
-                    {menuOpenId === msg.id && (
+                    {!isMobile && menuOpenId === msg.id && (
                       <div
                         ref={menuRef}
                         className={`absolute ${isUser ? 'right-0' : 'left-0'} top-6 z-50 w-44 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 animate-fade-in`}
