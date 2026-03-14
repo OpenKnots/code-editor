@@ -12,7 +12,10 @@ import {
 import { getAgentConfig } from '@/lib/agent-session'
 import { useRepo } from '@/context/repo-context'
 
+export type WorkspaceFilterState = 'open' | 'closed' | 'all'
+
 export interface WorkspaceFilters {
+  state: WorkspaceFilterState
   labels: string[]
   authors: string[]
   assignees: string[]
@@ -31,6 +34,8 @@ interface WorkspaceSettingsContextValue {
   resetSettings: () => void
   effectiveRepo: string
   effectiveBrain: string
+  repoDefaultActive: boolean
+  brainDefaultActive: boolean
 }
 
 const STORAGE_KEY = 'code-editor:workspace-settings'
@@ -39,6 +44,7 @@ const DEFAULT_SETTINGS: WorkspaceSettings = {
   repo: '',
   brain: '',
   filters: {
+    state: 'open',
     labels: [],
     authors: [],
     assignees: [],
@@ -52,11 +58,16 @@ function sanitizeList(values?: string[]) {
   return values.map((value) => value.trim()).filter(Boolean)
 }
 
+function sanitizeState(state?: string): WorkspaceFilterState {
+  return state === 'closed' || state === 'all' ? state : 'open'
+}
+
 function sanitizeSettings(value: Partial<WorkspaceSettings> | null | undefined): WorkspaceSettings {
   return {
     repo: value?.repo?.trim() ?? '',
     brain: value?.brain?.trim() ?? '',
     filters: {
+      state: sanitizeState(value?.filters?.state),
       labels: sanitizeList(value?.filters?.labels),
       authors: sanitizeList(value?.filters?.authors),
       assignees: sanitizeList(value?.filters?.assignees),
@@ -112,8 +123,11 @@ export function WorkspaceSettingsProvider({ children }: { children: ReactNode })
     setSettings(DEFAULT_SETTINGS)
   }, [])
 
+  const repoDefaultActive = !settings.repo.trim() && !!repo?.fullName
   const effectiveRepo = settings.repo || repo?.fullName || ''
-  const effectiveBrain = settings.brain || getAgentConfig()?.modelPreference || 'Balanced'
+  const modelPreference = getAgentConfig()?.modelPreference || 'Balanced'
+  const brainDefaultActive = !settings.brain.trim()
+  const effectiveBrain = settings.brain || modelPreference
 
   const value = useMemo<WorkspaceSettingsContextValue>(
     () => ({
@@ -123,8 +137,19 @@ export function WorkspaceSettingsProvider({ children }: { children: ReactNode })
       resetSettings,
       effectiveRepo,
       effectiveBrain,
+      repoDefaultActive,
+      brainDefaultActive,
     }),
-    [settings, updateSettings, updateFilters, resetSettings, effectiveRepo, effectiveBrain],
+    [
+      settings,
+      updateSettings,
+      updateFilters,
+      resetSettings,
+      effectiveRepo,
+      effectiveBrain,
+      repoDefaultActive,
+      brainDefaultActive,
+    ],
   )
 
   return (

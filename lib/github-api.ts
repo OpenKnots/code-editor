@@ -162,7 +162,7 @@ export async function fetchUserRepos(): Promise<Repo[]> {
   let page = 1
   while (page <= 10) {
     const res = await ghFetch(
-      `https://api.github.com/user/repos?per_page=100&sort=updated&page=${page}`
+      `https://api.github.com/user/repos?per_page=100&sort=updated&page=${page}`,
     )
     if (!res.ok) break
     const data = (await res.json()) as Repo[]
@@ -193,14 +193,14 @@ export async function fetchRepoTree(
 
   // Resolve ref to SHA
   const refRes = await ghFetch(
-    `https://api.github.com/repos/${o}/${r}/commits?sha=${encodeURIComponent(ref)}&per_page=1`
+    `https://api.github.com/repos/${o}/${r}/commits?sha=${encodeURIComponent(ref)}&per_page=1`,
   )
   if (!refRes.ok) throw new Error(`Failed to resolve ref "${ref}": ${refRes.status}`)
   const commits = (await refRes.json()) as Array<{ sha: string }>
   if (!commits.length) throw new Error(`No commits for ref "${ref}"`)
 
   const treeRes = await ghFetch(
-    `https://api.github.com/repos/${o}/${r}/git/trees/${commits[0].sha}?recursive=1`
+    `https://api.github.com/repos/${o}/${r}/git/trees/${commits[0].sha}?recursive=1`,
   )
   if (!treeRes.ok) throw new Error(`Failed to fetch tree: ${treeRes.status}`)
 
@@ -211,8 +211,8 @@ export async function fetchRepoTree(
 
   return {
     entries: data.tree
-      .filter(e => e.type === 'blob' || e.type === 'tree')
-      .map(e => ({ path: e.path, type: e.type as 'blob' | 'tree', size: e.size, sha: e.sha })),
+      .filter((e) => e.type === 'blob' || e.type === 'tree')
+      .map((e) => ({ path: e.path, type: e.type as 'blob' | 'tree', size: e.size, sha: e.sha })),
     truncated: data.truncated,
   }
 }
@@ -256,19 +256,16 @@ export async function fetchFileContents(
 
 // ─── Branches ──────────────────────────────────────────────────
 
-export async function fetchBranches(
-  owner: string,
-  repo: string,
-): Promise<Branch[]> {
+export async function fetchBranches(owner: string, repo: string): Promise<Branch[]> {
   const all: Branch[] = []
   let page = 1
   while (page <= 5) {
     const res = await ghFetch(
-      `https://api.github.com/repos/${owner}/${repo}/branches?per_page=100&page=${page}`
+      `https://api.github.com/repos/${owner}/${repo}/branches?per_page=100&page=${page}`,
     )
     if (!res.ok) break
     const data = (await res.json()) as Array<{ name: string; protected: boolean }>
-    all.push(...data.map(b => ({ name: b.name, protected: b.protected })))
+    all.push(...data.map((b) => ({ name: b.name, protected: b.protected })))
     if (data.length < 100) break
     page++
   }
@@ -315,10 +312,10 @@ export async function commitFiles(
           sha: file.sha || undefined,
           branch,
         }),
-      }
+      },
     )
     if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as Record<string, string>
+      const err = (await res.json().catch(() => ({}))) as Record<string, string>
       throw new Error(err.message || `GitHub ${res.status}`)
     }
     const data = (await res.json()) as { commit: { sha: string } }
@@ -327,55 +324,56 @@ export async function commitFiles(
 
   // Multi-file: Git Data API
   // 1. Get current ref
-  const refRes = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`)
+  const refRes = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`,
+  )
   if (!refRes.ok) throw new Error(`Failed to get ref: ${refRes.status}`)
   const refData = (await refRes.json()) as { object: { sha: string } }
   const baseSha = refData.object.sha
 
   // 2. Get base tree
-  const commitRes = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${baseSha}`)
+  const commitRes = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/commits/${baseSha}`,
+  )
   if (!commitRes.ok) throw new Error(`Failed to get commit: ${commitRes.status}`)
   const commitData = (await commitRes.json()) as { tree: { sha: string } }
 
   // 3. Create blobs
   const treeItems = await Promise.all(
     files.map(async (file) => {
-      const blobRes = await ghFetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/blobs`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            content: btoa(unescape(encodeURIComponent(file.content))),
-            encoding: 'base64',
-          }),
-        }
-      )
+      const blobRes = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: btoa(unescape(encodeURIComponent(file.content))),
+          encoding: 'base64',
+        }),
+      })
       if (!blobRes.ok) throw new Error(`Blob create failed: ${blobRes.status}`)
       const blobData = (await blobRes.json()) as { sha: string }
       return { path: file.path, mode: '100644' as const, type: 'blob' as const, sha: blobData.sha }
-    })
+    }),
   )
 
   // 4. Create tree
-  const treeRes = await ghFetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees`,
-    { method: 'POST', body: JSON.stringify({ base_tree: commitData.tree.sha, tree: treeItems }) }
-  )
+  const treeRes = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+    method: 'POST',
+    body: JSON.stringify({ base_tree: commitData.tree.sha, tree: treeItems }),
+  })
   if (!treeRes.ok) throw new Error(`Tree create failed: ${treeRes.status}`)
   const treeData = (await treeRes.json()) as { sha: string }
 
   // 5. Create commit
-  const newCommitRes = await ghFetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/commits`,
-    { method: 'POST', body: JSON.stringify({ message, tree: treeData.sha, parents: [baseSha] }) }
-  )
+  const newCommitRes = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+    method: 'POST',
+    body: JSON.stringify({ message, tree: treeData.sha, parents: [baseSha] }),
+  })
   if (!newCommitRes.ok) throw new Error(`Commit create failed: ${newCommitRes.status}`)
   const newCommit = (await newCommitRes.json()) as { sha: string }
 
   // 6. Update ref
   const updateRes = await ghFetch(
     `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`,
-    { method: 'PATCH', body: JSON.stringify({ sha: newCommit.sha }) }
+    { method: 'PATCH', body: JSON.stringify({ sha: newCommit.sha }) },
   )
   if (!updateRes.ok) throw new Error(`Ref update failed: ${updateRes.status}`)
 
@@ -449,7 +447,7 @@ function mapPullRequest(p: GitHubPullRaw): PullRequestSummary {
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     mergedAt: p.merged_at,
-    labels: (p.labels || []).map(l => ({ name: l.name, color: l.color })),
+    labels: (p.labels || []).map((l) => ({ name: l.name, color: l.color })),
     headRef: p.head?.ref ?? '',
     headSha: p.head?.sha ?? '',
     baseRef: p.base?.ref ?? '',
@@ -465,8 +463,14 @@ export async function fetchPullRequests(
   state: 'open' | 'closed' | 'all' = 'open',
   perPage = 30,
 ): Promise<PullRequestSummary[]> {
+  const params = new URLSearchParams({
+    state,
+    per_page: String(perPage),
+    sort: 'updated',
+    direction: 'desc',
+  })
   const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls?state=${state}&per_page=${perPage}&sort=updated&direction=desc`
+    `https://api.github.com/repos/${repoFullName}/pulls?${params.toString()}`,
   )
   if (!res.ok) throw new Error(`Failed to fetch PRs: ${res.status}`)
   const data = (await res.json()) as GitHubPullRaw[]
@@ -477,9 +481,7 @@ export async function fetchPullRequest(
   repoFullName: string,
   number: number,
 ): Promise<PullRequestSummary> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}`
-  )
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/pulls/${number}`)
   if (!res.ok) throw new Error(`Failed to fetch PR #${number}: ${res.status}`)
   const p = (await res.json()) as GitHubPullRaw
   return mapPullRequest(p)
@@ -490,11 +492,11 @@ export async function fetchPullRequestFiles(
   number: number,
 ): Promise<PullRequestFile[]> {
   const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}/files?per_page=100`
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/files?per_page=100`,
   )
   if (!res.ok) throw new Error(`Failed to fetch PR files: ${res.status}`)
   const data = (await res.json()) as PullRequestFile[]
-  return data.map(f => ({
+  return data.map((f) => ({
     filename: f.filename,
     status: f.status,
     additions: f.additions,
@@ -505,6 +507,82 @@ export async function fetchPullRequestFiles(
   }))
 }
 
+export interface IssueSummary {
+  number: number
+  title: string
+  body: string | null
+  state: 'open' | 'closed'
+  author: string
+  assignees: string[]
+  labels: Array<{ name: string; color: string }>
+  comments: number
+  updatedAt: string
+  createdAt: string
+  url: string
+}
+
+interface GitHubIssueRaw {
+  number: number
+  title: string
+  body: string | null
+  state: 'open' | 'closed'
+  user?: { login: string }
+  assignees?: Array<{ login: string }>
+  labels?: Array<{ name?: string; color?: string }>
+  comments: number
+  updated_at: string
+  created_at: string
+  html_url: string
+  pull_request?: unknown
+}
+
+function mapIssue(issue: GitHubIssueRaw): IssueSummary {
+  return {
+    number: issue.number,
+    title: issue.title,
+    body: issue.body,
+    state: issue.state,
+    author: issue.user?.login ?? 'unknown',
+    assignees: issue.assignees?.map((assignee) => assignee.login) ?? [],
+    labels: (issue.labels ?? []).map((label) => ({
+      name: label.name ?? 'label',
+      color: label.color ?? '6b7280',
+    })),
+    comments: issue.comments,
+    updatedAt: issue.updated_at,
+    createdAt: issue.created_at,
+    url: issue.html_url,
+  }
+}
+
+export async function fetchIssues(
+  repoFullName: string,
+  filters: {
+    state?: 'open' | 'closed' | 'all'
+    labels?: string[]
+    author?: string
+    assignee?: string
+    perPage?: number
+  } = {},
+): Promise<IssueSummary[]> {
+  const params = new URLSearchParams({
+    state: filters.state ?? 'open',
+    per_page: String(filters.perPage ?? 30),
+    sort: 'updated',
+    direction: 'desc',
+  })
+  if (filters.labels?.length) params.set('labels', filters.labels.join(','))
+  if (filters.author) params.set('creator', filters.author)
+  if (filters.assignee) params.set('assignee', filters.assignee)
+
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/issues?${params.toString()}`,
+  )
+  if (!res.ok) throw new Error(`Failed to fetch issues: ${res.status}`)
+  const data = (await res.json()) as GitHubIssueRaw[]
+  return data.filter((issue) => !issue.pull_request).map(mapIssue)
+}
+
 export async function createPullRequest(
   repoFullName: string,
   title: string,
@@ -513,15 +591,12 @@ export async function createPullRequest(
   base: string,
   draft = false,
 ): Promise<PullRequestSummary> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ title, body, head, base, draft }),
-    }
-  )
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/pulls`, {
+    method: 'POST',
+    body: JSON.stringify({ title, body, head, base, draft }),
+  })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, string>
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
     throw new Error(err.message || `Failed to create PR: ${res.status}`)
   }
   const p = (await res.json()) as GitHubPullRaw
@@ -536,10 +611,10 @@ export async function mergePullRequest(
 ): Promise<{ merged: boolean; message: string; sha: string }> {
   const payload: Record<string, unknown> = { merge_method: mergeMethod }
   if (commitTitle) payload.commit_title = commitTitle
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}/merge`,
-    { method: 'PUT', body: JSON.stringify(payload) }
-  )
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/pulls/${number}/merge`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
   const data = (await res.json()) as { merged?: boolean; message?: string; sha?: string }
   if (!res.ok) throw new Error(data.message || `Failed to merge PR: ${res.status}`)
   return { merged: data.merged ?? true, message: data.message ?? 'Merged', sha: data.sha ?? '' }
@@ -585,7 +660,15 @@ export interface CheckRun {
   id: number
   name: string
   status: 'queued' | 'in_progress' | 'completed'
-  conclusion: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required' | null
+  conclusion:
+    | 'success'
+    | 'failure'
+    | 'neutral'
+    | 'cancelled'
+    | 'skipped'
+    | 'timed_out'
+    | 'action_required'
+    | null
   html_url: string
   started_at: string | null
   completed_at: string | null
@@ -596,7 +679,7 @@ export async function fetchIssueComments(
   number: number,
 ): Promise<IssueComment[]> {
   const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/issues/${number}/comments?per_page=100`
+    `https://api.github.com/repos/${repoFullName}/issues/${number}/comments?per_page=100`,
   )
   if (!res.ok) throw new Error(`Failed to fetch comments: ${res.status}`)
   return (await res.json()) as IssueComment[]
@@ -607,29 +690,21 @@ export async function fetchPRReviewComments(
   number: number,
 ): Promise<ReviewComment[]> {
   const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}/comments?per_page=100`
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/comments?per_page=100`,
   )
   if (!res.ok) throw new Error(`Failed to fetch review comments: ${res.status}`)
   return (await res.json()) as ReviewComment[]
 }
 
-export async function fetchPRReviews(
-  repoFullName: string,
-  number: number,
-): Promise<PRReview[]> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}/reviews`
-  )
+export async function fetchPRReviews(repoFullName: string, number: number): Promise<PRReview[]> {
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/pulls/${number}/reviews`)
   if (!res.ok) throw new Error(`Failed to fetch reviews: ${res.status}`)
   return (await res.json()) as PRReview[]
 }
 
-export async function fetchPRChecks(
-  repoFullName: string,
-  headSha: string,
-): Promise<CheckRun[]> {
+export async function fetchPRChecks(repoFullName: string, headSha: string): Promise<CheckRun[]> {
   const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/commits/${headSha}/check-runs?per_page=100`
+    `https://api.github.com/repos/${repoFullName}/commits/${headSha}/check-runs?per_page=100`,
   )
   if (res.status === 403) return []
   if (!res.ok) throw new Error(`Failed to fetch checks: ${res.status}`)
@@ -644,10 +719,10 @@ export async function addPRComment(
 ): Promise<IssueComment> {
   const res = await ghFetch(
     `https://api.github.com/repos/${repoFullName}/issues/${number}/comments`,
-    { method: 'POST', body: JSON.stringify({ body }) }
+    { method: 'POST', body: JSON.stringify({ body }) },
   )
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, string>
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
     throw new Error(err.message || `Failed to add comment: ${res.status}`)
   }
   return (await res.json()) as IssueComment
@@ -657,12 +732,12 @@ export async function closePullRequest(
   repoFullName: string,
   number: number,
 ): Promise<PullRequestSummary> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}`,
-    { method: 'PATCH', body: JSON.stringify({ state: 'closed' }) }
-  )
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/pulls/${number}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ state: 'closed' }),
+  })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, string>
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
     throw new Error(err.message || `Failed to close PR: ${res.status}`)
   }
   const p = (await res.json()) as GitHubPullRaw
@@ -674,12 +749,12 @@ export async function updatePullRequest(
   number: number,
   updates: { title?: string; body?: string; state?: 'open' | 'closed'; draft?: boolean },
 ): Promise<PullRequestSummary> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${repoFullName}/pulls/${number}`,
-    { method: 'PATCH', body: JSON.stringify(updates) }
-  )
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/pulls/${number}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, string>
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
     throw new Error(err.message || `Failed to update PR: ${res.status}`)
   }
   const p = (await res.json()) as GitHubPullRaw
@@ -696,13 +771,100 @@ export async function submitPRReview(
   if (body) payload.body = body
   const res = await ghFetch(
     `https://api.github.com/repos/${repoFullName}/pulls/${number}/reviews`,
-    { method: 'POST', body: JSON.stringify(payload) }
+    { method: 'POST', body: JSON.stringify(payload) },
   )
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, string>
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
     throw new Error(err.message || `Failed to submit review: ${res.status}`)
   }
   return (await res.json()) as PRReview
+}
+
+export async function updateIssue(
+  repoFullName: string,
+  number: number,
+  updates: {
+    title?: string
+    body?: string
+    state?: 'open' | 'closed'
+    assignees?: string[]
+    labels?: string[]
+  },
+): Promise<IssueSummary> {
+  const res = await ghFetch(`https://api.github.com/repos/${repoFullName}/issues/${number}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
+    throw new Error(err.message || `Failed to update issue: ${res.status}`)
+  }
+  return mapIssue((await res.json()) as GitHubIssueRaw)
+}
+
+export async function setIssueLabels(
+  repoFullName: string,
+  number: number,
+  labels: string[],
+): Promise<Array<{ name: string; color: string }>> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/issues/${number}/labels`,
+    { method: 'PUT', body: JSON.stringify({ labels }) },
+  )
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
+    throw new Error(err.message || `Failed to update labels: ${res.status}`)
+  }
+  const data = (await res.json()) as Array<{ name?: string; color?: string }>
+  return data.map((label) => ({ name: label.name ?? 'label', color: label.color ?? '6b7280' }))
+}
+
+export async function setIssueAssignees(
+  repoFullName: string,
+  number: number,
+  assignees: string[],
+): Promise<IssueSummary> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/issues/${number}/assignees`,
+    { method: 'PUT', body: JSON.stringify({ assignees }) },
+  )
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
+    throw new Error(err.message || `Failed to update assignees: ${res.status}`)
+  }
+  return mapIssue((await res.json()) as GitHubIssueRaw)
+}
+
+export async function addIssueComment(
+  repoFullName: string,
+  number: number,
+  body: string,
+): Promise<IssueComment> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/issues/${number}/comments`,
+    { method: 'POST', body: JSON.stringify({ body }) },
+  )
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
+    throw new Error(err.message || `Failed to add comment: ${res.status}`)
+  }
+  return (await res.json()) as IssueComment
+}
+
+export async function addPullRequestReviewComment(
+  repoFullName: string,
+  number: number,
+  input: { body: string; path: string; line: number },
+): Promise<ReviewComment> {
+  const res = await ghFetch(
+    `https://api.github.com/repos/${repoFullName}/pulls/${number}/comments`,
+    { method: 'POST', body: JSON.stringify(input) },
+  )
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, string>
+    throw new Error(err.message || `Failed to add review comment: ${res.status}`)
+  }
+  return (await res.json()) as ReviewComment
 }
 
 // ─── Create/Update single file (used by save) ─────────────────
@@ -723,10 +885,10 @@ export async function createOrUpdateFile(
   if (sha) payload.sha = sha
   if (branch) payload.branch = branch
 
-  const res = await ghFetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
-    { method: 'PUT', body: JSON.stringify(payload) }
-  )
+  const res = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
   if (!res.ok) {
     const err = await res.text()
     throw new Error(`Failed to update ${path}: ${res.status} ${err}`)
@@ -734,7 +896,6 @@ export async function createOrUpdateFile(
   const data = (await res.json()) as { content: { sha: string } }
   return { sha: data.content.sha }
 }
-
 
 // ─── Convenience wrappers (accept "owner/repo" string) ────────
 

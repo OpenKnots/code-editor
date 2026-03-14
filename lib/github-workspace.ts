@@ -1,9 +1,11 @@
 import {
-  authHeaders,
+  fetchIssues,
   fetchPullRequests,
   getGithubToken,
+  type IssueSummary,
   type PullRequestSummary,
 } from '@/lib/github-api'
+import type { WorkspaceFilterState } from '@/context/workspace-settings-context'
 
 export type WorkspaceItemType = 'pr' | 'issue'
 
@@ -30,6 +32,7 @@ export interface GithubWorkspaceItem {
 }
 
 export interface GithubWorkspaceFilters {
+  state?: WorkspaceFilterState
   labels?: string[]
   authors?: string[]
   assignees?: string[]
@@ -42,22 +45,6 @@ export interface GithubWorkspaceResult {
   message?: string
 }
 
-interface GitHubIssueRaw {
-  id: number
-  number: number
-  title: string
-  body: string | null
-  state: 'open' | 'closed'
-  user?: { login: string }
-  assignees?: Array<{ login: string }>
-  labels?: Array<{ name?: string; color?: string }>
-  comments: number
-  updated_at: string
-  created_at: string
-  html_url: string
-  pull_request?: unknown
-}
-
 function includesAny(values: string[], selected?: string[]) {
   if (!selected?.length) return true
   const haystack = new Set(values.map((value) => value.toLowerCase()))
@@ -66,6 +53,7 @@ function includesAny(values: string[], selected?: string[]) {
 
 function matchesFilters(item: GithubWorkspaceItem, filters?: GithubWorkspaceFilters) {
   if (!filters) return true
+  if (filters.state && filters.state !== 'all' && item.state !== filters.state) return false
   if (
     !includesAny(
       item.labels.map((label) => label.name),
@@ -102,7 +90,7 @@ function mapPullRequest(pr: PullRequestSummary): GithubWorkspaceItem {
   }
 }
 
-function mapIssue(issue: GitHubIssueRaw): GithubWorkspaceItem {
+function mapIssue(issue: IssueSummary): GithubWorkspaceItem {
   return {
     id: `issue-${issue.number}`,
     number: issue.number,
@@ -110,29 +98,38 @@ function mapIssue(issue: GitHubIssueRaw): GithubWorkspaceItem {
     title: issue.title,
     body: issue.body,
     state: issue.state,
-    author: issue.user?.login ?? 'unknown',
-    assignees: issue.assignees?.map((assignee) => assignee.login) ?? [],
-    labels: (issue.labels ?? []).map((label) => ({
-      name: label.name ?? 'label',
-      color: label.color ?? '6b7280',
-    })),
+    author: issue.author,
+    assignees: issue.assignees,
+    labels: issue.labels,
     comments: issue.comments,
-    updatedAt: issue.updated_at,
-    createdAt: issue.created_at,
-    url: issue.html_url,
+    updatedAt: issue.updatedAt,
+    createdAt: issue.createdAt,
+    url: issue.url,
   }
 }
 
-async function fetchIssues(repoFullName: string): Promise<GithubWorkspaceItem[]> {
-  const res = await fetch(
-    `https://api.github.com/repos/${repoFullName}/issues?state=open&per_page=30`,
-    {
-      headers: authHeaders(),
-    },
-  )
-  if (!res.ok) throw new Error(`Failed to fetch issues: ${res.status}`)
-  const data = (await res.json()) as GitHubIssueRaw[]
-  return data.filter((issue) => !issue.pull_request).map(mapIssue)
+async function loadGithubIssues(
+  repoFullName: string,
+  filters?: GithubWorkspaceFilters,
+): Promise<GithubWorkspaceItem[]> {
+  const author = filters?.authors?.length === 1 ? filters.authors[0] : undefined
+  const assignee = filters?.assignees?.length === 1 ? filters.assignees[0] : undefined
+  const issues = await fetchIssues(repoFullName, {
+    state: filters?.state ?? 'open',
+    labels: filters?.labels,
+    author,
+    assignee,
+    perPage: 30,
+  })
+  return issues.map(mapIssue)
+}
+
+async function loadGithubPullRequests(
+  repoFullName: string,
+  filters?: GithubWorkspaceFilters,
+): Promise<GithubWorkspaceItem[]> {
+  const pulls = await fetchPullRequests(repoFullName, filters?.state ?? 'open', 30)
+  return pulls.map(mapPullRequest).filter((item) => matchesFilters(item, filters))
 }
 
 function buildDemoItems(repoFullName?: string): GithubWorkspaceItem[] {
@@ -183,6 +180,19 @@ function buildDemoItems(repoFullName?: string): GithubWorkspaceItem[] {
   ]
 }
 
+function buildFallbackMessage(filters?: GithubWorkspaceFilters) {
+  const serverFilters = [
+    filters?.state && filters.state !== 'open' ? `state:${filters.state}` : null,
+    filters?.labels?.length ? `labels:${filters.labels.join(', ')}` : null,
+    filters?.authors?.length === 1 ? `author:${filters.authors[0]}` : null,
+    filters?.assignees?.length === 1 ? `assignee:${filters.assignees[0]}` : null,
+  ].filter(Boolean)
+
+  return serverFilters.length
+    ? `Live GitHub fetch unavailable, so filters are falling back locally (${serverFilters.join(' • ')}).`
+    : 'Connect GitHub in Settings to replace the demo feed with live Issues and Pull Requests.'
+}
+
 export async function loadGithubWorkspace(
   repoFullName: string,
   filters?: GithubWorkspaceFilters,
@@ -201,21 +211,27 @@ export async function loadGithubWorkspace(
       items: buildDemoItems(repoFullName).filter((item) => matchesFilters(item, filters)),
       source: 'demo',
       reason: 'missing-token',
-      message:
-        'Connect GitHub in Settings to replace the demo feed with live Issues and Pull Requests.',
+      message: buildFallbackMessage(filters),
     }
   }
 
   try {
     const [pullRequests, issues] = await Promise.all([
-      fetchPullRequests(repoFullName, 'open', 30),
-      fetchIssues(repoFullName),
+      loadGithubPullRequests(repoFullName, filters),
+      loadGithubIssues(repoFullName, filters),
     ])
-    const items = [...pullRequests.map(mapPullRequest), ...issues]
+    const items = [...pullRequests, ...issues]
       .filter((item) => matchesFilters(item, filters))
       .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
 
-    return { items, source: 'github' }
+    return {
+      items,
+      source: 'github',
+      message:
+        (filters?.authors?.length ?? 0) > 1 || (filters?.assignees?.length ?? 0) > 1
+          ? 'Using GitHub query params where supported, then refining locally for multi-person filters.'
+          : undefined,
+    }
   } catch (error) {
     return {
       items: buildDemoItems(repoFullName).filter((item) => matchesFilters(item, filters)),

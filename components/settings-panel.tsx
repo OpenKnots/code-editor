@@ -93,8 +93,16 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
   } = useTheme()
   const { token: ghToken, authenticated: ghAuth, setManualToken, clearToken } = useGitHubAuth()
   const { repo } = useRepo()
-  const { settings, updateSettings, updateFilters, resetSettings, effectiveRepo, effectiveBrain } =
-    useWorkspaceSettings()
+  const {
+    settings,
+    updateSettings,
+    updateFilters,
+    resetSettings,
+    effectiveRepo,
+    effectiveBrain,
+    repoDefaultActive,
+    brainDefaultActive,
+  } = useWorkspaceSettings()
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null)
   const [patInput, setPatInput] = useState('')
   const [showPatField, setShowPatField] = useState(false)
@@ -478,6 +486,29 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
+            <div className="md:col-span-2 flex flex-wrap gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--brand)_18%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] px-3 py-2 text-[11px] text-[var(--text-secondary)]">
+              <span>
+                Effective repo{' '}
+                <span className="font-medium text-[var(--text-primary)]">
+                  {effectiveRepo || 'Not set'}
+                </span>
+              </span>
+              {repoDefaultActive && (
+                <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-2 py-0.5 text-[10px] text-[var(--text-primary)]">
+                  Using current repo fallback
+                </span>
+              )}
+              <span>
+                Effective brain{' '}
+                <span className="font-medium text-[var(--text-primary)]">{effectiveBrain}</span>
+              </span>
+              {brainDefaultActive && (
+                <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-2 py-0.5 text-[10px] text-[var(--text-primary)]">
+                  Using global model fallback
+                </span>
+              )}
+            </div>
+
             <label className="space-y-1.5 md:col-span-2">
               <span className="text-[11px] font-medium text-[var(--text-secondary)]">
                 Repository
@@ -517,6 +548,21 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
                 placeholder="e.g. gpt-5.4 • review-heavy"
                 className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
               />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-medium text-[var(--text-secondary)]">State</span>
+              <select
+                value={settings.filters.state}
+                onChange={(e) =>
+                  updateFilters({ state: e.target.value as 'open' | 'closed' | 'all' })
+                }
+                className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              >
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+                <option value="all">All</option>
+              </select>
             </label>
 
             <label className="space-y-1.5">
@@ -560,14 +606,10 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-[11px] text-[var(--text-secondary)]">
-              Effective repo{' '}
-              <span className="ml-1 font-medium text-[var(--text-primary)]">
-                {effectiveRepo || 'Not set'}
+              Effective state{' '}
+              <span className="ml-1 font-medium capitalize text-[var(--text-primary)]">
+                {settings.filters.state}
               </span>
-            </span>
-            <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-[11px] text-[var(--text-secondary)]">
-              Effective brain{' '}
-              <span className="ml-1 font-medium text-[var(--text-primary)]">{effectiveBrain}</span>
             </span>
             <button
               type="button"
