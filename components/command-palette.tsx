@@ -29,6 +29,8 @@ type CommandId =
   | 'view-editor'
   | 'view-preview'
   | 'view-git'
+  | 'view-github'
+  | 'view-builder'
   | 'view-skills'
   | 'view-prompts'
   | 'view-settings'
@@ -222,6 +224,22 @@ const COMMANDS: CommandItem[] = [
     group: 'navigate',
   },
   {
+    id: 'view-github',
+    label: 'Go to PRs & Issues',
+    hint: 'Open the GitHub management workspace',
+    keywords: ['github', 'issues', 'pull requests', 'prs', 'triage'],
+    icon: 'lucide:github',
+    group: 'navigate',
+  },
+  {
+    id: 'view-builder',
+    label: 'Go to Builder',
+    hint: 'Open the agent builder workspace',
+    keywords: ['builder', 'brain', 'agent', 'configure'],
+    icon: 'lucide:sparkles',
+    group: 'navigate',
+  },
+  {
     id: 'view-skills',
     label: 'Go to Skills',
     hint: 'Open the skills library',
@@ -348,6 +366,8 @@ const VIEW_CONTEXT_COMMANDS: Partial<Record<ViewId, CommandId[]>> = {
     'toggle-terminal',
   ],
   git: ['git-commit', 'toggle-git-panel', 'git-push', 'git-pull', 'git-stash', 'toggle-terminal'],
+  github: ['view-github', 'view-builder', 'view-git'],
+  builder: ['view-builder', 'view-github', 'view-settings'],
   skills: ['view-skills', 'open-new-window', 'view-editor'],
   prompts: ['view-prompts', 'view-editor', 'open-new-window'],
 

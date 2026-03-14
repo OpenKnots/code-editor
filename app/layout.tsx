@@ -10,6 +10,7 @@ import { GitHubAuthProvider } from '@/context/github-auth-context'
 import { PluginProvider } from '@/context/plugin-context'
 import { PreviewProvider } from '@/context/preview-context'
 import { ChatAppearanceProvider } from '@/context/chat-appearance-context'
+import { WorkspaceSettingsProvider } from '@/context/workspace-settings-context'
 
 import { LayoutProvider } from '@/context/layout-context'
 import { ThreadProvider } from '@/context/thread-context'
@@ -47,23 +48,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <RepoProvider>
                   <EditorProvider>
                     <LocalProvider>
-                      <ViewProvider>
-                        <LayoutProvider>
-                          <ThreadProvider>
-                            <AppModeProvider>
-                              <PreviewProvider>
-                                <ChatAppearanceProvider>
-                                  <PluginProvider>
-                                    <ToastProvider>
-                                      <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
-                                    </ToastProvider>
-                                  </PluginProvider>
-                                </ChatAppearanceProvider>
-                              </PreviewProvider>
-                            </AppModeProvider>
-                          </ThreadProvider>
-                        </LayoutProvider>
-                      </ViewProvider>
+                      <WorkspaceSettingsProvider>
+                        <ViewProvider>
+                          <LayoutProvider>
+                            <ThreadProvider>
+                              <AppModeProvider>
+                                <PreviewProvider>
+                                  <ChatAppearanceProvider>
+                                    <PluginProvider>
+                                      <ToastProvider>
+                                        <Suspense fallback={<AppSkeleton />}>{children}</Suspense>
+                                      </ToastProvider>
+                                    </PluginProvider>
+                                  </ChatAppearanceProvider>
+                                </PreviewProvider>
+                              </AppModeProvider>
+                            </ThreadProvider>
+                          </LayoutProvider>
+                        </ViewProvider>
+                      </WorkspaceSettingsProvider>
                     </LocalProvider>
                   </EditorProvider>
                 </RepoProvider>

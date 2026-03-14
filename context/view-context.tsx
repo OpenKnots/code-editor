@@ -23,6 +23,8 @@ export type ViewId =
   | 'mcp'
   | 'settings'
   | 'terminal'
+  | 'builder'
+  | 'github'
   | 'workshop'
 
 const VIEW_ORDER: ViewId[] = [
@@ -37,6 +39,8 @@ const VIEW_ORDER: ViewId[] = [
   'workshop',
   'settings',
   'terminal',
+  'builder',
+  'github',
 ]
 
 interface ViewState {

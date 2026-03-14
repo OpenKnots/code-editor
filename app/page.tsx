@@ -82,6 +82,8 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   git: { icon: 'lucide:git-branch', label: 'Git' },
   skills: { icon: 'lucide:sparkles', label: 'Skills' },
   prompts: { icon: 'lucide:book-open', label: 'Prompts' },
+  github: { icon: 'lucide:github', label: 'PRs & Issues' },
+  builder: { icon: 'lucide:sparkles', label: 'Builder' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
   terminal: { icon: 'lucide:terminal', label: 'Terminal' },
   kanban: { icon: 'lucide:kanban', label: 'Kanban' },
@@ -130,7 +132,7 @@ export default function EditorLayout() {
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
   const mobileViewTabs = useMemo(() => {
     // On mobile/iOS portrait, keep all primary screens reachable.
-    const preferred: ViewId[] = ['chat', 'editor', 'skills', 'prompts', 'git', 'terminal']
+    const preferred: ViewId[] = ['chat', 'editor', 'github', 'builder', 'git', 'terminal']
     const base = preferred.filter((v) => v === 'terminal' || visibleViews.includes(v))
     const overflow = visibleViews.filter(
       (v) => !base.includes(v) && !['preview', 'diff', 'settings'].includes(v),
@@ -930,6 +932,12 @@ export default function EditorLayout() {
               break
             case 'view-git':
               setView('git')
+              break
+            case 'view-github':
+              setView('github')
+              break
+            case 'view-builder':
+              setView('builder')
               break
             case 'view-settings':
               setView('settings')

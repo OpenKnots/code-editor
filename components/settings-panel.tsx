@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useCallback } from 'react'
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { MobileConnect } from './mobile-connect'
@@ -9,6 +9,8 @@ import { CaffeinateToggle } from './caffeinate-toggle'
 import { KnotLogo } from './knot-logo'
 import { useGateway } from '@/context/gateway-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
+import { useRepo } from '@/context/repo-context'
+import { useWorkspaceSettings } from '@/context/workspace-settings-context'
 import {
   fetchAuthenticatedUser,
   startDeviceFlow,
@@ -70,6 +72,13 @@ function groupThemes() {
  * Settings Panel — single scrollable view for the left sidepanel.
  * All sections inline, Connect at the bottom.
  */
+function parseListInput(value: string): string[] {
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
 export function SettingsPanel({ onBack }: { onBack: () => void }) {
   const { status, gatewayUrl } = useGateway()
   const {
@@ -83,6 +92,9 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
     setEditorBgOpacity,
   } = useTheme()
   const { token: ghToken, authenticated: ghAuth, setManualToken, clearToken } = useGitHubAuth()
+  const { repo } = useRepo()
+  const { settings, updateSettings, updateFilters, resetSettings, effectiveRepo, effectiveBrain } =
+    useWorkspaceSettings()
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null)
   const [patInput, setPatInput] = useState('')
   const [showPatField, setShowPatField] = useState(false)
@@ -98,6 +110,11 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [repoSearch, setRepoSearch] = useState('')
   const [showGatewayUrl, setShowGatewayUrl] = useState(false)
+  const [workspaceRepoInput, setWorkspaceRepoInput] = useState(settings.repo)
+  const [brainInput, setBrainInput] = useState(settings.brain)
+  const [labelsInput, setLabelsInput] = useState(settings.filters.labels.join(', '))
+  const [authorsInput, setAuthorsInput] = useState(settings.filters.authors.join(', '))
+  const [assigneesInput, setAssigneesInput] = useState(settings.filters.assignees.join(', '))
   const [approvalTier, setApprovalTierState] = useState<ApprovalTier>(() => {
     try {
       return getAgentConfig()?.approvalTier ?? 'ask-all'
@@ -118,6 +135,14 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
       saveAgentConfig({ ...cfg, approvalTier: tier })
     } catch {}
   }, [])
+
+  useEffect(() => {
+    setWorkspaceRepoInput(settings.repo)
+    setBrainInput(settings.brain)
+    setLabelsInput(settings.filters.labels.join(', '))
+    setAuthorsInput(settings.filters.authors.join(', '))
+    setAssigneesInput(settings.filters.assignees.join(', '))
+  }, [settings])
 
   const ghTokenRef = useRef(ghToken)
   if (ghTokenRef.current !== ghToken) {
@@ -435,6 +460,129 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
                 </div>
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* Workspace Defaults */}
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--brand)]">
+              <Icon icon="lucide:sliders-horizontal" width={14} />
+            </span>
+            <div>
+              <h3 className="text-sm font-medium text-[var(--text-primary)]">Workspace Defaults</h3>
+              <p className="text-[11px] text-[var(--text-secondary)]">
+                Shared repo, brain, and GitHub filters for Builder + PR/Issues.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-1.5 md:col-span-2">
+              <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+                Repository
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={workspaceRepoInput}
+                  onChange={(e) => setWorkspaceRepoInput(e.target.value)}
+                  onBlur={() => updateSettings({ repo: workspaceRepoInput.trim() })}
+                  placeholder="owner/repo"
+                  className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextRepo = (repo?.fullName || '').trim()
+                    setWorkspaceRepoInput(nextRepo)
+                    updateSettings({ repo: nextRepo })
+                  }}
+                  className="rounded-xl border border-[var(--border)] px-3 text-[11px] font-medium text-[var(--text-secondary)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
+                >
+                  Use current
+                </button>
+              </div>
+            </label>
+
+            <label className="space-y-1.5 md:col-span-2">
+              <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+                Brain / Model Profile
+              </span>
+              <input
+                type="text"
+                value={brainInput}
+                onChange={(e) => setBrainInput(e.target.value)}
+                onBlur={() => updateSettings({ brain: brainInput.trim() })}
+                placeholder="e.g. gpt-5.4 • review-heavy"
+                className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-medium text-[var(--text-secondary)]">Labels</span>
+              <input
+                type="text"
+                value={labelsInput}
+                onChange={(e) => setLabelsInput(e.target.value)}
+                onBlur={() => updateFilters({ labels: parseListInput(labelsInput) })}
+                placeholder="bug, ios, polish"
+                className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-medium text-[var(--text-secondary)]">Authors</span>
+              <input
+                type="text"
+                value={authorsInput}
+                onChange={(e) => setAuthorsInput(e.target.value)}
+                onBlur={() => updateFilters({ authors: parseListInput(authorsInput) })}
+                placeholder="val, octocat"
+                className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              />
+            </label>
+
+            <label className="space-y-1.5 md:col-span-2">
+              <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+                Assignees
+              </span>
+              <input
+                type="text"
+                value={assigneesInput}
+                onChange={(e) => setAssigneesInput(e.target.value)}
+                onBlur={() => updateFilters({ assignees: parseListInput(assigneesInput) })}
+                placeholder="nova, val"
+                className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] px-3 py-2.5 text-[13px] text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-[11px] text-[var(--text-secondary)]">
+              Effective repo{' '}
+              <span className="ml-1 font-medium text-[var(--text-primary)]">
+                {effectiveRepo || 'Not set'}
+              </span>
+            </span>
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-[11px] text-[var(--text-secondary)]">
+              Effective brain{' '}
+              <span className="ml-1 font-medium text-[var(--text-primary)]">{effectiveBrain}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                resetSettings()
+                setWorkspaceRepoInput('')
+                setBrainInput('')
+                setLabelsInput('')
+                setAuthorsInput('')
+                setAssigneesInput('')
+              }}
+              className="ml-auto rounded-xl border border-[var(--border)] px-3 py-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
+            >
+              Reset defaults
+            </button>
           </div>
         </section>
 

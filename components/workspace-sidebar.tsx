@@ -191,9 +191,25 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           </button>
 
           <button
+            onClick={() => setView('github')}
+            className={`activity-bar-btn ${activeView === 'github' ? 'activity-bar-btn--active' : ''}`}
+            title="PRs & Issues (⌘5)"
+          >
+            <Icon icon="lucide:github" width={24} height={24} />
+          </button>
+
+          <button
+            onClick={() => setView('builder')}
+            className={`activity-bar-btn ${activeView === 'builder' ? 'activity-bar-btn--active' : ''}`}
+            title="Builder (⌘6)"
+          >
+            <Icon icon="lucide:sparkles" width={24} height={24} />
+          </button>
+
+          <button
             onClick={() => setView('skills')}
             className={`activity-bar-btn ${activeView === 'skills' ? 'activity-bar-btn--active' : ''}`}
-            title="Skills (⌘5)"
+            title="Skills (⌘7)"
           >
             <Icon icon="lucide:wand-2" width={24} height={24} />
           </button>
@@ -201,7 +217,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('prompts')}
             className={`activity-bar-btn ${activeView === 'prompts' ? 'activity-bar-btn--active' : ''}`}
-            title="Prompts (⌘6)"
+            title="Prompts (⌘8)"
           >
             <Icon icon="lucide:book-open" width={24} height={24} />
           </button>
@@ -209,7 +225,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <button
             onClick={() => setView('kanban')}
             className={`activity-bar-btn ${activeView === 'kanban' ? 'activity-bar-btn--active' : ''}`}
-            title="Kanban (⌘7)"
+            title="Kanban (⌘9)"
           >
             <Icon icon="lucide:kanban" width={24} height={24} />
           </button>
@@ -350,14 +366,26 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
               <div className="h-px my-1.5 bg-[var(--border)]" style={{ opacity: 0.3 }} />
 
               {[
-                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘5' },
+                {
+                  id: 'github' as const,
+                  icon: 'lucide:github',
+                  label: 'PRs & Issues',
+                  shortcut: '⌘5',
+                },
+                {
+                  id: 'builder' as const,
+                  icon: 'lucide:sparkles',
+                  label: 'Builder',
+                  shortcut: '⌘6',
+                },
+                { id: 'skills' as const, icon: 'lucide:wand-2', label: 'Skills', shortcut: '⌘7' },
                 {
                   id: 'prompts' as const,
                   icon: 'lucide:book-open',
                   label: 'Prompts',
-                  shortcut: '⌘6',
+                  shortcut: '⌘8',
                 },
-                { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘7' },
+                { id: 'kanban' as const, icon: 'lucide:kanban', label: 'Kanban', shortcut: '⌘9' },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -392,7 +420,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                   id: 'workshop' as const,
                   icon: 'lucide:hammer',
                   label: 'Workshop',
-                  shortcut: '⌘9',
+                  shortcut: '⌘0',
                 },
               ].map((item) => (
                 <button

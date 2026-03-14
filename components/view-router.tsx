@@ -48,6 +48,14 @@ const WorkshopView = dynamic(
   () => import('@/components/views/workshop-view').then((m) => m.WorkshopView),
   { ssr: false },
 )
+const AgentBuilderView = dynamic(
+  () => import('@/components/views/agent-builder-view').then((m) => m.AgentBuilderView),
+  { ssr: false },
+)
+const GithubWorkspaceView = dynamic(
+  () => import('@/components/views/github-workspace-view').then((m) => m.GithubWorkspaceView),
+  { ssr: false },
+)
 const VIEW_ICONS: Record<string, { label: string }> = {
   chat: { label: 'Chat' },
   editor: { label: 'Editor' },
@@ -58,6 +66,8 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   prompts: { label: 'Prompts' },
   settings: { label: 'Settings' },
   terminal: { label: 'Terminal' },
+  builder: { label: 'Builder' },
+  github: { label: 'PRs & Issues' },
   workshop: { label: 'Workshop' },
 }
 
@@ -133,6 +143,8 @@ export function ViewRouter() {
                 {activeView === 'skills' && <SkillsView />}
                 {activeView === 'prompts' && <PromptLibraryView />}
                 {activeView === 'workshop' && <WorkshopView />}
+                {activeView === 'builder' && <AgentBuilderView />}
+                {activeView === 'github' && <GithubWorkspaceView />}
                 {activeView === 'settings' && <SettingsPanel onBack={() => setView('chat')} />}
                 {activeView === 'terminal' && (
                   <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
