@@ -30,8 +30,6 @@ targets:
     sources:
       - path: Sources
       - path: Assets.xcassets
-      - path: Externals
-        buildPhase: none
       - path: app_iOS
       - path: assets
         buildPhase: resources
