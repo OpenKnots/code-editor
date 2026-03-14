@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Icon } from '@iconify/react'
-import { isTauri, tauriInvoke, tauriListen } from '@/lib/tauri'
+import { isIOSTauri, isTauri, tauriInvoke, tauriListen } from '@/lib/tauri'
 import { useTheme } from '@/context/theme-context'
 import { useLocal } from '@/context/local-context'
+import { useGateway } from '@/context/gateway-context'
 import { emit } from '@/lib/events'
 import '@xterm/xterm/css/xterm.css'
 
@@ -14,6 +15,7 @@ interface TerminalPanelProps {
   onHeightChange: (h: number) => void
   floating?: boolean
   onToggleFloating?: () => void
+  forceGatewayFallback?: boolean
   /** Restart terminal session whenever pane opens or mode changes. */
   refreshOnOpenOrMode?: boolean
   /** Token that changes when app mode changes. */
@@ -85,7 +87,9 @@ function buildXtermTheme(hasBgImage?: boolean, bgColor?: string | null) {
   const solidBg = bgColor || SOLID_TERMINAL_BG
   return {
     background: hasBgImage ? 'transparent' : solidBg,
-    foreground: hasBgImage ? v('--text-primary') || (dark ? '#e5e5e5' : '#171717') : SOLID_TERMINAL_FG,
+    foreground: hasBgImage
+      ? v('--text-primary') || (dark ? '#e5e5e5' : '#171717')
+      : SOLID_TERMINAL_FG,
     cursor: v('--brand') || '#a855f7',
     cursorAccent: hasBgImage ? 'transparent' : solidBg,
     selectionBackground: (v('--brand') || '#a855f7') + '40',
@@ -113,6 +117,7 @@ function buildXtermTheme(hasBgImage?: boolean, bgColor?: string | null) {
 
 interface SessionState {
   terminalId: number | null
+  remoteSessionId: string | null
   creating: boolean
   lastKilledAt: number
   exitUnlisten: (() => void) | null
@@ -124,6 +129,7 @@ interface SessionState {
 
 const session: SessionState = {
   terminalId: null,
+  remoteSessionId: null,
   creating: false,
   lastKilledAt: 0,
   exitUnlisten: null,
@@ -137,8 +143,9 @@ const session: SessionState = {
 // is still alive in the Tauri backend, we keep the id.
 if (typeof window !== 'undefined') {
   const prev = (window as any).__terminalSession as SessionState | undefined
-  if (prev?.terminalId != null) {
+  if (prev) {
     session.terminalId = prev.terminalId
+    session.remoteSessionId = prev.remoteSessionId
     session.exitUnlisten = prev.exitUnlisten
     session.outputUnlisten = prev.outputUnlisten
     session.manualClose = prev.manualClose
@@ -264,9 +271,12 @@ function TerminalPane({
   terminalBgColor,
   onChangeBgColor,
 }: TerminalPaneProps) {
+  const { status: gatewayStatus, sendRequest, onEvent } = useGateway()
   const hasBgImage = !!terminalBg
   const [showBgPicker, setShowBgPicker] = useState(false)
-  const [activeId, setActiveId] = useState<number | null>(session.terminalId)
+  const [activeId, setActiveId] = useState<number | string | null>(
+    session.terminalId ?? session.remoteSessionId,
+  )
   const [terminalError, setTerminalError] = useState<string | null>(null)
   const termRef = useRef<HTMLDivElement>(null)
   const onFileOpenRef = useRef(onFileOpen)
@@ -314,48 +324,103 @@ function TerminalPane({
     [],
   )
 
+  useEffect(() => {
+    if (isDesktop) return
+    const offOutput = onEvent('pty.output', (payload) => {
+      const typed = (payload ?? {}) as { sessionId?: string; data?: string }
+      if (!typed.sessionId || typed.sessionId !== session.remoteSessionId) return
+      if (typeof typed.data === 'string') {
+        session.xterm?.write(typed.data)
+      }
+    })
+    const offExit = onEvent('pty.exit', (payload) => {
+      const typed = (payload ?? {}) as { sessionId?: string; code?: number | null }
+      if (!typed.sessionId || typed.sessionId !== session.remoteSessionId) return
+      session.xterm?.write('\r\n\x1b[90m[Remote process exited]\x1b[0m\r\n')
+      session.remoteSessionId = null
+      setActiveId(null)
+    })
+    return () => {
+      offOutput()
+      offExit()
+    }
+  }, [isDesktop, onEvent])
+
   const createTerminal = useCallback(
     async (initialCommand?: string) => {
-      if (!isDesktop) return
-      if (session.terminalId != null) {
-        try {
-          session.xterm?.focus?.()
-        } catch {}
+      if (isDesktop) {
+        if (session.terminalId != null) {
+          try {
+            session.xterm?.focus?.()
+          } catch {}
+          if (initialCommand) {
+            await tauriInvoke('write_terminal', {
+              id: session.terminalId,
+              data: initialCommand + '\n',
+            }).catch(() => {})
+          }
+          return
+        }
+
+        setTerminalError(null)
+        const id = await ensureSession(cwd, listeners())
+        if (id == null) {
+          if (!session.creating) {
+            const sinceKill = Date.now() - session.lastKilledAt
+            const inDebounceWindow = sinceKill < CREATE_DEBOUNCE_MS
+            if (inDebounceWindow) {
+              const retryIn = Math.max(50, CREATE_DEBOUNCE_MS - sinceKill)
+              setTimeout(() => {
+                void createTerminal(initialCommand)
+              }, retryIn)
+              return
+            }
+            setTerminalError('Terminal is unavailable outside the desktop runtime.')
+          }
+          return
+        }
+        setActiveId(id)
+
         if (initialCommand) {
-          await tauriInvoke('write_terminal', {
-            id: session.terminalId,
-            data: initialCommand + '\n',
-          }).catch(() => {})
+          setTimeout(async () => {
+            await tauriInvoke('write_terminal', { id, data: initialCommand + '\n' })
+          }, 600)
         }
         return
       }
 
       setTerminalError(null)
-      const id = await ensureSession(cwd, listeners())
-      if (id == null) {
-        if (!session.creating) {
-          const sinceKill = Date.now() - session.lastKilledAt
-          const inDebounceWindow = sinceKill < CREATE_DEBOUNCE_MS
-          if (inDebounceWindow) {
-            const retryIn = Math.max(50, CREATE_DEBOUNCE_MS - sinceKill)
-            setTimeout(() => {
-              void createTerminal(initialCommand)
-            }, retryIn)
-            return
-          }
-          setTerminalError('Terminal is unavailable outside the desktop runtime.')
+      if (session.remoteSessionId) {
+        if (initialCommand) {
+          await sendRequest('pty.write', {
+            sessionId: session.remoteSessionId,
+            data: initialCommand + '\n',
+          }).catch(() => {})
         }
+        try {
+          session.xterm?.focus?.()
+        } catch {}
         return
       }
-      setActiveId(id)
 
-      if (initialCommand) {
-        setTimeout(async () => {
-          await tauriInvoke('write_terminal', { id, data: initialCommand + '\n' })
-        }, 600)
+      try {
+        const res = (await sendRequest('pty.create', {
+          cols: session.xterm?.cols ?? 80,
+          rows: session.xterm?.rows ?? 24,
+          cwd: cwd ?? undefined,
+        })) as { sessionId?: string }
+        const sessionId = res?.sessionId
+        if (!sessionId) throw new Error('Gateway did not return a PTY session id')
+        session.remoteSessionId = sessionId
+        setActiveId(sessionId)
+        if (initialCommand) {
+          await sendRequest('pty.write', { sessionId, data: initialCommand + '\n' })
+        }
+      } catch (error) {
+        setTerminalError(error instanceof Error ? error.message : 'Remote terminal unavailable')
       }
     },
-    [isDesktop, cwd, listeners],
+    [isDesktop, cwd, listeners, sendRequest],
   )
 
   // Initialize xterm (once per pane mount), re-use if it already exists
@@ -404,6 +469,12 @@ function TerminalPane({
       term.onData(async (data: string) => {
         if (session.terminalId != null) {
           await tauriInvoke('write_terminal', { id: session.terminalId, data })
+          return
+        }
+        if (session.remoteSessionId) {
+          await sendRequest('pty.write', { sessionId: session.remoteSessionId, data }).catch(
+            () => {},
+          )
         }
       })
 
@@ -456,7 +527,7 @@ function TerminalPane({
       session.lastKilledAt > 0 ? CREATE_DEBOUNCE_MS : 0,
     )
     return () => clearTimeout(timer)
-  }, [visible, isDesktop, activeId, createTerminal, refreshOnOpenOrMode])
+  }, [visible, activeId, createTerminal, refreshOnOpenOrMode])
 
   // Optional auto-refresh behavior for flaky PTY state:
   // recreate the backend session on pane-open and on mode changes.
@@ -470,7 +541,7 @@ function TerminalPane({
     refreshTokenRef.current = refreshToken
 
     if (!refreshOnOpenOrMode) return
-    if (!isDesktop || !visible) return
+    if (!visible) return
     if (!opened && !modeChangedWhileVisible) return
 
     let cancelled = false
@@ -492,6 +563,42 @@ function TerminalPane({
       cancelled = true
     }
   }, [visible, isDesktop, refreshOnOpenOrMode, refreshToken, startupCommand, createTerminal])
+
+  useEffect(() => {
+    if (isDesktop) return
+    if (gatewayStatus !== 'connected') return
+    if (!session.remoteSessionId) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = (await sendRequest('pty.list')) as { sessions?: Array<{ sessionId?: string }> }
+        const exists = Array.isArray(res?.sessions)
+          ? res.sessions.some((entry) => entry?.sessionId === session.remoteSessionId)
+          : false
+        if (cancelled) return
+        if (exists) {
+          setActiveId(session.remoteSessionId)
+          if (session.xterm) {
+            await sendRequest('pty.resize', {
+              sessionId: session.remoteSessionId,
+              cols: session.xterm.cols,
+              rows: session.xterm.rows,
+            }).catch(() => {})
+          }
+        } else {
+          session.remoteSessionId = null
+          setActiveId(null)
+          if (!session.manualClose && visible) {
+            await createTerminal()
+          }
+        }
+      } catch {}
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isDesktop, gatewayStatus, sendRequest, visible, createTerminal])
 
   // Listen for script run requests from the preview panel
   useEffect(() => {
@@ -540,14 +647,19 @@ function TerminalPane({
     const obs = new ResizeObserver(fit)
     if (termRef.current) obs.observe(termRef.current)
     return () => obs.disconnect()
-  }, [visible, height, activeId])
+  }, [visible, height, activeId, sendRequest])
 
   const resetTerminal = useCallback(async () => {
     session.manualClose = true
+    if (session.remoteSessionId) {
+      const sessionId = session.remoteSessionId
+      session.remoteSessionId = null
+      await sendRequest('pty.kill', { sessionId }).catch(() => {})
+    }
     await killSession()
     setActiveId(null)
     session.xterm?.clear()
-  }, [])
+  }, [sendRequest])
 
   return (
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -592,12 +704,30 @@ function TerminalPane({
                     aria-label="Close picker"
                   />
                   <div className="absolute right-0 top-full mt-1 z-[100] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl p-3 w-[200px]">
-                    <p className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Background</p>
+                    <p className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                      Background
+                    </p>
                     <div className="grid grid-cols-6 gap-1.5 mb-2">
-                      {['#000000', '#0a0a0a', '#1a1a2e', '#0d1117', '#1e1e2e', '#2d1b2e', '#0b132b', '#1b2a1b', '#2a1a0b', '#1a0a0a', '#0a1a2a', '#2a2a1a'].map((c) => (
+                      {[
+                        '#000000',
+                        '#0a0a0a',
+                        '#1a1a2e',
+                        '#0d1117',
+                        '#1e1e2e',
+                        '#2d1b2e',
+                        '#0b132b',
+                        '#1b2a1b',
+                        '#2a1a0b',
+                        '#1a0a0a',
+                        '#0a1a2a',
+                        '#2a2a1a',
+                      ].map((c) => (
                         <button
                           key={c}
-                          onClick={() => { onChangeBgColor(c); setShowBgPicker(false) }}
+                          onClick={() => {
+                            onChangeBgColor(c)
+                            setShowBgPicker(false)
+                          }}
                           className={`w-6 h-6 rounded-md border transition-all hover:scale-110 ${terminalBgColor === c ? 'border-[var(--brand)] ring-1 ring-[var(--brand)]' : 'border-[var(--border)]'}`}
                           style={{ backgroundColor: c }}
                           title={c}
@@ -617,7 +747,10 @@ function TerminalPane({
                       </span>
                       {terminalBgColor && (
                         <button
-                          onClick={() => { onChangeBgColor(null); setShowBgPicker(false) }}
+                          onClick={() => {
+                            onChangeBgColor(null)
+                            setShowBgPicker(false)
+                          }}
                           className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                           title="Reset to default"
                         >
@@ -646,7 +779,7 @@ function TerminalPane({
       {/* Terminal viewport */}
       <div
         className="flex-1 overflow-hidden relative"
-        style={{ backgroundColor: hasBgImage ? undefined : (terminalBgColor || '#000000') }}
+        style={{ backgroundColor: hasBgImage ? undefined : terminalBgColor || '#000000' }}
       >
         {hasBgImage && (
           <>
@@ -662,30 +795,14 @@ function TerminalPane({
             />
           </>
         )}
-        {isDesktop ? (
-          <div className="w-full h-full p-2 relative">
-            <div ref={termRef} className="w-full h-full" />
-            {terminalError && (
-              <div className="absolute right-2 top-2 max-w-[70%] rounded border border-[color-mix(in_srgb,var(--color-deletions)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] px-2 py-1 text-[11px] text-[var(--color-deletions)]">
-                {terminalError}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-[var(--text-secondary)] text-sm">
-            <div className="text-center space-y-2">
-              <Icon icon="lucide:terminal" width={32} height={32} className="mx-auto opacity-40" />
-              <p>Terminal available in the desktop app</p>
-              <p className="text-[12px] text-[var(--text-tertiary)]">
-                Run{' '}
-                <code className="px-1 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--brand)]">
-                  pnpm desktop:dev
-                </code>{' '}
-                for native terminal
-              </p>
+        <div className="w-full h-full p-2 relative">
+          <div ref={termRef} className="w-full h-full" />
+          {terminalError && (
+            <div className="absolute right-2 top-2 max-w-[70%] rounded border border-[color-mix(in_srgb,var(--color-deletions)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] px-2 py-1 text-[11px] text-[var(--color-deletions)]">
+              {terminalError}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
@@ -699,11 +816,18 @@ export function TerminalPanel({
   onHeightChange,
   floating,
   onToggleFloating,
+  forceGatewayFallback,
   refreshOnOpenOrMode,
   refreshToken,
   startupCommand,
 }: TerminalPanelProps) {
-  const { version: themeVersion, terminalBg, terminalBgOpacity, terminalBgColor, setTerminalBgColor } = useTheme()
+  const {
+    version: themeVersion,
+    terminalBg,
+    terminalBgOpacity,
+    terminalBgColor,
+    setTerminalBgColor,
+  } = useTheme()
   const local = useLocal()
   const [isDesktop, setIsDesktop] = useState(false)
   const resizing = useRef(false)
@@ -711,8 +835,9 @@ export function TerminalPanel({
   const startH = useRef(0)
 
   useEffect(() => {
-    setIsDesktop(isTauri())
+    setIsDesktop(isTauri() && !isIOSTauri())
   }, [])
+  const canUseNativeTerminal = isDesktop && !forceGatewayFallback
 
   const handleFileOpen = useCallback((path: string, line?: number) => {
     emit('file-select', { path })
@@ -770,7 +895,7 @@ export function TerminalPanel({
         <TerminalPane
           visible={visible}
           height={height}
-          isDesktop={isDesktop}
+          isDesktop={canUseNativeTerminal}
           themeVersion={themeVersion}
           floating={floating}
           onToggleFloating={isCenter ? undefined : onToggleFloating}

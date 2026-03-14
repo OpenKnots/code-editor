@@ -10,7 +10,8 @@ This is a product-scope adaptation, not a direct desktop parity port.
 
 The current desktop app relies on capabilities that are not available (or not practical) on iOS:
 
-- Local shell and PTY-backed terminal sessions
+- Local shell and desktop-native PTY sessions
+- iOS now uses gateway-backed remote PTY sessions instead of device-local shells
 - Running `git` as a system CLI from Rust commands
 - Starting/stopping the local OpenClaw engine process from the app
 - Wide open local filesystem access patterns optimized for desktop workflows
