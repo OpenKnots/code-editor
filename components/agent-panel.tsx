@@ -2574,7 +2574,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       )}
 
       {showReconnectOverlay && (
-        <div className="pointer-events-none absolute inset-x-4 top-[72px] bottom-[92px] z-20 overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,12,16,0.76),rgba(10,12,16,0.38))] backdrop-blur-xl shadow-[0_32px_80px_rgba(0,0,0,0.38)]">
+        <div className="pointer-events-none absolute inset-x-4 top-[70px] bottom-[88px] z-20 overflow-hidden rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,12,16,0.8),rgba(10,12,16,0.42))] backdrop-blur-xl shadow-[0_32px_80px_rgba(0,0,0,0.38)]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_52%)]" />
           <div className="relative flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
             <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/88 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
@@ -2600,7 +2600,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
               {[0, 1, 2].map((row) => (
                 <div
                   key={row}
-                  className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.045] px-4 py-3"
+                  className="overflow-hidden rounded-[20px] border border-white/8 bg-white/[0.045] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
                 >
                   <div className="h-2.5 w-24 rounded-full bg-white/10" />
                   <div className="mt-2 h-2.5 w-full rounded-full bg-white/6" />

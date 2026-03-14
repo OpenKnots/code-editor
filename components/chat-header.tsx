@@ -92,7 +92,7 @@ export function ChatHeader({
 
   return (
     <div className="shrink-0">
-      <div className="flex items-center justify-between h-10 px-3 border-b border-[var(--border)] bg-[var(--sidebar-bg)]">
+      <div className="flex h-10 items-center justify-between border-b border-[color-mix(in_srgb,var(--border)_88%,transparent)] bg-[color-mix(in_srgb,var(--sidebar-bg)_90%,var(--bg-elevated))] px-3 backdrop-blur-sm">
         <div className="flex flex-1 min-w-0 items-center gap-2">
           {/* Streaming status indicator */}
           {isStreaming ? (

@@ -473,7 +473,7 @@ export function ChatInputBar({
                       return (
                         <div
                           key={i}
-                          className="group/chip flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-1 hover:border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] transition-colors"
+                          className="group/chip flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-subtle)_94%,transparent)] px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] hover:border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] transition-colors"
                         >
                           <div className="w-5 h-5 rounded-md bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] flex items-center justify-center shrink-0">
                             <Icon

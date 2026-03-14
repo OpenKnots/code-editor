@@ -3391,14 +3391,17 @@ p {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 7px 10px;
-  border-radius: 8px;
+  padding: 7.5px 10px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
-  transition: all 180ms ease;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
   cursor: pointer;
   text-align: left;
   position: relative;
@@ -3407,7 +3410,8 @@ p {
 
 .sidebar-view-nav:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--bg-subtle) 88%, transparent);
+  transform: translateX(1px);
 }
 
 .sidebar-view-nav--active {
@@ -3433,11 +3437,12 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.25rem;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-elevated);
+  margin-bottom: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .codex-sidebar-hero__icon {
@@ -3731,9 +3736,14 @@ p {
 }
 
 .skeleton {
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--shimmer-from) 94%, transparent) 0%,
+    color-mix(in srgb, var(--shimmer-via) 92%, transparent) 50%,
+    color-mix(in srgb, var(--shimmer-from) 94%, transparent) 100%
+  );
+  border-radius: calc(var(--radius-sm) + 2px);
+  animation: shimmer 2.2s ease-in-out infinite;
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -5992,12 +6002,17 @@ p {
 }
 
 .codex-sidebar-new-thread {
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 10px 24px rgba(0, 0, 0, 0.12);
 }
 
 .codex-sidebar-new-thread:hover {
-  background: var(--bg-subtle);
+  background: color-mix(in srgb, var(--bg-subtle) 92%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
+  transform: translateY(-0.5px);
 }
 
 .codex-sidebar-nav-item {
@@ -6070,17 +6085,22 @@ p {
 .codex-header-btn {
   border: 1px solid transparent;
   background: color-mix(in srgb, var(--shell-chip-bg) 88%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 8px 24px rgba(0, 0, 0, 0.08);
 }
 .codex-header-btn:hover {
   border-color: var(--shell-chip-border);
   background: color-mix(in srgb, var(--shell-chip-bg) 84%, var(--shell-chip-hover));
+  transform: translateY(-0.5px);
 }
 
 .codex-header-badge {
   letter-spacing: 0.02em;
   border: 1px solid var(--shell-chip-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Codex Layout: Home / Composer ──────────────────────── */
@@ -6104,10 +6124,17 @@ p {
 .codex-composer {
   transition:
     border-color 200ms,
-    box-shadow 200ms;
+    box-shadow 200ms,
+    background-color 200ms;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 18px 44px rgba(0, 0, 0, 0.14);
 }
 .codex-composer:focus-within {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 15%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 0 1px color-mix(in srgb, var(--brand) 15%, transparent),
+    0 22px 52px rgba(0, 0, 0, 0.16);
 }
 
 .codex-pill {
@@ -6466,7 +6493,9 @@ a:active,
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(135deg, var(--brand, #3b82f6), var(--accent, #8b5cf6));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;

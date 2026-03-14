@@ -829,7 +829,7 @@ export default function EditorLayout() {
                   }
                 }}
               >
-                <div className="h-full overflow-hidden rounded-r-[28px] border border-white/8 bg-[color-mix(in_srgb,var(--sidebar-bg)_92%,rgba(8,10,14,0.92))] shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+                <div className="h-full overflow-hidden rounded-r-[30px] border border-white/8 bg-[color-mix(in_srgb,var(--sidebar-bg)_92%,rgba(8,10,14,0.92))] shadow-[0_28px_96px_rgba(0,0,0,0.46)] backdrop-blur-xl">
                   <WorkspaceSidebar
                     collapsed={false}
                     repoName={repo?.fullName || localRootPath?.split('/').pop()}
