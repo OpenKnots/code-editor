@@ -37,6 +37,7 @@ export type ConnectionStatus =
   | 'disconnected'
   | 'connecting'
   | 'authenticating'
+  | 'reconnecting'
   | 'connected'
   | 'error'
 
@@ -118,7 +119,9 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
       cleanup()
       intentionalDisconnectRef.current = false
       setError(null)
-      setStatus('connecting')
+      setStatus(
+        connectedRef.current || reconnectAttemptRef.current > 0 ? 'reconnecting' : 'connecting',
+      )
 
       const wsUrl = gatewayUrlToWs(url)
       let ws: WebSocket
@@ -342,7 +345,7 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Auto-reconnect with exponential backoff
-        setStatus('disconnected')
+        setStatus('reconnecting')
         if (credentialsRef.current) {
           const attempt = ++reconnectAttemptRef.current
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000)

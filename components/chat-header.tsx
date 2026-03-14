@@ -1,8 +1,10 @@
 'use client'
 
 import { Icon } from '@iconify/react'
+import { motion } from 'framer-motion'
 import { useRepo } from '@/context/repo-context'
 import { useLocal } from '@/context/local-context'
+import type { ConnectionStatus } from '@/context/gateway-context'
 
 interface Props {
   title?: string
@@ -13,6 +15,9 @@ interface Props {
   maxContextTokens?: number
   activityCount?: number
   filesChanged?: number
+  connectionStatus?: ConnectionStatus
+  connectionError?: string | null
+  onReconnect?: () => void
   onClose?: () => void
 }
 
@@ -25,6 +30,9 @@ export function ChatHeader({
   maxContextTokens = 128000,
   activityCount = 0,
   filesChanged = 0,
+  connectionStatus = 'disconnected',
+  connectionError = null,
+  onReconnect,
   onClose,
 }: Props) {
   const { repo } = useRepo()
@@ -38,6 +46,46 @@ export function ChatHeader({
   if (!title && messageCount === 0) return null
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  const connectionMeta: Record<
+    ConnectionStatus,
+    { label: string; tone: string; dot: string; pulse?: boolean }
+  > = {
+    disconnected: {
+      label: 'Offline',
+      tone: 'text-[var(--text-disabled)] border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_90%,transparent)]',
+      dot: 'bg-zinc-500/80',
+    },
+    connecting: {
+      label: 'Connecting',
+      tone: 'text-sky-200 border-sky-500/30 bg-sky-500/10',
+      dot: 'bg-sky-400',
+      pulse: true,
+    },
+    authenticating: {
+      label: 'Authenticating',
+      tone: 'text-violet-200 border-violet-500/30 bg-violet-500/10',
+      dot: 'bg-violet-400',
+      pulse: true,
+    },
+    reconnecting: {
+      label: 'Reconnecting',
+      tone: 'text-amber-200 border-amber-500/30 bg-amber-500/10',
+      dot: 'bg-amber-400',
+      pulse: true,
+    },
+    connected: {
+      label: 'Online',
+      tone: 'text-emerald-200 border-emerald-500/30 bg-emerald-500/10',
+      dot: 'bg-emerald-400',
+    },
+    error: {
+      label: 'Connection error',
+      tone: 'text-rose-200 border-rose-500/30 bg-rose-500/10',
+      dot: 'bg-rose-400',
+    },
+  }
+  const connection = connectionMeta[connectionStatus]
 
   // Hide entire chat header on mobile — saves 40px vertical space
   if (isMobile) return null
@@ -63,6 +111,19 @@ export function ChatHeader({
           <span className="text-[14px] font-semibold text-[var(--text-primary)] truncate">
             {title || 'Chat'}
           </span>
+          <motion.span
+            key={connectionStatus}
+            initial={{ opacity: 0, y: -4, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-[0_10px_24px_rgba(0,0,0,0.18)] ${connection.tone}`}
+            title={connectionError ?? `Gateway ${connection.label.toLowerCase()}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${connection.dot} ${connection.pulse ? 'connection-pulse' : ''}`}
+            />
+            {connection.label}
+          </motion.span>
           {repoName && (
             <>
               <span className="shrink-0 text-[var(--text-disabled)]">&middot;</span>
@@ -102,24 +163,43 @@ export function ChatHeader({
             <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--bg-subtle)] px-1.5 py-0.5 text-[9px] text-[var(--text-disabled)]">
               <Icon icon="lucide:activity" width={9} height={9} className="text-[var(--brand)]" />
               {activityCount} ops
-              {filesChanged > 0 && (
-                <span className="text-amber-400">· {filesChanged} files</span>
-              )}
+              {filesChanged > 0 && <span className="text-amber-400">· {filesChanged} files</span>}
             </span>
           )}
           {/* Context token count */}
           {contextTokens > 0 && (
-            <span className={`inline-flex items-center gap-1 whitespace-nowrap text-[9px] tabular-nums ${
-              contextPct > 80 ? 'text-amber-400' : contextPct > 95 ? 'text-red-400' : 'text-[var(--text-disabled)]'
-            }`}>
+            <span
+              className={`inline-flex items-center gap-1 whitespace-nowrap text-[9px] tabular-nums ${
+                contextPct > 80
+                  ? 'text-amber-400'
+                  : contextPct > 95
+                    ? 'text-red-400'
+                    : 'text-[var(--text-disabled)]'
+              }`}
+            >
               <Icon icon="lucide:database" width={9} height={9} />
               {contextTokens >= 1000 ? `${(contextTokens / 1000).toFixed(0)}K` : contextTokens}
-              <span className="text-[8px]">/{maxContextTokens >= 1000 ? `${(maxContextTokens / 1000).toFixed(0)}K` : maxContextTokens}</span>
+              <span className="text-[8px]">
+                /
+                {maxContextTokens >= 1000
+                  ? `${(maxContextTokens / 1000).toFixed(0)}K`
+                  : maxContextTokens}
+              </span>
             </span>
           )}
           <span className="whitespace-nowrap text-[11px] text-[var(--text-disabled)]">
             {messageCount} msg
           </span>
+          {(connectionStatus === 'reconnecting' || connectionStatus === 'error') && onReconnect && (
+            <button
+              onClick={onReconnect}
+              className="inline-flex h-7 items-center gap-1 rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-2.5 text-[10px] font-medium text-[var(--text-secondary)] transition hover:border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] hover:text-[var(--text-primary)]"
+              title="Retry gateway connection"
+            >
+              <Icon icon="lucide:refresh-cw" width={11} height={11} />
+              Retry
+            </button>
+          )}
           {onClose && (
             <button
               onClick={onClose}

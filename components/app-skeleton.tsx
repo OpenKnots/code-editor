@@ -8,9 +8,10 @@ export function AppSkeleton() {
   const sidebarLineWidths = ['72%', '84%', '67%', '79%', '90%']
 
   return (
-    <div className="flex h-full w-full bg-[var(--bg)] text-[var(--text-primary)] overflow-hidden gap-1.5 p-1.5 animate-pulse">
+    <div className="relative flex h-full w-full overflow-hidden gap-1.5 bg-[var(--bg)] p-1.5 text-[var(--text-primary)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_35%,transparent_60%)] [background-size:220%_100%] animate-[shimmer_2.2s_linear_infinite]" />
       {/* Sidebar placeholder */}
-      <div className="w-[220px] shrink-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]">
+      <div className="w-[220px] shrink-0 rounded-[22px] border border-white/8 bg-[color-mix(in_srgb,var(--bg-elevated)_92%,transparent)] shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
         <div className="h-12 border-b border-[var(--border)] px-4 flex items-center">
           <div className="h-3 w-24 rounded bg-[var(--border)]" />
         </div>
@@ -22,7 +23,7 @@ export function AppSkeleton() {
       </div>
 
       {/* Main content placeholder */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl overflow-hidden border border-[var(--border)]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/8 bg-[color-mix(in_srgb,var(--bg)_96%,transparent)] shadow-[0_24px_80px_rgba(0,0,0,0.2)]">
         {/* Accent line */}
         <div className="h-[2px] shrink-0 bg-[var(--border)]" />
 

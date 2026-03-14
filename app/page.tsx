@@ -804,15 +804,15 @@ export default function EditorLayout() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[85] bg-black/60"
+              className="fixed inset-0 z-[85] bg-[radial-gradient(circle_at_left,rgba(0,0,0,0.18),rgba(0,0,0,0.7))] backdrop-blur-[2px]"
               onClick={() => setMobileSidebarOpen(false)}
               aria-label="Close workspace drawer"
             />
             <motion.div
               key="mobile-sidebar-drawer"
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
+              initial={{ x: '-100%', opacity: 0.84, scale: 0.985 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: '-100%', opacity: 0.84, scale: 0.985 }}
               transition={{ type: 'spring', stiffness: 400, damping: 34 }}
               className="fixed left-0 z-[90] w-[280px]"
               style={{
@@ -829,10 +829,12 @@ export default function EditorLayout() {
                   }
                 }}
               >
-                <WorkspaceSidebar
-                  collapsed={false}
-                  repoName={repo?.fullName || localRootPath?.split('/').pop()}
-                />
+                <div className="h-full overflow-hidden rounded-r-[28px] border border-white/8 bg-[color-mix(in_srgb,var(--sidebar-bg)_92%,rgba(8,10,14,0.92))] shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+                  <WorkspaceSidebar
+                    collapsed={false}
+                    repoName={repo?.fullName || localRootPath?.split('/').pop()}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => setMobileSidebarOpen(false)}

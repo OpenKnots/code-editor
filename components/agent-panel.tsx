@@ -314,7 +314,7 @@ function formatPullRequestDetails(
 }
 
 export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
-  const { sendRequest, onEvent, status } = useGateway()
+  const { sendRequest, onEvent, status, error, reconnect } = useGateway()
   const { files, activeFile, getFile, openFile, updateFileContent } = useEditor()
   const { repo, tree: repoTree } = useRepo()
   const local = useLocal()
@@ -441,6 +441,10 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
   }, [atQuery, allFilePaths])
 
   const isConnected = status === 'connected'
+  const hasMessages = messages.length > 0
+  const isConnectionTransitional =
+    status === 'connecting' || status === 'authenticating' || status === 'reconnecting'
+  const showReconnectOverlay = !isConnected && (hasMessages || isConnectionTransitional)
 
   // ─── Fetch model info from gateway ────────────────────────
   useEffect(() => {
@@ -2474,6 +2478,9 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
         modelName={modelInfo.current || undefined}
         contextTokens={contextTokens}
         activityCount={agentActivities.length}
+        connectionStatus={status}
+        connectionError={error}
+        onReconnect={reconnect}
         filesChanged={
           agentActivities
             .filter((a) => a.type === 'edit' || a.type === 'write' || a.type === 'create')
@@ -2547,7 +2554,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       )}
 
       {/* Empty states — full bleed */}
-      {messages.length === 0 && !isConnected && (
+      {messages.length === 0 && !isConnected && !isConnectionTransitional && (
         <div className="flex-1 overflow-y-auto px-3 py-3">
           <AgentConnectPrompt />
         </div>
@@ -2564,6 +2571,49 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
           imageAttachments={imageAttachments}
           onRemoveImage={(i) => setImageAttachments((prev) => prev.filter((_, j) => j !== i))}
         />
+      )}
+
+      {showReconnectOverlay && (
+        <div className="pointer-events-none absolute inset-x-4 top-[72px] bottom-[92px] z-20 overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,12,16,0.76),rgba(10,12,16,0.38))] backdrop-blur-xl shadow-[0_32px_80px_rgba(0,0,0,0.38)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_52%)]" />
+          <div className="relative flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/88 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+              <span
+                className={`h-2 w-2 rounded-full ${status === 'error' ? 'bg-rose-400' : status === 'reconnecting' ? 'bg-amber-400 connection-pulse' : 'bg-sky-400 connection-pulse'}`}
+              />
+              {status === 'error'
+                ? 'Connection interrupted'
+                : status === 'reconnecting'
+                  ? 'Restoring your session'
+                  : 'Preparing chat'}
+            </div>
+            <div className="max-w-sm space-y-1">
+              <p className="text-[15px] font-semibold text-white/96">
+                {hasMessages ? 'Your conversation is staying put.' : 'Warming up the chat surface.'}
+              </p>
+              <p className="text-[12px] leading-6 text-white/62">
+                {error ??
+                  "We're keeping the panel mounted and preserving context while the gateway comes back."}
+              </p>
+            </div>
+            <div className="flex w-full max-w-md flex-col gap-2">
+              {[0, 1, 2].map((row) => (
+                <div
+                  key={row}
+                  className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.045] px-4 py-3"
+                >
+                  <div className="h-2.5 w-24 rounded-full bg-white/10" />
+                  <div className="mt-2 h-2.5 w-full rounded-full bg-white/6" />
+                  <div
+                    className="mt-2 h-2.5 rounded-full bg-white/6"
+                    style={{ width: `${88 - row * 14}%` }}
+                  />
+                  <div className="mt-3 h-px w-full bg-white/6" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Agent Approvals */}
@@ -2632,6 +2682,16 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
           onImagePaste={handleImagePaste}
           onFileAttach={handleFileAttach}
           onImageAttach={handleImageAttach}
+          disabled={showReconnectOverlay}
+          statusLabel={
+            status === 'reconnecting'
+              ? 'Reconnecting…'
+              : status === 'error'
+                ? 'Offline'
+                : status === 'connecting' || status === 'authenticating'
+                  ? 'Connecting…'
+                  : null
+          }
         />
       )}
     </div>

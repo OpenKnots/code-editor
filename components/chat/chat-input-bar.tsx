@@ -15,6 +15,7 @@ import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
 import { formatShortcut } from '@/lib/platform'
 import { InlinePicker, type PickerItem } from '@/components/chat/inline-picker'
+import { triggerHaptic } from '@/lib/haptics'
 
 export interface Suggestion {
   cmd: string
@@ -79,6 +80,8 @@ interface ChatInputBarProps {
   onImagePaste: (e: ClipboardEvent<HTMLTextAreaElement>) => void
   onFileAttach: () => void
   onImageAttach: () => void
+  disabled?: boolean
+  statusLabel?: string | null
 }
 
 function getFileTypeIcon(path: string): string {
@@ -173,6 +176,8 @@ export function ChatInputBar({
   onImagePaste,
   onFileAttach,
   onImageAttach,
+  disabled = false,
+  statusLabel = null,
 }: ChatInputBarProps) {
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
@@ -212,6 +217,12 @@ export function ChatInputBar({
       setInputDragOver(false)
     }
   }, [])
+
+  const handleSend = useCallback(() => {
+    if (disabled || sending || !input.trim()) return
+    triggerHaptic('light')
+    onSend()
+  }, [disabled, sending, input, onSend])
 
   const handleInputDrop = useCallback(
     (e: DragEvent<HTMLDivElement>) => {
@@ -368,7 +379,7 @@ export function ChatInputBar({
 
           {/* Unified input container with drag-drop zone */}
           <div
-            className={`input-focus-glow rounded-xl border bg-[var(--bg)] focus-within:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-all overflow-hidden ${
+            className={`input-focus-glow rounded-[24px] border bg-[linear-gradient(180deg,color-mix(in_srgb,var(--bg)_95%,transparent),color-mix(in_srgb,var(--bg-elevated)_88%,transparent))] shadow-[0_26px_80px_rgba(0,0,0,0.28)] focus-within:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-all overflow-hidden ${
               inputDragOver
                 ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_4%,transparent)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--brand)_15%,transparent)]'
                 : 'border-[var(--border)]'
@@ -519,6 +530,13 @@ export function ChatInputBar({
             )}
 
             {/* Textarea */}
+            {statusLabel && (
+              <div className="mx-3 mt-3 inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] font-medium text-[var(--text-secondary)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand)] connection-pulse" />
+                {statusLabel}
+              </div>
+            )}
+
             <textarea
               ref={inputRef}
               value={input}
@@ -565,12 +583,13 @@ export function ChatInputBar({
                 }
                 onKeyDown(e)
               }}
-              onDrop={onFileDrop}
+              onDrop={disabled ? (e) => e.preventDefault() : onFileDrop}
               onDragOver={(e) => e.preventDefault()}
               onPaste={onImagePaste}
               placeholder={currentPlaceholder}
               rows={1}
-              className="w-full resize-none bg-transparent px-3 py-2 text-[14px] sm:text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
+              disabled={disabled}
+              className="w-full resize-none bg-transparent px-4 py-3 text-[14px] sm:text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none disabled:cursor-not-allowed disabled:opacity-70"
             />
 
             {/* Bottom toolbar row */}
@@ -578,6 +597,7 @@ export function ChatInputBar({
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={onFileAttach}
+                  disabled={disabled}
                   className="p-2 sm:p-1 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
                   title="Attach file"
                 >
@@ -590,6 +610,7 @@ export function ChatInputBar({
                 </button>
                 <button
                   onClick={onImageAttach}
+                  disabled={disabled}
                   className="p-2 sm:p-1 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
                   title="Attach image"
                 >
@@ -613,11 +634,11 @@ export function ChatInputBar({
                   </span>
                 )}
                 <button
-                  onClick={onSend}
-                  disabled={!input.trim() || sending}
+                  onClick={handleSend}
+                  disabled={disabled || !input.trim() || sending}
                   className={`p-1 rounded-md transition-all cursor-pointer ${
                     input.trim() && !sending
-                      ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90'
+                      ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90 shadow-[0_10px_24px_color-mix(in_srgb,var(--brand)_30%,transparent)]'
                       : 'text-[var(--text-disabled)] cursor-not-allowed'
                   }`}
                   title="Send (Enter)"

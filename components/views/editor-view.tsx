@@ -344,7 +344,7 @@ export function EditorView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-40 bg-black/40"
+              className="absolute inset-0 z-40 bg-[radial-gradient(circle_at_right,rgba(0,0,0,0.18),rgba(0,0,0,0.62))] backdrop-blur-[2px]"
               onClick={() => layout.hide('tree')}
               aria-label="Close files"
             />
@@ -396,17 +396,17 @@ export function EditorView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-40 bg-black/40"
+              className="absolute inset-0 z-40 bg-[radial-gradient(circle_at_right,rgba(0,0,0,0.18),rgba(0,0,0,0.62))] backdrop-blur-[2px]"
               onClick={() => layout.hide('chat')}
               aria-label="Close chat"
             />
             <motion.div
               key="chat-drawer"
-              initial={{ x: 420 }}
-              animate={{ x: 0 }}
-              exit={{ x: 420 }}
+              initial={{ x: 420, opacity: 0.84, scale: 0.985 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: 420, opacity: 0.84, scale: 0.985 }}
               transition={PANEL_SPRING}
-              className="absolute inset-y-0 right-0 z-50 w-[min(96vw,420px)] overflow-hidden border-l border-[var(--border)] bg-[var(--sidebar-bg)]"
+              className="absolute inset-y-0 right-0 z-50 w-[min(96vw,420px)] overflow-hidden rounded-l-[28px] border border-white/8 bg-[color-mix(in_srgb,var(--sidebar-bg)_92%,rgba(8,10,14,0.92))] shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl"
             >
               <button
                 type="button"
