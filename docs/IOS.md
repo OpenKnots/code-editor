@@ -58,6 +58,7 @@ Deliverables:
 - Tune editor interactions for touch
 - Keep file open/edit/save flow via existing API/local-web pathways
 - Improve reconnect/resume behavior for unstable mobile networks
+- Keep remote terminal writes backpressure-safe during large paste bursts and clearly distinguish closed vs disconnected states
 
 Deliverables:
 

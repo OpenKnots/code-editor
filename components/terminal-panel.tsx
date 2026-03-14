@@ -118,6 +118,7 @@ function buildXtermTheme(hasBgImage?: boolean, bgColor?: string | null) {
 interface SessionState {
   terminalId: number | null
   remoteSessionId: string | null
+  remoteLifecycle: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'closed'
   creating: boolean
   lastKilledAt: number
   exitUnlisten: (() => void) | null
@@ -130,6 +131,7 @@ interface SessionState {
 const session: SessionState = {
   terminalId: null,
   remoteSessionId: null,
+  remoteLifecycle: 'idle',
   creating: false,
   lastKilledAt: 0,
   exitUnlisten: null,
@@ -146,6 +148,7 @@ if (typeof window !== 'undefined') {
   if (prev) {
     session.terminalId = prev.terminalId
     session.remoteSessionId = prev.remoteSessionId
+    session.remoteLifecycle = prev.remoteLifecycle
     session.exitUnlisten = prev.exitUnlisten
     session.outputUnlisten = prev.outputUnlisten
     session.manualClose = prev.manualClose
@@ -278,7 +281,12 @@ function TerminalPane({
     session.terminalId ?? session.remoteSessionId,
   )
   const [terminalError, setTerminalError] = useState<string | null>(null)
+  const [remoteLifecycle, setRemoteLifecycle] = useState<SessionState['remoteLifecycle']>(
+    session.remoteLifecycle,
+  )
   const termRef = useRef<HTMLDivElement>(null)
+  const remoteWriteBufferRef = useRef('')
+  const remoteFlushPromiseRef = useRef<Promise<void> | null>(null)
   const onFileOpenRef = useRef(onFileOpen)
   const wasVisibleRef = useRef(false)
   const refreshTokenRef = useRef<string | undefined>(undefined)
@@ -286,6 +294,36 @@ function TerminalPane({
   useEffect(() => {
     onFileOpenRef.current = onFileOpen
   }, [onFileOpen])
+
+  const setRemoteState = useCallback((next: SessionState['remoteLifecycle']) => {
+    session.remoteLifecycle = next
+    setRemoteLifecycle(next)
+  }, [])
+
+  const flushRemoteWrites = useCallback(async () => {
+    if (remoteFlushPromiseRef.current) return remoteFlushPromiseRef.current
+    const run = (async () => {
+      while (
+        remoteWriteBufferRef.current &&
+        session.remoteSessionId &&
+        gatewayStatus === 'connected'
+      ) {
+        const chunk = remoteWriteBufferRef.current.slice(0, 8192)
+        try {
+          await sendRequest('pty.write', { sessionId: session.remoteSessionId, data: chunk })
+          remoteWriteBufferRef.current = remoteWriteBufferRef.current.slice(chunk.length)
+          setRemoteState('connected')
+        } catch {
+          setRemoteState('disconnected')
+          break
+        }
+      }
+    })().finally(() => {
+      remoteFlushPromiseRef.current = null
+    })
+    remoteFlushPromiseRef.current = run
+    return run
+  }, [gatewayStatus, sendRequest, setRemoteState])
 
   // Keyboard-first: allow global shortcuts to focus the active terminal.
   useEffect(() => {
@@ -338,13 +376,14 @@ function TerminalPane({
       if (!typed.sessionId || typed.sessionId !== session.remoteSessionId) return
       session.xterm?.write('\r\n\x1b[90m[Remote process exited]\x1b[0m\r\n')
       session.remoteSessionId = null
+      setRemoteState('closed')
       setActiveId(null)
     })
     return () => {
       offOutput()
       offExit()
     }
-  }, [isDesktop, onEvent])
+  }, [isDesktop, onEvent, setRemoteState])
 
   const createTerminal = useCallback(
     async (initialCommand?: string) => {
@@ -392,10 +431,8 @@ function TerminalPane({
       setTerminalError(null)
       if (session.remoteSessionId) {
         if (initialCommand) {
-          await sendRequest('pty.write', {
-            sessionId: session.remoteSessionId,
-            data: initialCommand + '\n',
-          }).catch(() => {})
+          remoteWriteBufferRef.current += initialCommand + '\n'
+          await flushRemoteWrites()
         }
         try {
           session.xterm?.focus?.()
@@ -404,6 +441,7 @@ function TerminalPane({
       }
 
       try {
+        setRemoteState('connecting')
         const res = (await sendRequest('pty.create', {
           cols: session.xterm?.cols ?? 80,
           rows: session.xterm?.rows ?? 24,
@@ -412,15 +450,18 @@ function TerminalPane({
         const sessionId = res?.sessionId
         if (!sessionId) throw new Error('Gateway did not return a PTY session id')
         session.remoteSessionId = sessionId
+        setRemoteState('connected')
         setActiveId(sessionId)
         if (initialCommand) {
-          await sendRequest('pty.write', { sessionId, data: initialCommand + '\n' })
+          remoteWriteBufferRef.current += initialCommand + '\n'
+          await flushRemoteWrites()
         }
       } catch (error) {
+        setRemoteState('disconnected')
         setTerminalError(error instanceof Error ? error.message : 'Remote terminal unavailable')
       }
     },
-    [isDesktop, cwd, listeners, sendRequest],
+    [isDesktop, cwd, listeners, sendRequest, flushRemoteWrites, setRemoteState],
   )
 
   // Initialize xterm (once per pane mount), re-use if it already exists
@@ -472,9 +513,8 @@ function TerminalPane({
           return
         }
         if (session.remoteSessionId) {
-          await sendRequest('pty.write', { sessionId: session.remoteSessionId, data }).catch(
-            () => {},
-          )
+          remoteWriteBufferRef.current += data
+          void flushRemoteWrites()
         }
       })
 
@@ -566,7 +606,10 @@ function TerminalPane({
 
   useEffect(() => {
     if (isDesktop) return
-    if (gatewayStatus !== 'connected') return
+    if (gatewayStatus !== 'connected') {
+      if (session.remoteSessionId) setRemoteState('disconnected')
+      return
+    }
     if (!session.remoteSessionId) return
 
     let cancelled = false
@@ -578,6 +621,7 @@ function TerminalPane({
           : false
         if (cancelled) return
         if (exists) {
+          setRemoteState('connected')
           setActiveId(session.remoteSessionId)
           if (session.xterm) {
             await sendRequest('pty.resize', {
@@ -586,19 +630,41 @@ function TerminalPane({
               rows: session.xterm.rows,
             }).catch(() => {})
           }
-        } else {
-          session.remoteSessionId = null
-          setActiveId(null)
-          if (!session.manualClose && visible) {
-            await createTerminal()
-          }
+          await flushRemoteWrites()
+          return
         }
-      } catch {}
+      } catch {
+        if (cancelled) return
+      }
+
+      const lostSessionId = session.remoteSessionId
+      session.remoteSessionId = null
+      setActiveId(null)
+      setRemoteState('disconnected')
+      if (!session.manualClose && visible) {
+        session.xterm?.write(
+          '\r\n\x1b[90m[Remote terminal disconnected — starting a fresh session]\x1b[0m\r\n',
+        )
+        await createTerminal().catch(() => {})
+        if (!cancelled && session.remoteSessionId) {
+          setTerminalError(
+            `Remote terminal session ${lostSessionId} was lost; started a fresh session.`,
+          )
+        }
+      }
     })()
     return () => {
       cancelled = true
     }
-  }, [isDesktop, gatewayStatus, sendRequest, visible, createTerminal])
+  }, [
+    isDesktop,
+    gatewayStatus,
+    sendRequest,
+    visible,
+    createTerminal,
+    flushRemoteWrites,
+    setRemoteState,
+  ])
 
   // Listen for script run requests from the preview panel
   useEffect(() => {
@@ -641,25 +707,33 @@ function TerminalPane({
       if (session.terminalId != null && session.xterm) {
         const { cols, rows } = session.xterm
         tauriInvoke('resize_terminal', { id: session.terminalId, cols, rows })
+      } else if (session.remoteSessionId && session.xterm && gatewayStatus === 'connected') {
+        const { cols, rows } = session.xterm
+        void sendRequest('pty.resize', { sessionId: session.remoteSessionId, cols, rows }).catch(
+          () => {
+            setRemoteState('disconnected')
+          },
+        )
       }
     }
     fit()
     const obs = new ResizeObserver(fit)
     if (termRef.current) obs.observe(termRef.current)
     return () => obs.disconnect()
-  }, [visible, height, activeId, sendRequest])
+  }, [visible, height, activeId, gatewayStatus, sendRequest, setRemoteState])
 
   const resetTerminal = useCallback(async () => {
     session.manualClose = true
     if (session.remoteSessionId) {
       const sessionId = session.remoteSessionId
       session.remoteSessionId = null
+      setRemoteState('closed')
       await sendRequest('pty.kill', { sessionId }).catch(() => {})
     }
     await killSession()
     setActiveId(null)
     session.xterm?.clear()
-  }, [sendRequest])
+  }, [sendRequest, setRemoteState])
 
   return (
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -797,6 +871,14 @@ function TerminalPane({
         )}
         <div className="w-full h-full p-2 relative">
           <div ref={termRef} className="w-full h-full" />
+          {!isDesktop && remoteLifecycle !== 'idle' && (
+            <div className="absolute left-2 top-2 rounded border border-[var(--border)] bg-[color-mix(in_srgb,var(--sidebar-bg)_90%,transparent)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+              {remoteLifecycle === 'connected' && 'Remote terminal connected'}
+              {remoteLifecycle === 'connecting' && 'Connecting remote terminal…'}
+              {remoteLifecycle === 'disconnected' && 'Remote terminal disconnected'}
+              {remoteLifecycle === 'closed' && 'Remote terminal closed'}
+            </div>
+          )}
           {terminalError && (
             <div className="absolute right-2 top-2 max-w-[70%] rounded border border-[color-mix(in_srgb,var(--color-deletions)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] px-2 py-1 text-[11px] text-[var(--color-deletions)]">
               {terminalError}
