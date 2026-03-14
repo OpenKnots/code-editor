@@ -89,9 +89,6 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   workshop: { icon: 'lucide:hammer', label: 'Workshop' },
 }
 
-/** Primary view cycle: Chat → Editor → Terminal */
-const VIEW_CYCLE: ViewId[] = ['chat', 'editor', 'terminal']
-
 const MODE_BUTTONS: Array<{ id: AppMode; icon: string; label: string }> = [
   { id: 'classic', icon: 'lucide:code-2', label: 'Classic' },
   { id: 'chat', icon: 'lucide:message-square', label: 'Chat' },
@@ -125,16 +122,20 @@ export default function EditorLayout() {
   const sidebarCollapsed = !layout.isVisible('sidebar')
   const terminalVisible = layout.isVisible('terminal')
   const terminalHeight = layout.getSize('terminal')
-  const terminalFloating = layout.isFloating('terminal')
+  const terminalFloating = false
   const viewportHeight = layout.viewport.height
+  const viewportWidth = layout.viewport.width
   const terminalRefreshToken = mode
   const useCenteredTerminal = modeSpec.terminalCenter && activeView === 'editor'
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
   const mobileViewTabs = useMemo(() => {
-    // On mobile, curate tabs to useful views + always include settings
-    const mobile = visibleViews.filter((v) => !['preview', 'diff', 'skills', 'prompts'].includes(v))
-    if (!mobile.includes('terminal')) mobile.push('terminal')
-    return mobile.slice(0, 5)
+    // On mobile/iOS portrait, keep all primary screens reachable.
+    const preferred: ViewId[] = ['chat', 'editor', 'skills', 'prompts', 'git', 'terminal']
+    const base = preferred.filter((v) => v === 'terminal' || visibleViews.includes(v))
+    const overflow = visibleViews.filter(
+      (v) => !base.includes(v) && !['preview', 'diff', 'settings'].includes(v),
+    )
+    return [...base, ...overflow]
   }, [visibleViews])
   const activeViewMeta = VIEW_ICONS[activeView] ?? {
     icon: 'lucide:layout-panel-top',
@@ -144,12 +145,13 @@ export default function EditorLayout() {
     () => repo?.fullName?.split('/').pop() ?? localRootPath?.split('/').pop() ?? 'KnotCode',
     [repo?.fullName, localRootPath],
   )
-  const showMobileBottomTabs = isMobile && !modeSpec.terminalCenter && keyboardOffset === 0
+  const isMobileLandscape = isMobile && viewportWidth > viewportHeight
+  const showMobileBottomTabs = isMobile && keyboardOffset === 0
   const showMobileSidebarButton = isMobile && mode !== 'tui'
   const showWorkflowEditorTabs = false
   const mobileTerminalOffset = showMobileBottomTabs
-    ? 'calc(env(safe-area-inset-bottom) + 5.75rem)'
-    : 'calc(env(safe-area-inset-bottom) + 0.5rem)'
+    ? 'calc(env(safe-area-inset-bottom) + 4.9rem)'
+    : 'calc(env(safe-area-inset-bottom) + 0.35rem)'
 
   // ─── Minimal state ──────────────────────────────────
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
@@ -167,6 +169,11 @@ export default function EditorLayout() {
   const [shortcutsVisible, setShortcutsVisible] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const dirtyCount = useMemo(() => files.filter((f) => f.dirty).length, [files])
+  const dismissKeyboard = useCallback(() => {
+    if (typeof document === 'undefined') return
+    const active = document.activeElement as HTMLElement | null
+    active?.blur?.()
+  }, [])
   const ensureTuiTerminalVisible = useCallback(() => {
     layout.setFloating('terminal', false)
     layout.show('terminal')
@@ -509,8 +516,11 @@ export default function EditorLayout() {
         {/* View navigation bar — folder tabs */}
         {isMobile ? (
           <div
-            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-4 pb-1.5"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.25rem)', minHeight: 44 }}
+            className={`shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-4 ${isMobileLandscape && keyboardOffset > 0 ? 'pb-1' : 'pb-1.5'}`}
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top) + 0.25rem)',
+              minHeight: isMobileLandscape && keyboardOffset > 0 ? 38 : 44,
+            }}
           >
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
@@ -534,7 +544,7 @@ export default function EditorLayout() {
                 <button
                   type="button"
                   onClick={() => layout.toggle('terminal')}
-                  className={`hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
                     terminalVisible
                       ? 'border-[color-mix(in_srgb,var(--brand)_36%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
                       : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
@@ -542,6 +552,17 @@ export default function EditorLayout() {
                   title={`${terminalVisible ? 'Hide' : 'Show'} terminal`}
                 >
                   <Icon icon="lucide:terminal" width={18} height={18} />
+                </button>
+              )}
+
+              {isMobileLandscape && keyboardOffset > 0 && (
+                <button
+                  type="button"
+                  onClick={dismissKeyboard}
+                  className="flex h-11 shrink-0 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--brand)_40%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_14%,transparent)] px-3 text-[12px] font-semibold text-[var(--text-primary)] transition"
+                  title="Hide keyboard"
+                >
+                  Done
                 </button>
               )}
 
@@ -620,9 +641,10 @@ export default function EditorLayout() {
                 <TerminalPanel
                   visible={terminalVisible && !terminalFloating}
                   height={terminalHeight}
+                  forceGatewayFallback={isMobile}
                   onHeightChange={(h: number) => layout.resize('terminal', h)}
-                  floating={terminalFloating}
-                  onToggleFloating={() => layout.setFloating('terminal', !terminalFloating)}
+                  floating={false}
+                  onToggleFloating={undefined}
                   refreshOnOpenOrMode={true}
                   refreshToken={terminalRefreshToken}
                   startupCommand={terminalStartupCommand}
@@ -649,21 +671,23 @@ export default function EditorLayout() {
                   animate={{ y: 0 }}
                   exit={{ y: 520 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                  className="fixed left-1.5 right-1.5 z-[80] overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl flex flex-col"
+                  className="fixed left-1 right-1 z-[80] overflow-hidden rounded-[24px] border border-[color-mix(in_srgb,var(--border)_90%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] shadow-[0_28px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl flex flex-col"
                   style={
                     {
                       bottom: mobileTerminalOffset,
                       '--height': Math.min(
-                        Math.max(terminalHeight, 260),
-                        Math.floor(viewportHeight * 0.72),
+                        Math.max(terminalHeight, isMobileLandscape ? 220 : 300),
+                        Math.floor(viewportHeight * (isMobileLandscape ? 0.84 : 0.8)),
                       ),
                     } as React.CSSProperties
                   }
                 >
                   <div className="flex justify-center pt-2 pb-0.5">
-                    <div className="w-9 h-1 rounded-full bg-[var(--text-disabled)] opacity-40" />
+                    <div className="w-10 h-1 rounded-full bg-[color-mix(in_srgb,var(--text-disabled)_78%,transparent)] opacity-60" />
                   </div>
-                  <div className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+                  <div
+                    className={`flex items-center justify-between px-4 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-secondary)_78%,transparent)] ${isMobileLandscape ? 'h-10' : 'h-11'}`}
+                  >
                     <span className="text-[13px] font-semibold text-[var(--text-primary)] flex items-center gap-2.5">
                       <Icon
                         icon="lucide:terminal"
@@ -685,9 +709,10 @@ export default function EditorLayout() {
                     <TerminalPanel
                       visible={terminalVisible && !terminalFloating}
                       height={terminalHeight}
+                      forceGatewayFallback={isMobile}
                       onHeightChange={(h: number) => layout.resize('terminal', h)}
-                      floating={terminalFloating}
-                      onToggleFloating={() => layout.setFloating('terminal', !terminalFloating)}
+                      floating={false}
+                      onToggleFloating={undefined}
                       refreshOnOpenOrMode={true}
                       refreshToken={terminalRefreshToken}
                       startupCommand={terminalStartupCommand}
@@ -715,6 +740,7 @@ export default function EditorLayout() {
             <TerminalPanel
               visible={terminalVisible}
               height={terminalHeight}
+              forceGatewayFallback={isMobile}
               onHeightChange={(h: number) => layout.resize('terminal', h)}
               floating={terminalFloating}
               onToggleFloating={() => layout.setFloating('terminal', !terminalFloating)}
@@ -733,9 +759,9 @@ export default function EditorLayout() {
               overscrollBehavior: 'none',
             }}
           >
-            {/* Primary view cycle toggle: Chat → Editor → Terminal */}
-            <div className="flex items-center justify-center gap-1 px-3 py-2">
-              {VIEW_CYCLE.map((v) => {
+            {/* Primary mobile tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap px-3 py-2">
+              {mobileViewTabs.map((v) => {
                 const isActive = activeView === v
                 const meta = VIEW_ICONS[v]
                 return (
@@ -744,7 +770,7 @@ export default function EditorLayout() {
                     type="button"
                     onClick={() => setView(v)}
                     whileTap={{ scale: 0.95 }}
-                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 touch-manipulation ${
+                    className={`relative shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 touch-manipulation ${
                       isActive
                         ? 'bg-[var(--brand)] text-[var(--brand-contrast)] shadow-[0_4px_16px_color-mix(in_srgb,var(--brand)_30%,transparent)]'
                         : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'

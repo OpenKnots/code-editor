@@ -151,6 +151,28 @@ function isNoReply(text: string | undefined): boolean {
   return /^\s*(NO_REPLY|HEARTBEAT_OK)\s*$/i.test(text)
 }
 
+function sanitizeTerminalText(text: string): string {
+  const strippedControls = Array.from(text)
+    .filter((char) => {
+      const code = char.codePointAt(0) ?? 0
+      return !(
+        (code >= 0 && code <= 8) ||
+        code === 11 ||
+        code === 12 ||
+        (code >= 14 && code <= 31) ||
+        code === 127
+      )
+    })
+    .join('')
+
+  return strippedControls
+    .normalize('NFKC')
+    .replace(/\uFFFD/g, '')
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/[•·●]/g, '-')
+    .replace(/\u00A0/g, ' ')
+}
+
 function buildHelpText(): string {
   const lines: string[] = ['# Gateway Terminal Commands\n']
   for (const cat of CATEGORY_ORDER) {
@@ -411,12 +433,21 @@ export function GatewayTerminal() {
   const [histIdx, setHistIdx] = useState(-1)
   const [acOpen, setAcOpen] = useState(false)
   const [acIdx, setAcIdx] = useState(0)
+  const [viewportWidth, setViewportWidth] = useState(0)
+  const [viewportHeight, setViewportHeight] = useState(0)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const streamBuf = useRef('')
   const streamId = useRef<string | null>(null)
   const pendingIdempotencyKeys = useRef(new Set<string>())
+
+  const isMobile = viewportWidth > 0 && viewportWidth < 768
+  const isLandscape = isMobile && viewportWidth > viewportHeight
+  const dismissKeyboard = useCallback(() => {
+    if (typeof document === 'undefined') return
+    ;(document.activeElement as HTMLElement | null)?.blur?.()
+  }, [])
 
   // Hydrate history
   useLayoutEffect(() => {
@@ -431,6 +462,21 @@ export function GatewayTerminal() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(-MAX_HISTORY)))
     } catch {}
+  }, [])
+
+  useEffect(() => {
+    const updateViewport = () => {
+      const vv = window.visualViewport
+      setViewportWidth(vv?.width ?? window.innerWidth)
+      setViewportHeight(vv?.height ?? window.innerHeight)
+    }
+    updateViewport()
+    window.addEventListener('resize', updateViewport)
+    window.visualViewport?.addEventListener('resize', updateViewport)
+    return () => {
+      window.removeEventListener('resize', updateViewport)
+      window.visualViewport?.removeEventListener('resize', updateViewport)
+    }
   }, [])
 
   // Welcome
@@ -514,7 +560,7 @@ export function GatewayTerminal() {
       }
 
       if (state === 'delta') {
-        const text = extractEventText(p)
+        const text = sanitizeTerminalText(extractEventText(p))
         if (text) {
           const merged = mergeStreamingText(streamBuf.current, text)
           streamBuf.current = merged
@@ -534,17 +580,17 @@ export function GatewayTerminal() {
         const toolName = (p.toolName || p.name || '') as string
         if (toolName) {
           const inp = p.input as Record<string, unknown> | undefined
-          let step = `🔧 ${toolName}`
+          let step = `Tool: ${toolName}`
           if (/read/i.test(toolName)) {
             const path = (inp?.path || inp?.file_path || '') as string
-            step = `📖 Reading ${path.split('/').pop() || path}`
+            step = `Reading ${path.split('/').pop() || path}`
           } else if (/search|grep/i.test(toolName)) {
-            step = `🔍 Searching ${((inp?.query as string) || '').slice(0, 40)}`
+            step = `Searching ${((inp?.query as string) || '').slice(0, 40)}`
           } else if (/write|edit/i.test(toolName)) {
             const path = (inp?.path || inp?.file_path || '') as string
-            step = `✏️ Editing ${path.split('/').pop() || path}`
+            step = `Editing ${path.split('/').pop() || path}`
           } else if (/exec|bash/i.test(toolName)) {
-            step = `⚡ Running command`
+            step = `Running command`
           }
           setEntries((prev) => [
             ...prev,
@@ -552,7 +598,7 @@ export function GatewayTerminal() {
           ])
         }
       } else if (state === 'final') {
-        const text = extractEventText(p) || streamBuf.current
+        const text = sanitizeTerminalText(extractEventText(p) || streamBuf.current)
         if (streamId.current) {
           const id = streamId.current
           if (text && !isNoReply(text)) {
@@ -575,7 +621,7 @@ export function GatewayTerminal() {
         if (streamId.current) setEntries((prev) => prev.filter((e) => e.id !== streamId.current))
         streamBuf.current = ''
         streamId.current = null
-        const msg = (p.errorMessage as string) || 'Unknown error'
+        const msg = sanitizeTerminalText((p.errorMessage as string) || 'Unknown error')
         setEntries((prev) => [
           ...prev,
           { id: uid(), type: 'error', text: msg, timestamp: Date.now() },
@@ -601,7 +647,10 @@ export function GatewayTerminal() {
   }, [onEvent])
 
   const addEntry = useCallback((type: TerminalEntry['type'], text: string) => {
-    setEntries((prev) => [...prev, { id: uid(), type, text, timestamp: Date.now() }])
+    setEntries((prev) => [
+      ...prev,
+      { id: uid(), type, text: sanitizeTerminalText(text), timestamp: Date.now() },
+    ])
   }, [])
 
   const sendChatMessage = useCallback(
@@ -637,7 +686,7 @@ export function GatewayTerminal() {
         })
 
         // Check if the response contains an inline reply (synchronous path)
-        const inlineReply = extractEventText(resp)
+        const inlineReply = sanitizeTerminalText(extractEventText(resp))
         if (inlineReply && !isNoReply(inlineReply)) {
           // If we haven't already rendered this via streaming events, add it
           if (!streamId.current) {
@@ -853,33 +902,38 @@ export function GatewayTerminal() {
       )}
       {/* Terminal Header */}
       <div
-        className={`flex items-center justify-between px-3 py-1.5 border-b border-[var(--border)] shrink-0 ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
+        className={`flex items-center justify-between border-b border-[var(--border)] shrink-0 ${isMobile ? 'px-3 py-1.5' : 'px-3 py-1.5'} ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
         style={
           hasBgImage ? { background: 'color-mix(in srgb, var(--bg) 70%, transparent)' } : undefined
         }
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <div
             className={`w-2 h-2 rounded-full transition-colors ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
             title={isConnected ? 'Connected' : 'Disconnected'}
           />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+          <span className="truncate text-[11px] font-medium text-[var(--text-secondary)]">
             Gateway Terminal
           </span>
+          {isMobile && (
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-[var(--text-disabled)]">
+              {isConnected ? 'Ready' : 'Offline'}
+            </span>
+          )}
         </div>
         <button
           onClick={() => setEntries([])}
-          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
           title="Clear terminal"
         >
           <Icon icon="lucide:trash-2" width={12} height={12} />
-          <span>Clear</span>
+          <span>{isMobile ? 'Clear' : 'Clear'}</span>
         </button>
       </div>
       {/* Output */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 min-h-0 relative"
+        className={`flex-1 overflow-y-auto overflow-x-hidden min-h-0 relative ${isMobile ? (isLandscape ? 'p-2.5' : 'p-3') : 'p-4'} space-y-2`}
         onClick={() => inputRef.current?.focus()}
       >
         {entries.map((entry) => (
@@ -924,33 +978,58 @@ export function GatewayTerminal() {
           }}
           visible={acOpen}
         />
-        <div className="flex items-center px-4 py-2.5">
-          <span className="text-[13px] text-[var(--brand)] mr-2 shrink-0 select-none font-semibold">
+        <div
+          className={`flex items-center gap-2 ${isMobile ? (isLandscape ? 'px-2.5 py-2' : 'px-3 py-2.5') : 'px-4 py-2.5'}`}
+        >
+          <span className="text-[13px] text-[var(--brand)] shrink-0 select-none font-semibold">
             ❯
           </span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            disabled={!isConnected}
-            placeholder={
-              isConnected
-                ? 'Type a command or ask a question…'
-                : 'Not connected — waiting for gateway…'
-            }
-            className="flex-1 bg-transparent text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
-            style={{ fontFamily: MONO }}
-            autoComplete="off"
-            spellCheck={false}
-            autoFocus
-          />
-          {sending && (
-            <span className="text-[10px] text-[var(--text-disabled)] animate-pulse">
-              running…
-            </span>
-          )}
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-[color-mix(in_srgb,white_5%,transparent)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              disabled={!isConnected}
+              placeholder={
+                isConnected
+                  ? isMobile
+                    ? 'Run a command…'
+                    : 'Type a command or ask a question…'
+                  : 'Not connected — waiting for gateway…'
+              }
+              className="flex-1 bg-transparent text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
+              style={{ fontFamily: MONO }}
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+              enterKeyHint="send"
+            />
+            {sending && (
+              <span className="text-[10px] text-[var(--text-disabled)] animate-pulse whitespace-nowrap">
+                running…
+              </span>
+            )}
+            {isMobile && (
+              <button
+                type="button"
+                onClick={dismissKeyboard}
+                className="shrink-0 rounded-xl border border-white/10 px-2 py-1 text-[10px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)]"
+                title="Hide keyboard"
+              >
+                Done
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={!isConnected || sending || !input.trim()}
+            className="shrink-0 rounded-2xl bg-[var(--brand)] px-3 py-2 text-[12px] font-semibold text-[var(--brand-contrast)] shadow-[0_10px_30px_color-mix(in_srgb,var(--brand)_28%,transparent)] transition disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Run
+          </button>
         </div>
       </div>
     </div>

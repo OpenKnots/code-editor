@@ -3609,7 +3609,17 @@ p {
 }
 
 .terminal-container .xterm {
-  padding: 8px 12px;
+  padding: var(--terminal-pad-y, 8px) var(--terminal-pad-x, 12px);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.terminal-container .xterm-screen {
+  width: 100% !important;
+}
+
+.terminal-container .xterm-rows {
+  word-break: break-word;
 }
 
 .terminal-container .xterm-viewport {

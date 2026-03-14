@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import { isIOSTauri, isTauri, tauriInvoke, tauriListen } from '@/lib/tauri'
 import { useTheme } from '@/context/theme-context'
@@ -285,6 +285,11 @@ function TerminalPane({
     session.remoteLifecycle,
   )
   const termRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [viewportSize, setViewportSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  })
   const remoteWriteBufferRef = useRef('')
   const remoteFlushPromiseRef = useRef<Promise<void> | null>(null)
   const onFileOpenRef = useRef(onFileOpen)
@@ -295,10 +300,62 @@ function TerminalPane({
     onFileOpenRef.current = onFileOpen
   }, [onFileOpen])
 
+  useEffect(() => {
+    if (!visible) return
+    const updateViewport = () => {
+      const node = containerRef.current
+      const width = node?.clientWidth ?? window.innerWidth ?? 0
+      const height = node?.clientHeight ?? window.innerHeight ?? 0
+      setViewportSize({ width, height })
+    }
+    updateViewport()
+    window.addEventListener('resize', updateViewport)
+    window.visualViewport?.addEventListener('resize', updateViewport)
+    return () => {
+      window.removeEventListener('resize', updateViewport)
+      window.visualViewport?.removeEventListener('resize', updateViewport)
+    }
+  }, [visible])
+
   const setRemoteState = useCallback((next: SessionState['remoteLifecycle']) => {
     session.remoteLifecycle = next
     setRemoteLifecycle(next)
   }, [])
+
+  const isMobileTerminal = !isDesktop
+  const isLandscape = viewportSize.width > viewportSize.height && viewportSize.height > 0
+  const compactChrome = isMobileTerminal && isLandscape
+  const terminalMetrics = useMemo(() => {
+    if (!isMobileTerminal) {
+      return { fontSize: 13, lineHeight: 1.4, paddingY: 8, paddingX: 12 }
+    }
+    if (isLandscape) {
+      return { fontSize: 12, lineHeight: 1.24, paddingY: 4, paddingX: 8 }
+    }
+    return { fontSize: 12.5, lineHeight: 1.3, paddingY: 6, paddingX: 10 }
+  }, [isLandscape, isMobileTerminal])
+  const remoteStatusMeta = useMemo(() => {
+    switch (remoteLifecycle) {
+      case 'connected':
+        return { label: 'Live', tone: 'text-emerald-200', dot: 'bg-emerald-400' }
+      case 'connecting':
+        return { label: 'Connecting…', tone: 'text-sky-100', dot: 'bg-sky-400 connection-pulse' }
+      case 'disconnected':
+        return {
+          label: 'Reconnecting…',
+          tone: 'text-amber-100',
+          dot: 'bg-amber-300 connection-pulse',
+        }
+      case 'closed':
+        return {
+          label: 'Session ended',
+          tone: 'text-[var(--text-secondary)]',
+          dot: 'bg-[var(--text-disabled)]',
+        }
+      default:
+        return null
+    }
+  }, [remoteLifecycle])
 
   const flushRemoteWrites = useCallback(async () => {
     if (remoteFlushPromiseRef.current) return remoteFlushPromiseRef.current
@@ -486,9 +543,10 @@ function TerminalPane({
       const term = new Terminal({
         cursorBlink: true,
         cursorStyle: 'bar',
-        fontSize: 13,
+        fontSize: terminalMetrics.fontSize,
         fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
-        lineHeight: 1.4,
+        lineHeight: terminalMetrics.lineHeight,
+        letterSpacing: isMobileTerminal ? -0.1 : 0,
         scrollback: 10000,
         allowProposedApi: true,
         allowTransparency: hasBgImage,
@@ -552,7 +610,27 @@ function TerminalPane({
     return () => {
       cancelled = true
     }
-  }, [visible])
+  }, [
+    visible,
+    hasBgImage,
+    isMobileTerminal,
+    terminalBgColor,
+    terminalMetrics.fontSize,
+    terminalMetrics.lineHeight,
+    flushRemoteWrites,
+  ])
+
+  useEffect(() => {
+    const term = session.xterm
+    if (!term) return
+    const id = requestAnimationFrame(() => {
+      term.options.fontSize = terminalMetrics.fontSize
+      term.options.lineHeight = terminalMetrics.lineHeight
+      term.options.letterSpacing = isMobileTerminal ? -0.1 : 0
+      session.fit?.fit()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [terminalMetrics.fontSize, terminalMetrics.lineHeight, isMobileTerminal])
 
   // Auto-create first terminal when pane becomes ready (skip if user manually closed)
   useEffect(() => {
@@ -605,6 +683,12 @@ function TerminalPane({
   }, [visible, isDesktop, refreshOnOpenOrMode, refreshToken, startupCommand, createTerminal])
 
   useEffect(() => {
+    if (!isDesktop && remoteLifecycle === 'connected' && terminalError) {
+      setTerminalError(null)
+    }
+  }, [isDesktop, remoteLifecycle, terminalError])
+
+  useEffect(() => {
     if (isDesktop) return
     if (gatewayStatus !== 'connected') {
       if (session.remoteSessionId) setRemoteState('disconnected')
@@ -643,13 +727,11 @@ function TerminalPane({
       setRemoteState('disconnected')
       if (!session.manualClose && visible) {
         session.xterm?.write(
-          '\r\n\x1b[90m[Remote terminal disconnected — starting a fresh session]\x1b[0m\r\n',
+          '\r\n\x1b[90m[Connection drifted — restoring terminal session]\x1b[0m\r\n',
         )
         await createTerminal().catch(() => {})
         if (!cancelled && session.remoteSessionId) {
-          setTerminalError(
-            `Remote terminal session ${lostSessionId} was lost; started a fresh session.`,
-          )
+          setTerminalError('Previous remote session expired. Reconnected with a fresh terminal.')
         }
       }
     })()
@@ -695,9 +777,20 @@ function TerminalPane({
     const id = requestAnimationFrame(() => {
       term.options.allowTransparency = hasBgImage
       term.options.theme = buildXtermTheme(hasBgImage, terminalBgColor)
+      term.options.fontSize = terminalMetrics.fontSize
+      term.options.lineHeight = terminalMetrics.lineHeight
+      term.options.letterSpacing = isMobileTerminal ? -0.1 : 0
+      session.fit?.fit()
     })
     return () => cancelAnimationFrame(id)
-  }, [themeVersion, hasBgImage, terminalBgColor])
+  }, [
+    themeVersion,
+    hasBgImage,
+    terminalBgColor,
+    terminalMetrics.fontSize,
+    terminalMetrics.lineHeight,
+    isMobileTerminal,
+  ])
 
   // Fit terminal on size or active tab change
   useEffect(() => {
@@ -739,10 +832,24 @@ function TerminalPane({
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
       {/* Header (single-terminal mode) — hidden in center/TUI mode */}
       {!hideHeader && (
-        <div className="flex items-center h-10 bg-[var(--sidebar-bg)] border-b border-[var(--border)] px-3 gap-1.5 shrink-0">
-          <span className="text-[13px] font-medium text-[var(--text-secondary)] mr-2 shrink-0">
-            Terminal
-          </span>
+        <div
+          className={`flex items-center border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--sidebar-bg)_86%,transparent)] px-3 gap-1.5 shrink-0 backdrop-blur-xl ${compactChrome ? 'h-8' : 'h-10'}`}
+        >
+          <div className="min-w-0 flex items-center gap-2 mr-2 shrink">
+            <span
+              className={`font-medium text-[var(--text-secondary)] shrink-0 ${compactChrome ? 'text-[12px]' : 'text-[13px]'}`}
+            >
+              Terminal
+            </span>
+            {!isDesktop && remoteStatusMeta && (
+              <div
+                className={`inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[10px] ${remoteStatusMeta.tone}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${remoteStatusMeta.dot}`} />
+                <span className="truncate">{remoteStatusMeta.label}</span>
+              </div>
+            )}
+          </div>
 
           <div className="flex-1" />
 
@@ -852,6 +959,7 @@ function TerminalPane({
 
       {/* Terminal viewport */}
       <div
+        ref={containerRef}
         className="flex-1 overflow-hidden relative"
         style={{ backgroundColor: hasBgImage ? undefined : terminalBgColor || '#000000' }}
       >
@@ -869,19 +977,22 @@ function TerminalPane({
             />
           </>
         )}
-        <div className="w-full h-full p-2 relative">
-          <div ref={termRef} className="w-full h-full" />
-          {!isDesktop && remoteLifecycle !== 'idle' && (
-            <div className="absolute left-2 top-2 rounded border border-[var(--border)] bg-[color-mix(in_srgb,var(--sidebar-bg)_90%,transparent)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-              {remoteLifecycle === 'connected' && 'Remote terminal connected'}
-              {remoteLifecycle === 'connecting' && 'Connecting remote terminal…'}
-              {remoteLifecycle === 'disconnected' && 'Remote terminal disconnected'}
-              {remoteLifecycle === 'closed' && 'Remote terminal closed'}
-            </div>
-          )}
+        <div className={`w-full h-full relative ${compactChrome ? 'p-1.5' : 'p-2'}`}>
+          <div
+            ref={termRef}
+            className="terminal-container w-full h-full overflow-hidden rounded-[18px] border border-white/6 bg-[color-mix(in_srgb,black_82%,transparent)] shadow-[0_20px_48px_rgba(0,0,0,0.22)]"
+            style={
+              {
+                '--terminal-pad-y': `${terminalMetrics.paddingY}px`,
+                '--terminal-pad-x': `${terminalMetrics.paddingX}px`,
+              } as React.CSSProperties
+            }
+          />
           {terminalError && (
-            <div className="absolute right-2 top-2 max-w-[70%] rounded border border-[color-mix(in_srgb,var(--color-deletions)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] px-2 py-1 text-[11px] text-[var(--color-deletions)]">
-              {terminalError}
+            <div className="pointer-events-none absolute inset-x-3 top-3 flex justify-end">
+              <div className="max-w-[85%] rounded-2xl border border-[color-mix(in_srgb,var(--color-warnings)_28%,transparent)] bg-[color-mix(in_srgb,var(--color-warnings)_12%,black)] px-3 py-2 text-[11px] leading-4 text-[color-mix(in_srgb,white_90%,var(--color-warnings))] shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md">
+                {terminalError}
+              </div>
             </div>
           )}
         </div>
@@ -911,14 +1022,10 @@ export function TerminalPanel({
     setTerminalBgColor,
   } = useTheme()
   const local = useLocal()
-  const [isDesktop, setIsDesktop] = useState(false)
+  const [isDesktop] = useState(() => isTauri() && !isIOSTauri())
   const resizing = useRef(false)
   const startY = useRef(0)
   const startH = useRef(0)
-
-  useEffect(() => {
-    setIsDesktop(isTauri() && !isIOSTauri())
-  }, [])
   const canUseNativeTerminal = isDesktop && !forceGatewayFallback
 
   const handleFileOpen = useCallback((path: string, line?: number) => {
