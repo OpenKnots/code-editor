@@ -327,69 +327,61 @@ export const ChatHome = memo(function ChatHome({
   }, [hasWorkspace, openFiles, local.localTree, branchName])
 
   return (
-    <div className="flex-1 overflow-y-auto relative">
+    <div className="relative flex-1 overflow-y-auto">
       <KnotBackground />
-      {/* Particle animation background */}
-      <div className="particles absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {Array.from({ length: 18 }).map((_, i) => (
-          <div
-            key={i}
-            className="particle"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 8}s`,
-              animationDuration: `${15 + Math.random() * 10}s`,
-              opacity: 0.1 + Math.random() * 0.2,
-            }}
-          />
-        ))}
-      </div>
-      <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[clamp(2.75rem,8vh,5rem)] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
-        {/* Header — Dynamic greeting + gradient tagline */}
-        <div className="flex flex-col items-center mb-6 sm:mb-7">
-          {/* Logo with entrance animation and glow */}
+      {!isMobile && (
+        <div className="particles absolute inset-0 pointer-events-none overflow-hidden z-0">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div
+              key={i}
+              className="particle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 8}s`,
+                animationDuration: `${15 + Math.random() * 10}s`,
+                opacity: 0.1 + Math.random() * 0.2,
+              }}
+            />
+          ))}
+        </div>
+      )}
+      <div className="relative z-[1] mx-auto flex min-h-full w-full max-w-[680px] flex-col justify-start px-4 py-4 pt-[clamp(2rem,7vh,4rem)] sm:px-6 sm:py-10 sm:pt-0 md:py-12">
+        <div className="mb-5 flex flex-col items-center rounded-[28px] border border-[color-mix(in_srgb,var(--border)_82%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_72%,transparent)] px-4 py-5 shadow-[0_18px_56px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:mb-6 sm:px-7 sm:py-7">
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="mb-3"
           >
-            <KnotLogo size={40} color="var(--brand)" />
+            <KnotLogo size={isMobile ? 34 : 38} color="var(--brand)" />
           </motion.div>
 
-          {/* Dynamic time-based greeting */}
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-[13px] text-[var(--text-secondary)] mb-2 font-medium"
+            transition={{ duration: 0.4, delay: 0.08 }}
+            className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-disabled)] sm:text-[12px]"
           >
             {getGreeting()}
           </motion.p>
 
-          {/* Main tagline with gradient */}
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-center text-[28px] sm:text-[32px] font-bold tracking-[-0.04em] leading-none"
-            style={{
-              background: 'linear-gradient(135deg, #f0f0f0 0%, #3b82f6 50%, #8b5cf6 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
+            transition={{ duration: 0.45, delay: 0.16 }}
+            className="text-center text-[26px] font-semibold tracking-[-0.045em] text-[var(--text-primary)] sm:text-[32px]"
           >
             What shall we build?
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-2 max-w-[28rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]"
+            transition={{ duration: 0.45, delay: 0.24 }}
+            className="mt-2 max-w-[28rem] text-center text-[12px] leading-5 text-[var(--text-secondary)] sm:text-[13px]"
           >
-            Open a project or describe changes, and we&apos;ll help you shape it.
+            Open a project or describe the next change. KnotCode keeps the workspace tight, focused,
+            and ready to ship.
           </motion.p>
 
           {/* Workspace dropdown — hidden on mobile */}
@@ -407,7 +399,7 @@ export const ChatHome = memo(function ChatHome({
               {!ghAuthenticated && (
                 <button
                   onClick={() => emit('open-settings')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-disabled)] transition-all hover:border-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
                 >
                   <Icon icon="lucide:github" width={14} height={14} />
                   Sign in to GitHub via Settings
@@ -428,7 +420,7 @@ export const ChatHome = memo(function ChatHome({
                           <button
                             key={r.fullName}
                             onClick={() => selectSavedRepo(r)}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] transition-colors cursor-pointer text-left"
+                            className="w-full flex min-h-[44px] items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] cursor-pointer"
                           >
                             <Icon
                               icon="lucide:star"
@@ -463,7 +455,7 @@ export const ChatHome = memo(function ChatHome({
                             <button
                               key={r.fullName}
                               onClick={() => selectSavedRepo(r)}
-                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] transition-colors cursor-pointer text-left"
+                              className="w-full flex min-h-[44px] items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--text-primary)_6%,transparent)] cursor-pointer"
                             >
                               <Icon
                                 icon="lucide:clock"
@@ -487,7 +479,7 @@ export const ChatHome = memo(function ChatHome({
                   {/* Manual input fallback */}
                   <button
                     onClick={() => setShowRepoInput(true)}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+                    className="w-full flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-disabled)] transition-all hover:border-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
                   >
                     <Icon icon="lucide:plus" width={13} />
                     Open a repository
@@ -528,7 +520,7 @@ export const ChatHome = memo(function ChatHome({
                     <button
                       onClick={handleRepoConnect}
                       disabled={repoLoading || !repoInput.trim()}
-                      className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-medium cursor-pointer disabled:opacity-40 bg-[var(--brand)] text-[var(--brand-contrast,#fff)]"
+                      className="min-h-[44px] shrink-0 rounded-xl bg-[var(--brand)] px-3 py-2 text-[12px] font-medium text-[var(--brand-contrast,#fff)] cursor-pointer disabled:opacity-40"
                     >
                       {repoLoading ? '…' : 'Go'}
                     </button>
@@ -653,16 +645,16 @@ export const ChatHome = memo(function ChatHome({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
           onClick={() => inputRef.current?.focus()}
-          className={`codex-composer rounded-[20px] border backdrop-blur-sm overflow-hidden transition-all duration-200 ${
+          className={`codex-composer overflow-hidden rounded-[22px] border backdrop-blur-md transition-all duration-200 ${
             isFocused
-              ? 'border-[var(--brand)]'
-              : 'border-[var(--border)] hover:border-[rgba(255,255,255,0.1)]'
+              ? 'border-[color-mix(in_srgb,var(--brand)_72%,white_10%)]'
+              : 'border-[color-mix(in_srgb,var(--border)_88%,transparent)] hover:border-[color-mix(in_srgb,var(--text-disabled)_45%,transparent)]'
           }`}
           style={{
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'color-mix(in srgb, var(--bg-elevated) 82%, rgba(7, 10, 16, 0.86))',
             boxShadow: isFocused
-              ? '0 0 0 1px var(--brand), 0 0 20px rgba(59, 130, 246, 0.1)'
-              : '0 4px 16px rgba(0, 0, 0, 0.2)',
+              ? '0 0 0 1px color-mix(in srgb, var(--brand) 34%, transparent), 0 18px 44px rgba(0, 0, 0, 0.24)'
+              : '0 14px 34px rgba(0, 0, 0, 0.18)',
           }}
         >
           <textarea
@@ -680,7 +672,7 @@ export const ChatHome = memo(function ChatHome({
                 : PLACEHOLDER_TEXTS[placeholderIndex]
             }
             aria-label="Chat input"
-            className="w-full bg-transparent px-4 pt-3.5 pb-2 text-[14px] leading-[1.6] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none resize-none min-h-[48px] max-h-[200px] overflow-y-auto placeholder:transition-opacity placeholder:duration-500"
+            className="min-h-[52px] max-h-[200px] w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-3 text-[14px] leading-[1.55] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-disabled)] placeholder:transition-opacity placeholder:duration-500"
             key={placeholderIndex}
           />
 
@@ -708,13 +700,13 @@ export const ChatHome = memo(function ChatHome({
           )}
 
           {/* Bottom toolbar — Codex-style pill bar */}
-          <div className="px-3 pb-2.5 pt-1">
+          <div className="px-3 pb-3 pt-1.5 sm:px-3.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 {/* + button */}
                 <button
                   onClick={onImageAttach}
-                  className="codex-pill-btn flex items-center justify-center w-7 h-7 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+                  className="codex-pill-btn flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] text-[var(--text-disabled)] transition-all hover:border-[var(--text-disabled)] hover:text-[var(--text-secondary)] cursor-pointer"
                   title="Attach file"
                 >
                   <Icon icon="lucide:plus" width={14} height={14} />
@@ -755,12 +747,12 @@ export const ChatHome = memo(function ChatHome({
               {/* Send button with enhanced size and animation */}
               <motion.button
                 onClick={startOrSend}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.94 }}
                 aria-label={input.trim() ? 'Send message' : 'Start chat'}
-                className={`codex-send-btn flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
+                className={`codex-send-btn flex h-10 w-10 items-center justify-center rounded-2xl transition-all cursor-pointer ${
                   input.trim()
-                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-[0_0_16px_rgba(59,130,246,0.3)]'
-                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.12)]'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-[0_10px_24px_color-mix(in_srgb,var(--brand)_26%,transparent)]'
+                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-tertiary)] hover:bg-[rgba(255,255,255,0.12)] hover:text-[var(--text-secondary)]'
                 }`}
               >
                 <Icon

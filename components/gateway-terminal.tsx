@@ -381,7 +381,6 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
         }}
       >
         <MarkdownPreview content={entry.text} className="terminal-md" />
-        <span className="inline-block w-1.5 h-4 bg-[var(--brand)] animate-pulse ml-0.5 align-text-bottom rounded-sm" />
       </div>
     )
   }

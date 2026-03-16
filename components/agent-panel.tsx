@@ -891,18 +891,18 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
         const endLine = att.endLine ?? startLine
         const lineCount = Math.max(1, endLine - startLine + 1)
         labels.push(
-          `📝 ${att.path.split('/').pop()}:${startLine}-${endLine} (${lineCount} line${lineCount === 1 ? '' : 's'} selected)`,
+          `[SEL] ${att.path.split('/').pop()}:${startLine}-${endLine} (${lineCount} line${lineCount === 1 ? '' : 's'} selected)`,
         )
       } else {
         const lineCount = att.content.split('\n').length
         labels.push(
-          `📄 ${att.path.split('/').pop()} (${lineCount} line${lineCount === 1 ? '' : 's'})`,
+          `[FILE] ${att.path.split('/').pop()} (${lineCount} line${lineCount === 1 ? '' : 's'})`,
         )
       }
     }
 
     for (const img of imageAttachments) {
-      labels.push(`🖼 ${img.name}`)
+      labels.push(`[IMG] ${img.name}`)
     }
 
     return labels

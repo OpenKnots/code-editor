@@ -100,17 +100,21 @@ function parseUserAttachmentPreview(content: string): {
   text: string
   chips: UserAttachmentChip[]
 } {
-  const match = content.match(/^\[([^\]]*(?:📄|📝|🖼)[^\]]*)\]\n?/)
+  const match = content.match(/^\[([^\]]*(?:\[FILE\]|\[SEL\]|\[IMG\])[^\]]*)\]\n?/)
   if (!match) return { text: content, chips: [] }
 
   const chips: UserAttachmentChip[] = []
   for (const token of match[1].split(' · ').map((item) => item.trim())) {
-    if (!token || token.startsWith('🖼 ')) continue
+    if (!token || token.startsWith('[IMG] ')) continue
 
-    const kind = token.startsWith('📝 ') ? 'selection' : token.startsWith('📄 ') ? 'file' : null
+    const kind = token.startsWith('[SEL] ')
+      ? 'selection'
+      : token.startsWith('[FILE] ')
+        ? 'file'
+        : null
     if (!kind) continue
 
-    const rawLabel = token.slice(2).trim()
+    const rawLabel = token.replace(/^\[(?:SEL|FILE)\]\s*/, '').trim()
     const detailMatch = rawLabel.match(/^(.*?)(?:\s+\(([^()]+)\))?$/)
     const label = detailMatch?.[1]?.trim() ?? rawLabel
     const parsedDetail = detailMatch?.[2]?.trim() ?? ''

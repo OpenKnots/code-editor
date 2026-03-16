@@ -334,28 +334,6 @@ function TerminalPane({
     }
     return { fontSize: 12.5, lineHeight: 1.3, paddingY: 6, paddingX: 10 }
   }, [isLandscape, isMobileTerminal])
-  const remoteStatusMeta = useMemo(() => {
-    switch (remoteLifecycle) {
-      case 'connected':
-        return { label: 'Live', tone: 'text-emerald-200', dot: 'bg-emerald-400' }
-      case 'connecting':
-        return { label: 'Connecting…', tone: 'text-sky-100', dot: 'bg-sky-400 connection-pulse' }
-      case 'disconnected':
-        return {
-          label: 'Reconnecting…',
-          tone: 'text-amber-100',
-          dot: 'bg-amber-300 connection-pulse',
-        }
-      case 'closed':
-        return {
-          label: 'Session ended',
-          tone: 'text-[var(--text-secondary)]',
-          dot: 'bg-[var(--text-disabled)]',
-        }
-      default:
-        return null
-    }
-  }, [remoteLifecycle])
 
   const flushRemoteWrites = useCallback(async () => {
     if (remoteFlushPromiseRef.current) return remoteFlushPromiseRef.current
@@ -841,14 +819,6 @@ function TerminalPane({
             >
               Terminal
             </span>
-            {!isDesktop && remoteStatusMeta && (
-              <div
-                className={`inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[10px] ${remoteStatusMeta.tone}`}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${remoteStatusMeta.dot}`} />
-                <span className="truncate">{remoteStatusMeta.label}</span>
-              </div>
-            )}
           </div>
 
           <div className="flex-1" />

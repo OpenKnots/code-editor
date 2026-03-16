@@ -148,8 +148,8 @@ export default function EditorLayout() {
   const showMobileSidebarButton = isMobile && mode !== 'tui'
   const showWorkflowEditorTabs = false
   const mobileTerminalOffset = showMobileBottomTabs
-    ? 'calc(env(safe-area-inset-bottom) + 4.9rem)'
-    : 'calc(env(safe-area-inset-bottom) + 0.35rem)'
+    ? 'calc(env(safe-area-inset-bottom) + 3.5rem)'
+    : 'calc(env(safe-area-inset-bottom) + 0.15rem)'
 
   // ─── Minimal state ──────────────────────────────────
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
@@ -655,13 +655,13 @@ export default function EditorLayout() {
                   animate={{ y: 0 }}
                   exit={{ y: 520 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                  className="fixed left-1 right-1 z-[80] overflow-hidden rounded-[24px] border border-[color-mix(in_srgb,var(--border)_90%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] shadow-[0_28px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl flex flex-col"
+                  className="fixed left-0 right-0 z-[80] overflow-hidden rounded-t-[24px] border border-[color-mix(in_srgb,var(--border)_90%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] shadow-[0_28px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl flex flex-col"
                   style={
                     {
                       bottom: mobileTerminalOffset,
                       '--height': Math.min(
-                        Math.max(terminalHeight, isMobileLandscape ? 220 : 300),
-                        Math.floor(viewportHeight * (isMobileLandscape ? 0.84 : 0.8)),
+                        Math.max(terminalHeight, isMobileLandscape ? 240 : 340),
+                        Math.floor(viewportHeight * (isMobileLandscape ? 0.88 : 0.86)),
                       ),
                     } as React.CSSProperties
                   }
@@ -813,12 +813,16 @@ export default function EditorLayout() {
       {/* Git sidebar panel — Codex-style always-visible right panel */}
       {!isMobile && mode !== 'tui' && layout.isVisible('gitPanel') && <GitSidebarPanel />}
 
-      {/* Plugins */}
-      <SpotifyPlugin />
-      <YouTubePlugin />
-      <PipWindow />
-      <WidgetPipWindow />
-      <PluginSlotRenderer slot="floating" />
+      {/* Plugins (desktop-only for intentional mobile UX) */}
+      {!isMobile && (
+        <>
+          <SpotifyPlugin />
+          <YouTubePlugin />
+          <PipWindow />
+          <WidgetPipWindow />
+          <PluginSlotRenderer slot="floating" />
+        </>
+      )}
 
       <AnimatePresence initial={false}>
         {showMobileSidebarButton && mobileSidebarOpen && (

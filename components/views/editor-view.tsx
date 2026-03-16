@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@iconify/react'
@@ -159,11 +159,12 @@ function MainEditorPane({
 export function EditorView() {
   const { files, activeFile } = useEditor()
   const local = useLocal()
-  const { repo } = useRepo()
+  const { repo, tree } = useRepo()
   const layout = useLayout()
   const isMobile = layout.isAtMost('lte768')
   const isNarrow = layout.isAtMost('lte992')
   const [isDesktop, setIsDesktop] = useState(false)
+  const autoOpenedSourceRef = useRef<string | null>(null)
 
   useEffect(() => {
     setIsDesktop(isTauri())
@@ -195,6 +196,35 @@ export function EditorView() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [layout])
+
+  useEffect(() => {
+    if (activeFile || !hasCodebase) return
+
+    const sourceKey = repo
+      ? `repo:${repo.fullName}:${repo.branch}`
+      : local.rootPath
+        ? `local:${local.rootPath}`
+        : null
+
+    if (!sourceKey || autoOpenedSourceRef.current === sourceKey) return
+
+    if (repo && tree.length > 0) {
+      const firstBlob = tree.find((node) => node.type === 'blob')
+      if (firstBlob) {
+        autoOpenedSourceRef.current = sourceKey
+        emit('file-select', { path: firstBlob.path, sha: firstBlob.sha })
+      }
+      return
+    }
+
+    if (!repo && local.localTree.length > 0) {
+      const firstFile = local.localTree.find((entry) => !entry.is_dir)
+      if (firstFile) {
+        autoOpenedSourceRef.current = sourceKey
+        emit('file-select', { path: firstFile.path })
+      }
+    }
+  }, [activeFile, hasCodebase, local.localTree, local.rootPath, repo, tree])
 
   return (
     <div className="relative flex flex-1 min-h-0 min-w-0 overflow-hidden bg-[var(--sidebar-bg)]">
@@ -403,7 +433,7 @@ export function EditorView() {
               animate={{ x: 0, opacity: 1, scale: 1 }}
               exit={{ x: 420, opacity: 0.84, scale: 0.985 }}
               transition={PANEL_SPRING}
-              className="absolute inset-y-0 right-0 z-50 w-[min(96vw,420px)] overflow-hidden rounded-l-[28px] border border-white/8 bg-[color-mix(in_srgb,var(--sidebar-bg)_92%,rgba(8,10,14,0.92))] shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl"
+              className="absolute inset-y-0 right-0 z-50 w-full overflow-hidden rounded-l-[28px] border border-white/8 bg-[color-mix(in_srgb,var(--sidebar-bg)_92%,rgba(8,10,14,0.92))] shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl"
             >
               <button
                 type="button"
