@@ -369,6 +369,11 @@ export function ChatInputBar({
             </div>
           )}
 
+          {/* Model selector — ChatGPT/Cursor-style, above input */}
+          <div className="mb-1">
+            <ProviderSelector size="sm" />
+          </div>
+
           {/* Unified input container with drag-drop zone */}
           <div
             className={`chat-input-shell overflow-hidden rounded-[18px] border bg-[var(--bg)] transition-colors ${
@@ -638,14 +643,11 @@ export function ChatInputBar({
           </div>
         </div>
 
-        {/* Bottom bar — mode + provider */}
-        <div className="flex items-center justify-between mt-1">
+        {/* Bottom bar — mode selector */}
+        <div className="flex items-center mt-1">
           <div className="flex items-center gap-1.5">
             <ModeSelector mode={agentMode} onChange={setAgentMode} />
             <span className="hidden sm:inline text-[9px] text-[var(--text-disabled)]">⇧Tab</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <ProviderSelector size="sm" />
           </div>
         </div>
       </div>

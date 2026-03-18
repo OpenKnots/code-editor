@@ -602,6 +602,16 @@ export const ChatHome = memo(function ChatHome({
           </div>
         </motion.div>
 
+        {/* Model selector — ChatGPT/Cursor-style, above composer */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.55 }}
+          className="mb-1.5"
+        >
+          <ProviderSelector size="sm" />
+        </motion.div>
+
         {/* Composer */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -675,14 +685,6 @@ export const ChatHome = memo(function ChatHome({
 
                 {/* Mode selector */}
                 <ModeSelector mode={agentMode} onChange={setAgentMode} size="sm" />
-
-                {/* Divider — desktop only */}
-                <div className="hidden sm:block w-px h-4 bg-[var(--border)]" />
-
-                {/* Provider selector — desktop only */}
-                <span className="hidden sm:inline-flex">
-                  <ProviderSelector size="sm" />
-                </span>
               </div>
 
               {/* Send button */}

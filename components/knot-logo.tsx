@@ -76,8 +76,8 @@ export function KnotLogo({ size = 24, className, color }: KnotLogoProps) {
           const prevRad = (angles[prevIdx] * Math.PI) / 180
 
           const crossR = 100
-          const mx = cx + crossR * Math.cos(prevRad)
-          const my = cy + crossR * Math.sin(prevRad)
+          const mx = Math.round(cx + crossR * Math.cos(prevRad))
+          const my = Math.round(cy + crossR * Math.sin(prevRad))
 
           return (
             <mask key={i} id={`${id}w${i}`}>

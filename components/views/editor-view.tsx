@@ -164,7 +164,7 @@ function MainEditorPane({
 }
 
 export function EditorView() {
-  const { files, activeFile } = useEditor()
+  const { files, activeFile, openPreviewTab } = useEditor()
   const { activeView } = useView()
   const local = useLocal()
   const { repo } = useRepo()
@@ -189,6 +189,10 @@ export function EditorView() {
   const hasCodebase = !!repo || !!local.rootPath
   const branchName = repo?.branch ?? local.gitInfo?.branch ?? null
   const showPreview = activeView === 'preview'
+
+  useEffect(() => {
+    if (showPreview) openPreviewTab()
+  }, [showPreview, openPreviewTab])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

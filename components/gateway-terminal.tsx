@@ -27,6 +27,7 @@ import { useGateway } from '@/context/gateway-context'
 import { useTheme } from '@/context/theme-context'
 import { useLocal } from '@/context/local-context'
 import { MarkdownPreview } from '@/components/markdown-preview'
+import { on } from '@/lib/events'
 import {
   SKILL_FIRST_OVERRIDE_TOKEN,
   buildSkillFirstBlockMessage,
@@ -408,6 +409,7 @@ export function GatewayTerminal() {
   const streamBuf = useRef('')
   const streamId = useRef<string | null>(null)
   const pendingIdempotencyKeys = useRef(new Set<string>())
+  const lastMirroredReplyRef = useRef<{ content: string; ts: number } | null>(null)
 
   // Hydrate history
   useLayoutEffect(() => {
@@ -469,6 +471,39 @@ export function GatewayTerminal() {
     const focusInput = () => inputRef.current?.focus()
     window.addEventListener('focus-terminal', focusInput)
     return () => window.removeEventListener('focus-terminal', focusInput)
+  }, [])
+
+  // Mirror non-terminal agent replies so this surface doesn't feel disconnected
+  useEffect(() => {
+    return on('agent-reply', ({ content, sessionKey, source }) => {
+      if (!content || isNoReply(content)) return
+      if (source === 'terminal' || sessionKey === TERMINAL_SESSION_KEY) return
+
+      const last = lastMirroredReplyRef.current
+      const now = Date.now()
+      if (last && last.content === content && now - last.ts < 4000) return
+      lastMirroredReplyRef.current = { content, ts: now }
+
+      setEntries((prev) => {
+        const latest = prev[prev.length - 1]
+        if (latest?.type === 'response' && latest.text === content) return prev
+        return [
+          ...prev,
+          {
+            id: uid(),
+            type: 'system',
+            text: 'Agent reply mirrored from chat',
+            timestamp: now,
+          },
+          {
+            id: uid(),
+            type: 'response',
+            text: content,
+            timestamp: now,
+          },
+        ]
+      })
+    })
   }, [])
 
   // Chat event listener (streaming + final)

@@ -86,31 +86,27 @@ export function useYouTubeEngine() {
 export function YouTubePlugin() {
   const { registerPlugin, unregisterPlugin } = usePlugins()
 
-  const [current, setCurrent] = useState<PlaylistInfo | null>(() => {
+  const [current, setCurrent] = useState<PlaylistInfo | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [volume, setVolume] = useState(70)
+  const [muted, setMuted] = useState(false)
+
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) return JSON.parse(raw)
+      if (raw) setCurrent(JSON.parse(raw))
     } catch {}
-    return null
-  })
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [volume, setVolume] = useState<number>(() => {
     try {
-      const raw = localStorage.getItem(VOLUME_KEY)
-      if (raw) {
-        const parsed = Number(raw)
-        if (Number.isFinite(parsed)) return Math.max(0, Math.min(100, Math.round(parsed)))
+      const rawVol = localStorage.getItem(VOLUME_KEY)
+      if (rawVol) {
+        const parsed = Number(rawVol)
+        if (Number.isFinite(parsed)) setVolume(Math.max(0, Math.min(100, Math.round(parsed))))
       }
     } catch {}
-    return 70
-  })
-  const [muted, setMuted] = useState<boolean>(() => {
     try {
-      return localStorage.getItem(MUTED_KEY) === 'true'
-    } catch {
-      return false
-    }
-  })
+      if (localStorage.getItem(MUTED_KEY) === 'true') setMuted(true)
+    } catch {}
+  }, [])
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const playerReadyRef = useRef(false)

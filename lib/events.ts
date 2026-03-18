@@ -40,7 +40,7 @@ export interface AppEvents {
   }
 
   // Agent / streaming
-  'agent-reply': void
+  'agent-reply': { content: string; sessionKey?: string; source?: 'chat' | 'terminal' }
   'engine-status': { running: boolean }
 
   // Git

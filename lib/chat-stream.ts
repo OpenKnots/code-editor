@@ -33,7 +33,9 @@ interface StreamCallbacks {
   setSending: (v: boolean) => void
   setThinkingTrail: React.Dispatch<React.SetStateAction<string[]>>
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>
-  setAgentActivities?: React.Dispatch<React.SetStateAction<import('@/lib/agent-activity').AgentActivity[]>>
+  setAgentActivities?: React.Dispatch<
+    React.SetStateAction<import('@/lib/agent-activity').AgentActivity[]>
+  >
   getFile: (path: string) => { content: string } | undefined
 }
 
@@ -72,6 +74,22 @@ function extractEventText(payload: Record<string, unknown>): string {
   if (typeof payload.content === 'string') return payload.content
   if (typeof payload.delta === 'string') return payload.delta
   return ''
+}
+
+export function mergeStreamingText(previous: string, incoming: string): string {
+  if (!previous) return incoming
+  if (!incoming) return previous
+  if (incoming.startsWith(previous)) return incoming
+  if (previous.endsWith(incoming)) return previous
+
+  const maxOverlap = Math.min(previous.length, incoming.length)
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    if (previous.slice(-overlap) === incoming.slice(0, overlap)) {
+      return previous + incoming.slice(overlap)
+    }
+  }
+
+  return previous + incoming
 }
 
 export function handleChatEvent(
@@ -140,7 +158,10 @@ export function handleChatEvent(
       // Track structured activity
       if (callbacks.setAgentActivities) {
         import('@/lib/agent-activity').then(({ parseToolActivity }) => {
-          const activity = parseToolActivity(toolName, toolInput as Record<string, unknown> | undefined)
+          const activity = parseToolActivity(
+            toolName,
+            toolInput as Record<string, unknown> | undefined,
+          )
           callbacks.setAgentActivities!((prev) => [...prev, activity])
         })
       }
@@ -232,11 +253,12 @@ export function handleChatEvent(
           emit('show-inline-diff', { proposals: editProposals })
         }
         const planSteps = isPlanContent(text) ? parsePlanSteps(text) : undefined
-        const msgType = editProposals.length > 0
-          ? ('edit' as const)
-          : planSteps
-            ? ('plan' as const)
-            : ('text' as const)
+        const msgType =
+          editProposals.length > 0
+            ? ('edit' as const)
+            : planSteps
+              ? ('plan' as const)
+              : ('text' as const)
         callbacks.setMessages((msgs) => [
           ...msgs,
           {
@@ -249,7 +271,7 @@ export function handleChatEvent(
             planSteps,
           },
         ])
-        emit('agent-reply')
+        emit('agent-reply', { content: text, sessionKey: state.sessionKey, source: 'chat' })
       } else {
         debugLog('Final chat event had no assistant text', {
           idempotencyKey,

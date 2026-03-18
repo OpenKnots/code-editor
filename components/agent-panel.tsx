@@ -1132,7 +1132,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
           timestamp: Date.now(),
           editProposals: editProposals.length > 0 ? editProposals : undefined,
         })
-        emit('agent-reply')
+        emit('agent-reply', { content: reply, sessionKey, source: 'chat' })
         logChatDebug('assistant reply appended from direct response', {
           idempotencyKey: idemKey,
           replyChars: reply.length,
@@ -1877,7 +1877,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
               type: editProposals.length > 0 ? 'edit' : 'text',
               editProposals: editProposals.length > 0 ? editProposals : undefined,
             })
-            emit('agent-reply')
+            emit('agent-reply', { content: reply, sessionKey, source: 'chat' })
           }
           setIsStreaming(false)
           setSending(false)

@@ -28,7 +28,7 @@ export function useKeyboardShortcuts({
   const { activeView, setView } = useView()
   const { mode, spec: modeSpec, setMode } = useAppMode()
   const layout = useLayout()
-  const { activeFile } = useEditor()
+  const { activeFile, closeFile, closePreviewTab } = useEditor()
   const visibleViews = modeSpec.visibleViews
 
   const activeViewRef = useRef(activeView)
@@ -79,6 +79,20 @@ export function useKeyboardShortcuts({
           emit('open-side-chat')
         }
         requestAnimationFrame(() => emit('focus-agent-input'))
+      }
+      // ⌘W — Close active editor/preview tab
+      if (meta && e.key === 'w' && !e.shiftKey) {
+        if (activeViewRef.current === 'preview') {
+          e.preventDefault()
+          closePreviewTab()
+          setView('editor')
+          return
+        }
+        if (activeViewRef.current === 'editor' && activeFile) {
+          e.preventDefault()
+          closeFile(activeFile)
+          return
+        }
       }
       // ⌘⌥1-4 — Focus key regions (explorer/editor/chat/terminal)
       if (meta && e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
@@ -132,6 +146,9 @@ export function useKeyboardShortcuts({
     onGlobalSearch,
     onNewWindow,
     onFlashTab,
+    closeFile,
+    closePreviewTab,
+    activeFile,
   ])
 
   // ─── ⌘S — Save file ───────────────────────────────────

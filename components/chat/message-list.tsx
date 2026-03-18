@@ -208,6 +208,7 @@ export function MessageList({
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const shouldStickToBottomRef = useRef(true)
   const { chatFontSize, chatFontCss } = useChatAppearance()
 
   const visibleMessages = useMemo(
@@ -216,10 +217,19 @@ export function MessageList({
   )
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages, streamBuffer])
+    const el = scrollRef.current
+    if (!el) return
+
+    if (!shouldStickToBottomRef.current) return
+
+    const raf = requestAnimationFrame(() => {
+      const nextEl = scrollRef.current
+      if (!nextEl) return
+      nextEl.scrollTop = nextEl.scrollHeight
+    })
+
+    return () => cancelAnimationFrame(raf)
+  }, [messages, streamBuffer, isStreaming])
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -322,13 +332,13 @@ export function MessageList({
           className="h-full overflow-y-auto px-3 py-3 space-y-3 scroll-shadow"
           onScroll={(e) => {
             const el = e.currentTarget
+            const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+            const nearBottom = distanceFromBottom < 80
+            shouldStickToBottomRef.current = nearBottom
             el.classList.toggle('has-scroll-top', el.scrollTop > 8)
-            el.classList.toggle(
-              'has-scroll-bottom',
-              el.scrollTop + el.clientHeight < el.scrollHeight - 8,
-            )
-            // Show scroll to bottom FAB if scrolled up more than 200px from bottom
-            setShowScrollToBottom(el.scrollTop + el.clientHeight < el.scrollHeight - 200)
+            el.classList.toggle('has-scroll-bottom', !nearBottom)
+            // Show scroll to bottom FAB if the reader has intentionally drifted away.
+            setShowScrollToBottom(distanceFromBottom > 200)
           }}
         >
           {visibleMessages.map((msg, idx) => {
@@ -699,6 +709,20 @@ export function MessageList({
                     <span className="text-[10px] font-medium text-[var(--text-tertiary)]">
                       Knot
                     </span>
+                    {(agentActivities.length > 0 || turnElapsedMs > 0) && (
+                      <div className="ml-auto flex items-center gap-1.5 text-[9px] text-[var(--text-disabled)]">
+                        {agentActivities.length > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_88%,transparent)] px-1.5 py-0.5">
+                            <Icon icon="lucide:wrench" width={9} height={9} />
+                            {agentActivities[agentActivities.length - 1]?.label ??
+                              `${agentActivities.length} actions`}
+                          </span>
+                        )}
+                        {turnElapsedMs > 999 && (
+                          <span className="tabular-nums">{Math.round(turnElapsedMs / 1000)}s</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div
                     className="rounded-xl px-3 py-2 leading-relaxed bg-[var(--bg-subtle)] border border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] text-[var(--text-primary)] rounded-bl-sm"

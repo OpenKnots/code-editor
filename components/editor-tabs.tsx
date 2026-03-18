@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { Icon } from '@iconify/react'
-import { useEditor } from '@/context/editor-context'
+import { PREVIEW_TAB_ID, useEditor } from '@/context/editor-context'
 import { useView } from '@/context/view-context'
 import { formatShortcut } from '@/lib/platform'
 
@@ -49,7 +49,16 @@ function getFileIcon(path: string) {
 }
 
 export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => void }) {
-  const { files, activeFile, setActiveFile, closeFile, reorderFiles } = useEditor()
+  const {
+    tabs,
+    files,
+    activeFile,
+    setActiveFile,
+    closeFile,
+    reorderTabs,
+    closePreviewTab,
+    openPreviewTab,
+  } = useEditor()
   const { activeView, setView } = useView()
   const previewActive = activeView === 'preview'
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -60,7 +69,6 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
     setDragIndex(index)
     dragNode.current = e.currentTarget as HTMLDivElement
     e.dataTransfer.effectAllowed = 'move'
-    // Make drag image semi-transparent
     requestAnimationFrame(() => {
       if (dragNode.current) dragNode.current.style.opacity = '0.4'
     })
@@ -69,12 +77,12 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
   const handleDragEnd = useCallback(() => {
     if (dragNode.current) dragNode.current.style.opacity = '1'
     if (dragIndex !== null && dropTarget !== null && dragIndex !== dropTarget) {
-      reorderFiles(dragIndex, dropTarget)
+      reorderTabs(dragIndex, dropTarget)
     }
     setDragIndex(null)
     setDropTarget(null)
     dragNode.current = null
-  }, [dragIndex, dropTarget, reorderFiles])
+  }, [dragIndex, dropTarget, reorderTabs])
 
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault()
@@ -82,19 +90,25 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
     setDropTarget(index)
   }, [])
 
-  if (files.length === 0) return null
+  if (tabs.length === 0) return null
 
   return (
     <div className="relative flex items-center border-b border-[var(--border)] bg-[var(--bg)] overflow-x-auto no-scrollbar shrink-0 h-[42px]">
-      {files.map((file, index) => {
-        const name = file.path.split('/').pop() ?? file.path
-        const isActive = !previewActive && file.path === activeFile
+      {tabs.map((tab, index) => {
+        const isPreview = tab.type === 'preview'
+        const tabPath = tab.type === 'file' ? tab.path : null
+        const isActive = isPreview ? previewActive : !previewActive && tabPath === activeFile
         const isDragTarget = dropTarget === index && dragIndex !== null && dragIndex !== index
-        const { icon, color } = getFileIcon(file.path)
+
+        const label = isPreview ? 'Preview' : (tabPath?.split('/').pop() ?? '')
+        const dirty = tabPath ? files.find((file) => file.path === tabPath)?.dirty : false
+        const iconMeta = isPreview
+          ? { icon: 'lucide:eye', color: 'var(--brand)' }
+          : getFileIcon(tabPath ?? '')
 
         return (
           <div
-            key={file.path}
+            key={tab.id}
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
             onDragEnd={handleDragEnd}
@@ -110,45 +124,54 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
               ${isDragTarget ? 'border-b-[var(--brand)] bg-[var(--bg-subtle)]' : ''}
             `}
             onClick={() => {
-              setActiveFile(file.path)
+              if (isPreview) {
+                openPreviewTab()
+                setView('preview')
+                return
+              }
+              if (!tabPath) return
+              setActiveFile(tabPath)
               setView('editor')
-              onTabSelect?.(file.path)
+              onTabSelect?.(tabPath)
             }}
           >
-            {/* Active indicator */}
             {isActive && (
               <div className="absolute bottom-0 left-0 right-0 h-[3px]">
                 <div className="h-full bg-[var(--brand)] rounded-t-full" />
               </div>
             )}
 
-            {/* File icon */}
             <Icon
-              icon={icon}
+              icon={iconMeta.icon}
               width={17}
               height={17}
-              style={{ color: isActive ? color : undefined }}
+              style={{ color: isActive ? iconMeta.color : undefined }}
               className={`transition-colors duration-150 ${isActive ? '' : 'text-[var(--text-tertiary)]'}`}
             />
 
-            {/* File name */}
-            <span className="text-[13px] font-medium truncate max-w-[140px]" title={file.path}>
-              {name}
+            <span
+              className="text-[13px] font-medium truncate max-w-[140px]"
+              title={isPreview ? 'Preview' : (tabPath ?? '')}
+            >
+              {label}
             </span>
 
-            {/* Dirty indicator */}
-            {file.dirty && (
+            {dirty && (
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]"
                 title="Unsaved changes"
               />
             )}
 
-            {/* Close button — show dot when dirty and not hovered */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                closeFile(file.path)
+                if (isPreview) {
+                  closePreviewTab()
+                  if (previewActive) setView('editor')
+                  return
+                }
+                if (tabPath) closeFile(tabPath)
               }}
               className="ml-1 cursor-pointer rounded-lg p-1.5 opacity-0 transition-colors hover:bg-[var(--bg)] group-hover:opacity-100 focus:opacity-100"
               title={`Close (${formatShortcut('meta+W')})`}
@@ -156,7 +179,6 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
               <Icon icon="lucide:x" width={14} height={14} />
             </button>
 
-            {/* Separator */}
             {!isActive && (
               <div className="absolute right-0 top-[6px] bottom-[6px] w-px bg-[var(--border)] opacity-30" />
             )}
@@ -164,36 +186,10 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
         )
       })}
 
-      <div
-        className={`
-          group relative flex items-center gap-2.5 px-4 h-full cursor-pointer transition-colors duration-150 select-none min-w-0 shrink-0
-          ${
-            previewActive
-              ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)]'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
-          }
-        `}
-        onClick={() => setView('preview')}
-      >
-        {previewActive && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px]">
-            <div className="h-full bg-[var(--brand)] rounded-t-full" />
-          </div>
-        )}
-        <Icon
-          icon="lucide:eye"
-          width={17}
-          height={17}
-          className={`transition-colors duration-150 ${previewActive ? 'text-[var(--brand)]' : 'text-[var(--text-tertiary)]'}`}
-        />
-        <span className="text-[13px] font-medium truncate max-w-[140px]">Preview</span>
-      </div>
-
-      {/* Tab count indicator when many tabs are open */}
-      {files.length > 6 && (
+      {tabs.length > 6 && (
         <div className="sticky right-0 flex items-center px-2 h-full bg-gradient-to-l from-[var(--bg)] via-[var(--bg)] to-transparent shrink-0">
           <span className="text-[11px] font-mono font-bold text-[var(--text-tertiary)] bg-[var(--bg-subtle)] px-2.5 py-1 rounded-full border-[1.5px] border-[var(--border)]">
-            {files.length}
+            {tabs.length}
           </span>
         </div>
       )}
