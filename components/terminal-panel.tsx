@@ -85,7 +85,9 @@ function buildXtermTheme(hasBgImage?: boolean, bgColor?: string | null) {
   const solidBg = bgColor || SOLID_TERMINAL_BG
   return {
     background: hasBgImage ? 'transparent' : solidBg,
-    foreground: hasBgImage ? v('--text-primary') || (dark ? '#e5e5e5' : '#171717') : SOLID_TERMINAL_FG,
+    foreground: hasBgImage
+      ? v('--text-primary') || (dark ? '#e5e5e5' : '#171717')
+      : SOLID_TERMINAL_FG,
     cursor: v('--brand') || '#a855f7',
     cursorAccent: hasBgImage ? 'transparent' : solidBg,
     selectionBackground: (v('--brand') || '#a855f7') + '40',
@@ -553,100 +555,177 @@ function TerminalPane({
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
       {/* Header (single-terminal mode) — hidden in center/TUI mode */}
       {!hideHeader && (
-        <div className="flex items-center h-10 bg-[var(--sidebar-bg)] border-b border-[var(--border)] px-3 gap-1.5 shrink-0">
-          <span className="text-[13px] font-medium text-[var(--text-secondary)] mr-2 shrink-0">
-            Terminal
-          </span>
+        <div className="border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--sidebar-bg)_88%,var(--bg))] shrink-0">
+          <div className="flex items-start justify-between gap-3 px-3.5 py-3">
+            <div className="min-w-0 flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--border)_88%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] text-[var(--brand)] shadow-sm">
+                <Icon icon="lucide:square-terminal" width={17} height={17} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                    Desktop Terminal
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--brand)_24%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand)]" />
+                    Native PTY
+                  </span>
+                  {activeId != null && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_76%,transparent)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-tertiary)]">
+                      tty:{activeId}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-[12.5px] leading-[1.65] text-[var(--text-secondary)]">
+                  Full desktop shell for local commands, repo workflows, and quick agent handoffs.
+                </p>
+              </div>
+            </div>
 
-          <div className="flex-1" />
-
-          {activeId != null && (
-            <button
-              onClick={async () => {
-                await resetTerminal()
-                session.manualClose = false
-                void createTerminal()
-              }}
-              className="ml-1 p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--color-deletions)] transition-colors shrink-0"
-              title="Restart terminal"
-            >
-              <Icon icon="lucide:rotate-ccw" width={13} height={13} />
-            </button>
-          )}
-
-          {onChangeBgColor && (
-            <div className="relative">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
-                onClick={() => setShowBgPicker((v) => !v)}
-                className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
-                title="Terminal background color"
+                onClick={() => emit('focus-terminal')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_78%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[color-mix(in_srgb,var(--brand)_24%,var(--border))] hover:bg-[var(--bg-subtle)] transition-colors shrink-0"
+                title="Focus terminal"
               >
-                <Icon icon="lucide:palette" width={13} height={13} />
+                <Icon icon="lucide:scan-line" width={13} height={13} />
+                <span>Focus</span>
               </button>
-              {showBgPicker && (
-                <>
+
+              {activeId != null && (
+                <button
+                  onClick={async () => {
+                    await resetTerminal()
+                    session.manualClose = false
+                    void createTerminal()
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--color-deletions)] hover:bg-[var(--bg-subtle)] transition-colors shrink-0"
+                  title="Restart terminal"
+                >
+                  <Icon icon="lucide:rotate-ccw" width={13} height={13} />
+                  <span>Restart</span>
+                </button>
+              )}
+
+              {onChangeBgColor && (
+                <div className="relative">
                   <button
-                    type="button"
-                    className="fixed inset-0 z-[99]"
-                    onClick={() => setShowBgPicker(false)}
-                    aria-label="Close picker"
-                  />
-                  <div className="absolute right-0 top-full mt-1 z-[100] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl p-3 w-[200px]">
-                    <p className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Background</p>
-                    <div className="grid grid-cols-6 gap-1.5 mb-2">
-                      {['#000000', '#0a0a0a', '#1a1a2e', '#0d1117', '#1e1e2e', '#2d1b2e', '#0b132b', '#1b2a1b', '#2a1a0b', '#1a0a0a', '#0a1a2a', '#2a2a1a'].map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => { onChangeBgColor(c); setShowBgPicker(false) }}
-                          className={`w-6 h-6 rounded-md border transition-all hover:scale-110 ${terminalBgColor === c ? 'border-[var(--brand)] ring-1 ring-[var(--brand)]' : 'border-[var(--border)]'}`}
-                          style={{ backgroundColor: c }}
-                          title={c}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={terminalBgColor || '#000000'}
-                        onChange={(e) => onChangeBgColor(e.target.value)}
-                        className="w-6 h-6 rounded cursor-pointer border border-[var(--border)] bg-transparent p-0"
-                        title="Custom color"
+                    onClick={() => setShowBgPicker((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors shrink-0"
+                    title="Terminal background color"
+                  >
+                    <Icon icon="lucide:palette" width={13} height={13} />
+                    <span>Tint</span>
+                  </button>
+                  {showBgPicker && (
+                    <>
+                      <button
+                        type="button"
+                        className="fixed inset-0 z-[99]"
+                        onClick={() => setShowBgPicker(false)}
+                        aria-label="Close picker"
                       />
-                      <span className="text-[10px] text-[var(--text-disabled)] font-mono flex-1">
-                        {terminalBgColor || '#000000'}
-                      </span>
-                      {terminalBgColor && (
-                        <button
-                          onClick={() => { onChangeBgColor(null); setShowBgPicker(false) }}
-                          className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-                          title="Reset to default"
-                        >
-                          Reset
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </>
+                      <div className="absolute right-0 top-full mt-1 z-[100] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl p-3 w-[220px]">
+                        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                          Background tint
+                        </p>
+                        <div className="grid grid-cols-6 gap-1.5 mb-2">
+                          {[
+                            '#000000',
+                            '#0a0a0a',
+                            '#1a1a2e',
+                            '#0d1117',
+                            '#1e1e2e',
+                            '#2d1b2e',
+                            '#0b132b',
+                            '#1b2a1b',
+                            '#2a1a0b',
+                            '#1a0a0a',
+                            '#0a1a2a',
+                            '#2a2a1a',
+                          ].map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => {
+                                onChangeBgColor(c)
+                                setShowBgPicker(false)
+                              }}
+                              className={`w-6 h-6 rounded-md border transition-all hover:scale-110 ${terminalBgColor === c ? 'border-[var(--brand)] ring-1 ring-[var(--brand)]' : 'border-[var(--border)]'}`}
+                              style={{ backgroundColor: c }}
+                              title={c}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={terminalBgColor || '#000000'}
+                            onChange={(e) => onChangeBgColor(e.target.value)}
+                            className="w-6 h-6 rounded cursor-pointer border border-[var(--border)] bg-transparent p-0"
+                            title="Custom color"
+                          />
+                          <span className="text-[10px] text-[var(--text-disabled)] font-mono flex-1">
+                            {terminalBgColor || '#000000'}
+                          </span>
+                          {terminalBgColor && (
+                            <button
+                              onClick={() => {
+                                onChangeBgColor(null)
+                                setShowBgPicker(false)
+                              }}
+                              className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                              title="Reset to default"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {onToggleFloating && (
+                <button
+                  onClick={onToggleFloating}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors shrink-0"
+                  title={floating ? 'Dock terminal' : 'Float terminal'}
+                >
+                  <Icon
+                    icon={floating ? 'lucide:pin' : 'lucide:app-window'}
+                    width={13}
+                    height={13}
+                  />
+                  <span>{floating ? 'Dock' : 'Float'}</span>
+                </button>
               )}
             </div>
-          )}
+          </div>
 
-          {onToggleFloating && (
-            <button
-              onClick={onToggleFloating}
-              className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
-              title={floating ? 'Dock terminal' : 'Float terminal'}
-            >
-              <Icon icon={floating ? 'lucide:pin' : 'lucide:app-window'} width={13} height={13} />
-            </button>
-          )}
+          <div className="flex items-center justify-between gap-3 border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] px-3.5 py-2 text-[11.5px] text-[var(--text-disabled)]">
+            <div className="flex min-w-0 items-center gap-2">
+              {cwd && (
+                <span
+                  className="truncate rounded-md bg-[color-mix(in_srgb,var(--bg-elevated)_76%,transparent)] px-2 py-1 font-mono text-[var(--text-tertiary)]"
+                  title={cwd}
+                >
+                  {cwd}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span>⌘J toggle</span>
+              <span>⌘⌥4 focus</span>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Terminal viewport */}
       <div
         className="flex-1 overflow-hidden relative"
-        style={{ backgroundColor: hasBgImage ? undefined : (terminalBgColor || '#000000') }}
+        style={{ backgroundColor: hasBgImage ? undefined : terminalBgColor || '#000000' }}
       >
         {hasBgImage && (
           <>
@@ -703,7 +782,13 @@ export function TerminalPanel({
   refreshToken,
   startupCommand,
 }: TerminalPanelProps) {
-  const { version: themeVersion, terminalBg, terminalBgOpacity, terminalBgColor, setTerminalBgColor } = useTheme()
+  const {
+    version: themeVersion,
+    terminalBg,
+    terminalBgOpacity,
+    terminalBgColor,
+    setTerminalBgColor,
+  } = useTheme()
   const local = useLocal()
   const [isDesktop, setIsDesktop] = useState(false)
   const resizing = useRef(false)

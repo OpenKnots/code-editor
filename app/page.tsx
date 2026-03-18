@@ -506,8 +506,134 @@ export default function EditorLayout() {
           }}
         />
 
-        {/* View navigation bar — folder tabs */}
-        {isMobile ? (
+        {/* Shell header / mobile title bar */}
+        {!isMobile ? (
+          <div
+            className={`border-b border-[var(--border)] px-4 py-3 ${isMacTauri ? 'pl-20 pr-4' : ''}`}
+            data-tauri-drag-region={isMacTauri ? true : undefined}
+            style={{ background: 'color-mix(in srgb, var(--header-glass-bg) 92%, transparent)' }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--border)_88%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] text-[var(--brand)] shadow-sm">
+                  <KnotLogo size={18} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-[17px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                      {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                        status === 'connected'
+                          ? 'border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]'
+                          : status === 'connecting'
+                            ? 'border-[color-mix(in_srgb,var(--warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] text-[var(--warning)]'
+                            : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_72%,transparent)] text-[var(--text-disabled)]'
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          status === 'connected'
+                            ? 'bg-[var(--success)]'
+                            : status === 'connecting'
+                              ? 'bg-[var(--warning)] animate-pulse'
+                              : 'bg-[var(--text-disabled)]'
+                        }`}
+                      />
+                      {status === 'connected'
+                        ? 'Gateway live'
+                        : status === 'connecting'
+                          ? 'Gateway waking'
+                          : 'Gateway offline'}
+                    </span>
+                    {terminalVisible && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--brand)_24%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                        <Icon
+                          icon="lucide:terminal"
+                          width={11}
+                          height={11}
+                          className="text-[var(--brand)]"
+                        />
+                        Terminal ready
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-secondary)]">
+                    Desktop coding cockpit with chat, editor, and first-class terminal workflows.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="hidden lg:flex items-center rounded-[22px] border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+                  {MODE_BUTTONS.map((modeButton) => {
+                    const active = mode === modeButton.id
+                    return (
+                      <button
+                        key={modeButton.id}
+                        type="button"
+                        onClick={() => setMode(modeButton.id)}
+                        className={`shell-mode-controller-btn ${active ? 'shell-mode-controller-btn--active' : ''}`}
+                        title={`${modeButton.label} mode`}
+                      >
+                        <Icon icon={modeButton.icon} width={15} height={15} />
+                        <span>{modeButton.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="hidden md:flex items-center rounded-[22px] border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+                  {VIEW_CYCLE.map((v) => {
+                    const isActive = activeView === v || (v === 'terminal' && useCenteredTerminal)
+                    const meta = VIEW_ICONS[v]
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => {
+                          if (v === 'terminal') layout.show('terminal')
+                          setView(v)
+                        }}
+                        className={`shell-view-controller-btn ${isActive ? 'shell-view-controller-btn--active' : ''}`}
+                        title={meta.label}
+                      >
+                        <Icon icon={meta.icon} width={15} height={15} />
+                        <span>{meta.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {!modeSpec.terminalCenter && (
+                  <button
+                    type="button"
+                    onClick={() => layout.toggle('terminal')}
+                    className={`inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-[12px] font-medium transition ${
+                      terminalVisible
+                        ? 'border-[color-mix(in_srgb,var(--brand)_36%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
+                        : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                    }`}
+                    title={`${terminalVisible ? 'Hide' : 'Show'} terminal`}
+                  >
+                    <Icon icon="lucide:terminal" width={16} height={16} />
+                    <span>{terminalVisible ? 'Hide Terminal' : 'Show Terminal'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setView('settings')}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                  title="Settings"
+                >
+                  <Icon icon="lucide:settings-2" width={17} height={17} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
           <div
             className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-4 pb-1.5"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.25rem)', minHeight: 44 }}
@@ -557,12 +683,7 @@ export default function EditorLayout() {
 
             {/* Gateway status text removed — dot in header is sufficient */}
           </div>
-        ) : isMacTauri ? (
-          <div
-            data-tauri-drag-region
-            className="shell-topbar flex items-center h-8 shrink-0 px-4 gap-2 tauri-drag-region pl-20"
-          />
-        ) : null}
+        )}
 
         {showWorkflowEditorTabs && <EditorTabs onTabSelect={() => setView('editor')} />}
 
