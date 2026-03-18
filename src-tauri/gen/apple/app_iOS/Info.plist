@@ -15,17 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.10.0</string>
+	<string>1.6.0</string>
 	<key>CFBundleVersion</key>
-	<string>1.10.0</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>KnotCode needs local network access to connect to the local development server during iOS development.</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<true/>
-	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleLightContent</string>
+	<string>1.6.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
