@@ -294,7 +294,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
   if (entry.type === 'command') {
     return (
       <div
-        className={`text-[13px] leading-relaxed ${backdrop}`}
+        className={`text-[13.5px] leading-[1.7] ${backdrop}`}
         style={{ fontFamily: MONO, ...bgStyle }}
       >
         <span className="text-[var(--brand)] font-semibold">❯ </span>
@@ -306,7 +306,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
   if (entry.type === 'system') {
     return (
       <div
-        className={`text-[12px] leading-relaxed text-[var(--text-disabled)] ${backdrop}`}
+        className={`text-[12.5px] leading-[1.7] text-[var(--text-disabled)] ${backdrop}`}
         style={{ fontFamily: MONO, ...bgStyle }}
       >
         {entry.text}
@@ -317,7 +317,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
   if (entry.type === 'error') {
     return (
       <div
-        className={`ml-2 pl-3 py-2 pr-8 rounded-lg text-[13px] leading-relaxed ${hasBg ? 'backdrop-blur-md' : ''}`}
+        className={`ml-2 pl-3.5 py-2.5 pr-8 rounded-xl text-[14px] leading-[1.65] ${hasBg ? 'backdrop-blur-md' : ''}`}
         style={{
           borderLeft: '3px solid var(--error, #ef4444)',
           background: hasBg
@@ -333,7 +333,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
   if (entry.type === 'rpc-result') {
     return (
       <div
-        className={`ml-2 pl-3 py-2 pr-8 rounded-lg text-[13px] leading-relaxed overflow-x-auto ${hasBg ? 'backdrop-blur-md' : ''}`}
+        className={`ml-2 pl-3.5 py-2.5 pr-8 rounded-xl text-[13.5px] leading-[1.65] overflow-x-auto ${hasBg ? 'backdrop-blur-md' : ''}`}
         style={{
           borderLeft: '3px solid var(--success, #10b981)',
           background: hasBg
@@ -350,7 +350,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
   if (entry.type === 'streaming') {
     return (
       <div
-        className={`ml-2 pl-3 py-2 pr-8 rounded-lg text-[13px] leading-relaxed ${hasBg ? 'backdrop-blur-md' : ''}`}
+        className={`ml-2 pl-3.5 py-2.5 pr-8 rounded-xl text-[14px] leading-[1.65] ${hasBg ? 'backdrop-blur-md' : ''}`}
         style={{
           borderLeft: '3px solid var(--brand)',
           background: hasBg
@@ -367,7 +367,7 @@ function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
   // response
   return (
     <div
-      className={`ml-2 pl-3 py-2 pr-8 rounded-lg text-[13px] leading-relaxed ${hasBg ? 'backdrop-blur-md' : ''}`}
+      className={`ml-2 pl-3.5 py-2.5 pr-8 rounded-xl text-[14px] leading-[1.65] ${hasBg ? 'backdrop-blur-md' : ''}`}
       style={{
         borderLeft: '3px solid var(--success, #10b981)',
         background: hasBg
@@ -392,9 +392,9 @@ export function GatewayTerminal() {
   const terminalStyle = useMemo(
     () =>
       hasBgImage
-        ? { fontFamily: MONO }
+        ? ({ fontFamily: 'var(--font-sans)' } as CSSProperties)
         : ({
-            fontFamily: MONO,
+            fontFamily: 'var(--font-sans)',
             '--text-primary': '#e5e7eb',
             '--text-secondary': '#cbd5e1',
             '--text-tertiary': '#94a3b8',
@@ -472,6 +472,13 @@ export function GatewayTerminal() {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [entries])
+
+  // External focus hook (keyboard shortcut / command palette)
+  useEffect(() => {
+    const focusInput = () => inputRef.current?.focus()
+    window.addEventListener('focus-terminal', focusInput)
+    return () => window.removeEventListener('focus-terminal', focusInput)
+  }, [])
 
   // Chat event listener (streaming + final)
   useEffect(() => {
@@ -853,33 +860,80 @@ export function GatewayTerminal() {
       )}
       {/* Terminal Header */}
       <div
-        className={`flex items-center justify-between px-3 py-1.5 border-b border-[var(--border)] shrink-0 ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
+        className={`border-b border-[var(--border)] shrink-0 ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
         style={
-          hasBgImage ? { background: 'color-mix(in srgb, var(--bg) 70%, transparent)' } : undefined
+          hasBgImage ? { background: 'color-mix(in srgb, var(--bg) 74%, transparent)' } : undefined
         }
       >
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-2 h-2 rounded-full transition-colors ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
-            title={isConnected ? 'Connected' : 'Disconnected'}
-          />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)]">
-            Gateway Terminal
-          </span>
+        <div className="flex items-start justify-between gap-3 px-4 py-3.5">
+          <div className="min-w-0 flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--border)_88%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] text-[var(--brand)] shadow-sm">
+              <Icon icon="lucide:square-terminal" width={16} height={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                  Gateway Terminal
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                    isConnected
+                      ? 'border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]'
+                      : 'border-[color-mix(in_srgb,var(--error)_26%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] text-[var(--color-deletions)]'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[var(--success)]' : 'bg-[var(--error)]'}`}
+                  />
+                  {isConnected ? 'Connected' : 'Offline'}
+                </span>
+              </div>
+              <p className="mt-1 text-[12.5px] leading-[1.65] text-[var(--text-secondary)]">
+                Slash-command workspace for gateway runs, quick shell tasks, and direct agent
+                prompts.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              onClick={() => inputRef.current?.focus()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_78%,transparent)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[color-mix(in_srgb,var(--brand)_24%,var(--border))] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+              title="Focus terminal input"
+            >
+              <Icon icon="lucide:scan-line" width={13} height={13} />
+              <span>Focus</span>
+            </button>
+            <button
+              onClick={() => setEntries([])}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+              title="Clear terminal"
+            >
+              <Icon icon="lucide:trash-2" width={13} height={13} />
+              <span>Clear</span>
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setEntries([])}
-          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
-          title="Clear terminal"
-        >
-          <Icon icon="lucide:trash-2" width={12} height={12} />
-          <span>Clear</span>
-        </button>
+        <div className="flex items-center justify-between gap-3 border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] px-4 py-2.5 text-[11.5px] text-[var(--text-disabled)]">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="rounded-md bg-[color-mix(in_srgb,var(--bg-elevated)_72%,transparent)] px-2 py-1 font-medium text-[var(--text-secondary)]">
+              Session {TERMINAL_SESSION_KEY}
+            </span>
+            {rootPath && (
+              <span className="truncate text-[var(--text-disabled)]" title={rootPath}>
+                {rootPath}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <span>{entries.length} entries</span>
+            {sending && <span className="text-[var(--brand)]">Running…</span>}
+          </div>
+        </div>
       </div>
       {/* Output */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 min-h-0 relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-2.5 min-h-0 relative"
         onClick={() => inputRef.current?.focus()}
       >
         {entries.map((entry) => (
@@ -924,8 +978,8 @@ export function GatewayTerminal() {
           }}
           visible={acOpen}
         />
-        <div className="flex items-center px-4 py-2.5">
-          <span className="text-[13px] text-[var(--brand)] mr-2 shrink-0 select-none font-semibold">
+        <div className="flex items-center gap-3 px-4 py-3.5">
+          <span className="text-[14px] text-[var(--brand)] shrink-0 select-none font-semibold">
             ❯
           </span>
           <input
@@ -940,14 +994,14 @@ export function GatewayTerminal() {
                 ? 'Type a command or ask a question…'
                 : 'Not connected — waiting for gateway…'
             }
-            className="flex-1 bg-transparent text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
-            style={{ fontFamily: MONO }}
+            className="flex-1 bg-transparent text-[14.5px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
+            style={{ fontFamily: MONO, letterSpacing: '-0.01em' }}
             autoComplete="off"
             spellCheck={false}
             autoFocus
           />
           {sending && (
-            <span className="text-[10px] text-[var(--text-disabled)] animate-pulse">
+            <span className="rounded-full bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2 py-1 text-[10px] font-medium text-[var(--text-secondary)] animate-pulse">
               running…
             </span>
           )}

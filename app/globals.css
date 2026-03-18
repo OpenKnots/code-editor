@@ -118,6 +118,18 @@
   --shell-chip-hover: color-mix(in srgb, var(--text-primary, #ededed) 6%, transparent);
   --shell-status-bg: color-mix(in srgb, var(--bg-elevated, #141414) 88%, transparent);
   --shell-status-border: color-mix(in srgb, var(--border, #262626) 86%, transparent);
+
+  /* Typography scale */
+  --font-ui: var(--font-sans);
+  --font-technical: var(--font-mono);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --leading-tight-ui: 1.35;
+  --leading-ui: 1.55;
+  --leading-relaxed-ui: 1.68;
 }
 
 /* Consistent keyboard focus across the app */
@@ -6466,7 +6478,9 @@ a:active,
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(135deg, var(--brand, #3b82f6), var(--accent, #8b5cf6));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
@@ -6530,4 +6544,96 @@ a:active,
     background: white !important;
     color: black !important;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Gateway + Chat Polish Pass
+   ────────────────────────────────────────────────────────────────── */
+.view-router-frame {
+  background:
+    radial-gradient(
+      circle at top,
+      color-mix(in srgb, var(--brand) 4%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, transparent), var(--bg));
+}
+
+.chat-input-shell {
+  background: color-mix(in srgb, var(--bg) 94%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--border) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 4%, transparent),
+    0 14px 36px -24px rgba(0, 0, 0, 0.42);
+}
+
+.chat-input-shell:hover {
+  border-color: color-mix(in srgb, var(--border-hover) 88%, var(--border));
+}
+
+.chat-input-shell:focus-within {
+  border-color: color-mix(in srgb, var(--brand) 16%, var(--border));
+  background: color-mix(in srgb, var(--bg) 90%, var(--bg-elevated));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--brand) 8%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--brand) 4%, transparent),
+    0 16px 38px -26px color-mix(in srgb, var(--brand) 14%, rgba(0, 0, 0, 0.45));
+}
+
+.chat-input-textarea {
+  font-family: var(--font-ui);
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed-ui);
+  letter-spacing: -0.012em;
+}
+
+.chat-input-textarea::selection,
+.gateway-credential-input::selection,
+.gateway-connect-url-input::selection {
+  background-color: color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.gateway-connect-url-input,
+.gateway-credential-input {
+  font-family: var(--font-technical);
+  font-size: var(--text-md);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+.gateway-connect-url-input:hover,
+.gateway-credential-input:hover {
+  border-color: color-mix(in srgb, var(--border-hover) 92%, var(--border));
+}
+
+.gateway-connect-url-input:focus,
+.gateway-credential-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--brand) 8%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--brand) 4%, transparent);
+}
+
+.gateway-credential-input {
+  -webkit-text-security: disc;
+}
+
+.terminal-md,
+.terminal-md .prose-chat,
+.terminal-md .md-preview {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.72;
+  letter-spacing: -0.012em;
+}
+
+.terminal-md .prose-chat :where(code, pre),
+.terminal-md .md-preview :where(code, pre) {
+  font-family: var(--font-technical);
+}
+
+.terminal-md .prose-chat code,
+.terminal-md .md-preview code {
+  font-size: 0.92em;
 }

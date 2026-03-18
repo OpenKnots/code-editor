@@ -70,16 +70,17 @@ function AgentConnectPrompt() {
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth <= 768
   const [url, setUrl] = useState(isMobileDevice ? '' : 'ws://localhost:18789')
   const [password, setPassword] = useState('')
+  const [accessToken, setAccessToken] = useState('')
 
   const isConnecting = status === 'connecting' || status === 'authenticating'
 
   const handleConnect = () => {
     if (!url.trim()) return
-    connect(url.trim(), password)
+    connect(url.trim(), accessToken.trim() || password)
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center text-center px-6">
+    <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       {/* Animated connection icon */}
       <div className="relative mb-6">
         <div
@@ -102,21 +103,44 @@ function AgentConnectPrompt() {
 
       {isConnecting ? (
         <>
-          <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">Connecting…</h3>
-          <p className="text-[13px] text-[var(--text-tertiary)]">Looking for your gateway</p>
+          <h3 className="mb-1 text-[19px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+            Connecting…
+          </h3>
+          <p className="text-[14px] leading-[1.65] text-[var(--text-tertiary)]">
+            Looking for your gateway
+          </p>
         </>
       ) : (
         <>
-          <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mb-1">
+          <h3 className="mb-1 text-[20px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
             Connect to Gateway
           </h3>
-          <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-6 max-w-[280px]">
+          <p className="mb-4 max-w-[360px] text-[14px] leading-[1.7] text-[var(--text-tertiary)]">
             {isMobileDevice
-              ? 'Enter your gateway address to start chatting.'
-              : 'Make sure OpenClaw is running on this machine.'}
+              ? 'Enter your gateway address, then use a token or password if your gateway requires auth.'
+              : 'Paste your gateway URL here. If auth is enabled, the token/password fields live directly below.'}
           </p>
 
-          <div className="w-full max-w-[340px] space-y-3">
+          <div className="mb-4 w-full max-w-[360px] rounded-2xl border border-[color-mix(in_srgb,var(--brand)_18%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_4%,transparent)] px-4 py-3.5 text-left shadow-[0_18px_40px_-28px_color-mix(in_srgb,var(--brand)_26%,transparent)]">
+            <div className="flex items-start gap-2">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]">
+                <Icon icon="lucide:key-round" width={14} height={14} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
+                  Gateway credentials
+                </p>
+                <p className="mt-1 text-[12px] leading-[1.65] text-[var(--text-secondary)]">
+                  Use <span className="font-medium text-[var(--text-primary)]">Access token</span>{' '}
+                  first when you have one. The fallback{' '}
+                  <span className="font-medium text-[var(--text-primary)]">Password</span> field is
+                  also masked.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full max-w-[360px] space-y-3">
             {/* URL input */}
             <div className="relative">
               <Icon
@@ -133,10 +157,35 @@ function AgentConnectPrompt() {
                   if (e.key === 'Enter') handleConnect()
                 }}
                 placeholder={isMobileDevice ? 'wss://your-gateway.ts.net' : 'ws://localhost:18789'}
-                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
+                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none transition-all gateway-connect-url-input"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
+              />
+            </div>
+
+            {/* Access token input */}
+            <div className="relative">
+              <Icon
+                icon="lucide:key-round"
+                width={15}
+                height={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-disabled)]"
+              />
+              <input
+                type="password"
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConnect()
+                }}
+                placeholder="Access token (recommended)"
+                className="gateway-credential-input w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none transition-all"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="current-password"
+                data-1p-ignore
               />
             </div>
 
@@ -155,16 +204,28 @@ function AgentConnectPrompt() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleConnect()
                 }}
-                placeholder="Password (optional)"
-                className="w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[color-mix(in_srgb,var(--brand)_30%,transparent)] transition-all"
+                placeholder="Password (fallback)"
+                className="gateway-credential-input w-full pl-10 pr-3 py-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none transition-all"
+                autoComplete="current-password"
+                data-1p-ignore
               />
+            </div>
+
+            <div className="rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_82%,transparent)] px-3.5 py-2.5">
+              <p className="text-[12px] font-medium tracking-[-0.01em] text-[var(--text-secondary)]">
+                Where do I put the gateway secret?
+              </p>
+              <p className="mt-1 text-[11.5px] leading-[1.65] text-[var(--text-disabled)]">
+                Right here: paste a gateway access token into the token field, or use the password
+                field if your setup still uses password auth. Both stay masked in the UI.
+              </p>
             </div>
 
             {/* Connect button */}
             <button
               onClick={handleConnect}
               disabled={!url.trim()}
-              className="w-full py-3.5 rounded-xl text-[14px] font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full rounded-xl py-3.5 text-[14.5px] font-semibold tracking-[-0.01em] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: url.trim() ? 'var(--brand)' : 'var(--bg-subtle)',
                 color: url.trim() ? 'var(--brand-contrast, #fff)' : 'var(--text-disabled)',
@@ -904,6 +965,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
     return labels
   }, [contextAttachments, imageAttachments])
 
+  // Follow-up seam: fallback local agent routing (Cursor Agent / Claude Code CLI) should plug in above sendStructuredGatewayMessage, while keeping local repo/docs as the default context source before any remote fetch.
   const buildSilentContext = useCallback(() => {
     const context = buildContext()
     const attachCtx = buildAttachmentContext()
@@ -2485,7 +2547,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
         onClose={onClose}
       />
       {messages.length > 0 && (
-        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-0.5 shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_92%,transparent)] px-3 py-1.5 backdrop-blur-sm">
           <div className="flex min-w-0 items-center gap-1.5">
             {/* Font size controls */}
             <div className="inline-flex items-center gap-0.5">
@@ -2496,7 +2558,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
               >
                 <Icon icon="lucide:minus" width={12} height={12} />
               </button>
-              <span className="w-7 select-none text-center text-[10px] font-mono tabular-nums text-[var(--text-disabled)]">
+              <span className="w-7 select-none text-center text-[11px] font-mono tabular-nums text-[var(--text-disabled)]">
                 {chatFontSize}
               </span>
               <button
@@ -2516,7 +2578,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
                 <button
                   key={f.id}
                   onClick={() => setChatFontFamily(f.id)}
-                  className={`whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
+                  className={`whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
                     chatFontFamily === f.id
                       ? 'text-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]'
                       : 'text-[var(--text-disabled)] hover:text-[var(--text-tertiary)]'

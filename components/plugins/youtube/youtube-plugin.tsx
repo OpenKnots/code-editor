@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, createContext, useContext, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo, useSyncExternalStore } from 'react'
 import { usePlugins } from '@/context/plugin-context'
 import { YouTubePlayer } from './youtube-player'
 import { YouTubeSettings } from './youtube-settings'
@@ -50,12 +50,37 @@ export interface YouTubeEngine {
   iframeRef: React.RefObject<HTMLIFrameElement | null>
 }
 
-const YouTubeEngineContext = createContext<YouTubeEngine | null>(null)
+const fallbackIframeRef: React.RefObject<HTMLIFrameElement | null> = { current: null }
+const fallbackEngine: YouTubeEngine = {
+  current: null,
+  setCurrent: () => {},
+  isPlaying: false,
+  setIsPlaying: () => {},
+  volume: 70,
+  muted: false,
+  handleVolumeChange: () => {},
+  toggleMute: () => {},
+  sendPlayerCommand: () => {},
+  iframeRef: fallbackIframeRef,
+}
+
+let engineSnapshot: YouTubeEngine = fallbackEngine
+const engineListeners = new Set<() => void>()
+
+function setEngineSnapshot(next: YouTubeEngine) {
+  engineSnapshot = next
+  engineListeners.forEach((listener) => listener())
+}
 
 export function useYouTubeEngine() {
-  const ctx = useContext(YouTubeEngineContext)
-  if (!ctx) throw new Error('useYouTubeEngine must be used within YouTubePlugin')
-  return ctx
+  return useSyncExternalStore(
+    (listener) => {
+      engineListeners.add(listener)
+      return () => engineListeners.delete(listener)
+    },
+    () => engineSnapshot,
+    () => fallbackEngine,
+  )
 }
 
 export function YouTubePlugin() {
@@ -253,8 +278,13 @@ export function YouTubePlugin() {
     [current, isPlaying, volume, muted, handleVolumeChange, toggleMute, sendPlayerCommand],
   )
 
+  useEffect(() => {
+    setEngineSnapshot(engine)
+    return () => setEngineSnapshot(fallbackEngine)
+  }, [engine])
+
   return (
-    <YouTubeEngineContext.Provider value={engine}>
+    <>
       {/* Persistent iframe — stays mounted even when sidebar/PiP is hidden */}
       {current && (
         <div
@@ -287,6 +317,6 @@ export function YouTubePlugin() {
           />
         </div>
       )}
-    </YouTubeEngineContext.Provider>
+    </>
   )
 }

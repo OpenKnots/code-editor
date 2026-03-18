@@ -57,7 +57,7 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   skills: { label: 'Skills' },
   prompts: { label: 'Prompts' },
   settings: { label: 'Settings' },
-  terminal: { label: 'Terminal' },
+  terminal: { label: 'Gateway Terminal' },
   workshop: { label: 'Workshop' },
 }
 
@@ -106,7 +106,7 @@ export function ViewRouter() {
   const showSplitView = activeView === 'chat' && previewDocked
 
   return (
-    <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+    <div className="view-router-frame flex flex-1 min-h-0 min-w-0 overflow-hidden">
       <AnimatePresence mode="wait" custom={direction} initial={false}>
         <motion.div
           key={showSplitView ? 'split-view' : activeView}

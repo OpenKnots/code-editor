@@ -485,17 +485,18 @@ export function GatewayProvider({ children }: { children: React.ReactNode }) {
           )
           if (cancelled || !config) return
 
-          // Verify the gateway is actually running before connecting
-          const status = await tauriInvoke<{ running: boolean }>('engine_status', {})
-          if (cancelled) return
-
-          if (status?.running && config.url && config.credential) {
-            credentialsRef.current = { url: config.url, credential: config.credential }
+          // Try the configured gateway directly whenever we have a URL.
+          // `engine_status` is useful telemetry, but its text parsing can be
+          // conservative/incorrect while the gateway is in fact reachable.
+          // Falling through to unauthenticated localhost discovery in that case
+          // is worse: it drops the real token and makes live reconnects flaky.
+          if (config.url) {
+            credentialsRef.current = { url: config.url, credential: config.credential ?? '' }
             setGatewayUrl(config.url)
             // Save to localStorage so future reconnects are instant
             localStorage.setItem(STORAGE_URL, config.url)
-            localStorage.setItem(STORAGE_PASS, config.credential)
-            doConnect(config.url, config.credential)
+            localStorage.setItem(STORAGE_PASS, config.credential ?? '')
+            doConnect(config.url, config.credential ?? '')
             return
           }
         } catch {

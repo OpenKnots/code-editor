@@ -83,7 +83,7 @@ const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
   skills: { icon: 'lucide:sparkles', label: 'Skills' },
   prompts: { icon: 'lucide:book-open', label: 'Prompts' },
   settings: { icon: 'lucide:settings', label: 'Settings' },
-  terminal: { icon: 'lucide:terminal', label: 'Terminal' },
+  terminal: { icon: 'lucide:terminal', label: 'Gateway Terminal' },
   kanban: { icon: 'lucide:kanban', label: 'Kanban' },
   mcp: { icon: 'lucide:plug', label: 'MCP' },
   workshop: { icon: 'lucide:hammer', label: 'Workshop' },
@@ -515,7 +515,7 @@ export default function EditorLayout() {
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[17px] font-semibold text-[var(--text-primary)] tracking-tight">
+                  <span className="text-[18px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
                     {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                   </span>
                   <span
@@ -664,7 +664,7 @@ export default function EditorLayout() {
                     <div className="w-9 h-1 rounded-full bg-[var(--text-disabled)] opacity-40" />
                   </div>
                   <div className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
-                    <span className="text-[13px] font-semibold text-[var(--text-primary)] flex items-center gap-2.5">
+                    <span className="flex items-center gap-2.5 text-[14px] font-semibold tracking-[-0.015em] text-[var(--text-primary)]">
                       <Icon
                         icon="lucide:terminal"
                         width={16}

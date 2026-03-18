@@ -296,15 +296,15 @@ export function ChatInputBar({
                   setInput(s.cmd + ' ')
                   setActiveSuggestionIdx(-1)
                 }}
-                className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] transition-colors cursor-pointer ${
                   i === activeSuggestionIdx
                     ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
                     : 'bg-[var(--bg-subtle)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--brand)]'
                 }`}
               >
                 <Icon icon={s.icon} width={12} height={12} className="text-[var(--brand)]" />
-                <span className="font-mono text-[var(--brand)]">{s.cmd}</span>
-                <span className="text-[var(--text-tertiary)]">{s.desc}</span>
+                <span className="font-mono text-[12px] text-[var(--brand)]">{s.cmd}</span>
+                <span className="text-[11px] text-[var(--text-tertiary)]">{s.desc}</span>
               </button>
             ))}
           </div>
@@ -368,7 +368,7 @@ export function ChatInputBar({
 
           {/* Unified input container with drag-drop zone */}
           <div
-            className={`input-focus-glow rounded-xl border bg-[var(--bg)] focus-within:border-[color-mix(in_srgb,var(--brand)_50%,var(--border))] transition-all overflow-hidden ${
+            className={`chat-input-shell input-focus-glow rounded-[18px] border bg-[var(--bg)] transition-all overflow-hidden ${
               inputDragOver
                 ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_4%,transparent)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--brand)_15%,transparent)]'
                 : 'border-[var(--border)]'
@@ -384,7 +384,7 @@ export function ChatInputBar({
             {/* Active file context pill */}
             {activeFile && contextAttachments.length === 0 && imageAttachments.length === 0 && (
               <div className="flex items-center gap-1.5 px-2.5 pt-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] border border-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-tertiary)]">
+                <span className="inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--brand)_12%,transparent)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] px-2 py-1 text-[10px] font-mono text-[var(--text-tertiary)]">
                   <Icon
                     icon={getFileTypeIcon(activeFile)}
                     width={9}
@@ -475,13 +475,13 @@ export function ChatInputBar({
                             />
                           </div>
                           <div className="min-w-0 flex flex-col">
-                            <span className="text-[10px] font-mono text-[var(--text-secondary)] truncate max-w-[140px] leading-tight">
+                            <span className="max-w-[150px] truncate text-[11px] font-mono leading-tight text-[var(--text-secondary)]">
                               {fileName}
                               {lineRange && (
                                 <span className="text-[var(--text-disabled)]">:{lineRange}</span>
                               )}
                             </span>
-                            <span className="text-[8px] text-[var(--text-disabled)] leading-tight">
+                            <span className="text-[9px] leading-tight text-[var(--text-disabled)]">
                               {lineCount} line{lineCount !== 1 ? 's' : ''}
                               {isSelection ? ' selected' : ''}
                             </span>
@@ -570,15 +570,15 @@ export function ChatInputBar({
               onPaste={onImagePaste}
               placeholder={currentPlaceholder}
               rows={1}
-              className="w-full resize-none bg-transparent px-3 py-2 text-[14px] sm:text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
+              className="chat-input-textarea w-full resize-none bg-transparent px-3.5 py-3 text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
             />
 
             {/* Bottom toolbar row */}
-            <div className="flex items-center justify-between px-2 pb-1">
+            <div className="flex items-center justify-between px-2.5 pb-1.5 pt-0.5">
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={onFileAttach}
-                  className="p-2 sm:p-1 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                  className="p-2 sm:p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
                   title="Attach file"
                 >
                   <Icon
@@ -590,7 +590,7 @@ export function ChatInputBar({
                 </button>
                 <button
                   onClick={onImageAttach}
-                  className="p-2 sm:p-1 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                  className="p-2 sm:p-1.5 rounded-md text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
                   title="Attach image"
                 >
                   <Icon
@@ -600,22 +600,22 @@ export function ChatInputBar({
                     className="sm:w-[14px] sm:h-[14px]"
                   />
                 </button>
-                <span className="text-[10px] text-[var(--text-disabled)] ml-1">
-                  <kbd className="px-1 py-px rounded border border-[var(--border)] text-[9px] font-mono">
+                <span className="ml-1 text-[11.5px] text-[var(--text-disabled)]">
+                  <kbd className="rounded border border-[var(--border)] px-1 py-px text-[10px] font-mono">
                     @
                   </kbd>
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 {contextTokens > 0 && (
-                  <span className="text-[10px] text-[var(--text-disabled)] tabular-nums mr-1">
+                  <span className="mr-1.5 text-[11.5px] tabular-nums text-[var(--text-disabled)]">
                     ~{(contextTokens / 1000).toFixed(1)}k
                   </span>
                 )}
                 <button
                   onClick={onSend}
                   disabled={!input.trim() || sending}
-                  className={`p-1 rounded-md transition-all cursor-pointer ${
+                  className={`h-8 min-w-8 px-2 rounded-lg transition-all cursor-pointer ${
                     input.trim() && !sending
                       ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:opacity-90'
                       : 'text-[var(--text-disabled)] cursor-not-allowed'
