@@ -998,17 +998,20 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
   }, [contextAttachments, imageAttachments])
 
   // Follow-up seam: fallback local agent routing (Cursor Agent / Claude Code CLI) should plug in above sendStructuredGatewayMessage, while keeping local repo/docs as the default context source before any remote fetch.
-  const buildSilentContext = useCallback(() => {
-    const context = buildContext()
-    const attachCtx = buildAttachmentContext()
-    const modePrefix =
-      agentMode === 'ask'
-        ? '[Mode: Ask — discuss and answer questions. Do not make code changes unless explicitly asked.]\n'
-        : agentMode === 'plan'
-          ? '[Mode: Plan — You MUST respond with a structured plan before making any changes. Format your response as a numbered list where each step has a **bold title** followed by a description and affected files in backticks. Example:\n1. **Update auth module** — Add token refresh logic\n   `lib/auth.ts`, `lib/api.ts`\n2. **Add tests** — Cover the new refresh flow\n   `tests/auth.test.ts`\nAfter the user approves, execute each step sequentially. Do NOT make changes until approved.]\n'
-          : '[Mode: Agent — You are an autonomous coding agent. Make direct code changes without asking for permission. Read files to understand context, edit them to implement changes, run commands to verify your work. After making changes, briefly summarize what you did and which files were modified. If a change fails, diagnose and fix it automatically.]\n'
-    return [modePrefix, context || '', attachCtx].filter(Boolean).join('\n\n')
-  }, [agentMode, buildAttachmentContext, buildContext])
+  const buildSilentContext = useCallback(
+    (mode: AgentMode = agentMode) => {
+      const context = buildContext()
+      const attachCtx = buildAttachmentContext()
+      const modePrefix =
+        mode === 'ask'
+          ? '[Mode: Ask — discuss and answer questions. Do not make code changes unless explicitly asked.]\n'
+          : mode === 'plan'
+            ? '[Mode: Plan — You MUST respond with a structured plan before making any changes. Format your response as a numbered list where each step has a **bold title** followed by a description and affected files in backticks. Example:\n1. **Update auth module** — Add token refresh logic\n   `lib/auth.ts`, `lib/api.ts`\n2. **Add tests** — Cover the new refresh flow\n   `tests/auth.test.ts`\nAfter the user approves, execute each step sequentially. Do NOT make changes until approved.]\n'
+            : '[Mode: Agent — You are an autonomous coding agent. Make direct code changes without asking for permission. Read files to understand context, edit them to implement changes, run commands to verify your work. After making changes, briefly summarize what you did and which files were modified. If a change fails, diagnose and fix it automatically.]\n'
+      return [modePrefix, context || '', attachCtx].filter(Boolean).join('\n\n')
+    },
+    [agentMode, buildAttachmentContext, buildContext],
+  )
 
   // ─── Message helpers ──────────────────────────────────────────
   // parsePlanSteps moved to components/chat/message-list.tsx
@@ -1318,8 +1321,9 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
 
   // ─── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (overrideText?: string) => {
+    async (overrideText?: string, overrideMode?: AgentMode) => {
       const text = (overrideText ?? input).trim()
+      const effectiveMode = overrideMode ?? agentMode
       if (!text || sending) return
 
       // Handle slash commands locally
@@ -1352,7 +1356,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
 
       logChatDebug('send attempt', {
         textLength: text.length,
-        mode: agentMode,
+        mode: effectiveMode,
         connected: isConnected,
         gatewayStatus: status,
         sessionKey,
@@ -1677,7 +1681,10 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
             attachLabels.length > 0
               ? `[${attachLabels.join(' · ')}]\n/skill use ${skill.slug} ${request}`
               : `/skill use ${skill.slug} ${request}`
-          const outboundMessage = buildGatewayMessage(envelope.prompt, buildSilentContext())
+          const outboundMessage = buildGatewayMessage(
+            envelope.prompt,
+            buildSilentContext(effectiveMode),
+          )
           const messageImages =
             imageAttachments.length > 0
               ? imageAttachments.map((img) => ({ name: img.name, dataUrl: img.dataUrl }))
@@ -1773,7 +1780,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
           ? imageAttachments.map((img) => ({ name: img.name, dataUrl: img.dataUrl }))
           : undefined
       try {
-        const outboundMessage = buildGatewayMessage(text, buildSilentContext())
+        const outboundMessage = buildGatewayMessage(text, buildSilentContext(effectiveMode))
         await sendStructuredGatewayMessage({
           displayText,
           outboundMessage,
@@ -1827,6 +1834,13 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       imageAttachments,
     ],
   )
+
+  useEffect(() => {
+    return on('agent-send', (detail) => {
+      if (detail.mode) setAgentMode(detail.mode)
+      void sendMessage(detail.text, detail.mode)
+    })
+  }, [sendMessage])
 
   // ─── Handle ⌘K inline edit requests ────────────────────────────
   useEffect(() => {
@@ -2608,7 +2622,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
         <ChatHome
           onSend={(text, mode) => {
             setAgentMode(mode)
-            sendMessage(text)
+            sendMessage(text, mode)
           }}
           onSelectFolder={() => emit('open-folder')}
           onCloneRepo={() => emit('open-folder')}

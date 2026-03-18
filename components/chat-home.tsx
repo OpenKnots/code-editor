@@ -644,7 +644,6 @@ export const ChatHome = memo(function ChatHome({
             }
             aria-label="Chat input"
             className="min-h-[48px] max-h-[200px] w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-3.5 text-[14px] leading-[1.65] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none placeholder:transition-opacity placeholder:duration-500"
-            key={placeholderIndex}
           />
 
           {/* Image previews */}
