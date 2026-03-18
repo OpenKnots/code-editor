@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { useGateway } from '@/context/gateway-context'
 import { useEditor } from '@/context/editor-context'
@@ -38,37 +37,8 @@ function StatusIndicator({ status, agentActive }: { status: string; agentActive:
 
   return (
     <span className="shell-status-item gap-[5px]" title={label}>
-      <span className="relative w-[16px] h-[16px] flex items-center justify-center">
-        <motion.svg
-          className="absolute inset-0 w-[16px] h-[16px]"
-          viewBox="0 0 16 16"
-          animate={
-            isConnecting
-              ? { rotate: 360 }
-              : isConnected
-                ? { scale: [1, agentActive ? 1.2 : 1.08, 1], opacity: [0.45, 1, 0.45] }
-                : { opacity: 0.35, scale: 1 }
-          }
-          transition={
-            isConnecting
-              ? { repeat: Infinity, duration: 2, ease: 'linear' }
-              : isConnected
-                ? { repeat: Infinity, duration: agentActive ? 1.2 : 3.5, ease: 'easeInOut' }
-                : { duration: 0.3 }
-          }
-        >
-          <circle
-            cx="8"
-            cy="8"
-            r="6"
-            fill="none"
-            stroke={color}
-            strokeWidth="1.2"
-            strokeDasharray={isConnecting ? '3 3' : undefined}
-            strokeLinecap="round"
-          />
-        </motion.svg>
-        <span className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: color }} />
+      <span className="flex h-[16px] w-[16px] items-center justify-center">
+        <span className="h-[6px] w-[6px] rounded-full" style={{ backgroundColor: color }} />
       </span>
     </span>
   )
@@ -209,21 +179,24 @@ export function StatusBar({ agentActive, devServerReady }: StatusBarProps) {
           title={status === 'connected' ? 'Connected to gateway' : 'Disconnected'}
         >
           <span
-            className={`w-[6px] h-[6px] rounded-full shrink-0 ${
-              status === 'connected' ? 'bg-green-500' : 'bg-red-500'
-            }`}
+            className="h-[6px] w-[6px] shrink-0 rounded-full"
+            style={{
+              backgroundColor: status === 'connected' ? 'var(--success)' : 'var(--error)',
+            }}
           />
-          <span className="text-[10px]">{status === 'connected' ? 'Connected' : 'Disconnected'}</span>
+          <span className="text-[10px]">
+            {status === 'connected' ? 'Connected' : 'Disconnected'}
+          </span>
         </span>
 
         {devServerReady && (
           <>
             <span className="shell-status-separator" />
-            <span
-              className="shell-status-item gap-1"
-              title="Dev server running on localhost:3000"
-            >
-              <span className="w-[6px] h-[6px] rounded-full bg-green-500 animate-pulse shrink-0" />
+            <span className="shell-status-item gap-1" title="Dev server running on localhost:3000">
+              <span
+                className="h-[6px] w-[6px] shrink-0 rounded-full"
+                style={{ backgroundColor: 'var(--success)' }}
+              />
               <span className="text-[10px]">localhost:3000</span>
             </span>
           </>

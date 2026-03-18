@@ -118,18 +118,13 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
               </div>
             )}
 
-            {/* Active top highlight */}
-            {isActive && (
-              <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-[color-mix(in_srgb,var(--brand)_30%,transparent)] to-transparent" />
-            )}
-
             {/* File icon */}
             <Icon
               icon={icon}
               width={17}
               height={17}
               style={{ color: isActive ? color : undefined }}
-              className={`transition-all duration-150 ${isActive ? 'scale-110' : 'text-[var(--text-tertiary)] group-hover:scale-110'}`}
+              className={`transition-colors duration-150 ${isActive ? '' : 'text-[var(--text-tertiary)]'}`}
             />
 
             {/* File name */}
@@ -137,15 +132,12 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
               {name}
             </span>
 
-            {/* Dirty indicator with pulse */}
+            {/* Dirty indicator */}
             {file.dirty && (
-              <span className="relative w-1.5 h-1.5 shrink-0" title="Unsaved changes">
-                <span className="absolute inset-0 rounded-full bg-[var(--brand)]" />
-                <span
-                  className="absolute inset-0 rounded-full bg-[var(--brand)] animate-ping opacity-40"
-                  style={{ animationDuration: '2s' }}
-                />
-              </span>
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]"
+                title="Unsaved changes"
+              />
             )}
 
             {/* Close button — show dot when dirty and not hovered */}
@@ -154,7 +146,7 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
                 e.stopPropagation()
                 closeFile(file.path)
               }}
-              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] transition-all cursor-pointer ml-1 hover:scale-110"
+              className="ml-1 cursor-pointer rounded-lg p-1.5 opacity-0 transition-all hover:bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] group-hover:opacity-100"
               title={`Close (${formatShortcut('meta+W')})`}
             >
               <Icon icon="lucide:x" width={14} height={14} />

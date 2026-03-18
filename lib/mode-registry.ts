@@ -23,8 +23,8 @@ export interface ModeSpec {
 export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
   classic: {
     id: 'classic',
-    label: 'Classic',
-    description: 'Traditional editor — no chat, files open',
+    label: 'Code',
+    description: 'Editor-first workspace with files front and center',
     visibleViews: ['editor', 'preview', 'git', 'skills', 'prompts'],
     defaultView: 'editor',
     autoExpandEditor: true,
@@ -42,7 +42,7 @@ export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
   chat: {
     id: 'chat',
     label: 'Chat',
-    description: 'Chat-first mode with optional editor and git views',
+    description: 'Conversation-first workspace with the editor nearby',
     visibleViews: ['chat', 'editor', 'git', 'skills', 'prompts'],
     defaultView: 'chat',
     hideTabs: true,
@@ -59,8 +59,8 @@ export const MODE_REGISTRY: Record<AppMode, ModeSpec> = {
   },
   tui: {
     id: 'tui',
-    label: 'TUI',
-    description: 'Terminal-first — editor available on demand',
+    label: 'Terminal',
+    description: 'Terminal-first workspace with the editor available on demand',
     visibleViews: ['chat', 'editor', 'git', 'skills', 'prompts'],
     defaultView: 'editor',
     terminalCenter: true,

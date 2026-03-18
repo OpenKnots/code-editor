@@ -81,42 +81,27 @@
   /* Premium shell controls */
   --shell-pill-bg: color-mix(in srgb, var(--bg-elevated, #141414) 88%, transparent);
   --shell-pill-border: color-mix(in srgb, var(--border, #262626) 88%, transparent);
-  --shell-pill-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  --shell-pill-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   --shell-pill-separator: color-mix(in srgb, var(--border, #262626) 72%, transparent);
   --shell-pill-hover: color-mix(in srgb, var(--text-primary, #ededed) 6%, transparent);
   --shell-active-fill: color-mix(in srgb, var(--bg, #0a0a0a) 92%, white 3%);
-  --shell-active-ring: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--brand, #ca3a29) 35%, white 65%),
-    var(--brand, #ca3a29),
-    color-mix(in srgb, var(--brand, #ca3a29) 58%, black 42%)
-  );
-  --shell-active-ring-shadow:
-    0 10px 24px color-mix(in srgb, var(--brand, #ca3a29) 20%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  --shell-active-ambient: 0 12px 24px color-mix(in srgb, var(--brand, #ca3a29) 16%, transparent);
+  --shell-active-ring: var(--bg-elevated, #141414);
+  --shell-active-ring-shadow: none;
+  --shell-active-ambient: none;
   --shell-icon-muted: var(--text-disabled, #777);
   --shell-icon-active: var(--text-primary, #ededed);
-  --shell-frame-bg: color-mix(in srgb, var(--bg, #0a0a0a) 92%, transparent);
+  --shell-frame-bg: var(--bg, #0a0a0a);
   --shell-frame-border: color-mix(in srgb, var(--border, #262626) 92%, transparent);
-  --shell-frame-shadow: var(--shadow-xl);
-  --shell-frame-sheen:
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--brand, #ca3a29) 10%, transparent),
-      transparent 28%
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 18%);
-  --shell-topbar-bg: color-mix(in srgb, var(--header-glass-bg, #141414) 88%, transparent);
-  --shell-panel-bg: color-mix(in srgb, var(--sidebar-bg, #111111) 92%, transparent);
+  --shell-frame-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shell-frame-sheen: none;
+  --shell-topbar-bg: var(--header-glass-bg, #141414);
+  --shell-panel-bg: var(--sidebar-bg, #111111);
   --shell-panel-border: color-mix(in srgb, var(--glass-border, #262626) 92%, transparent);
   --shell-panel-shadow: var(--shadow-lg);
   --shell-chip-bg: color-mix(in srgb, var(--bg-elevated, #141414) 88%, transparent);
   --shell-chip-border: color-mix(in srgb, var(--border, #262626) 82%, transparent);
   --shell-chip-hover: color-mix(in srgb, var(--text-primary, #ededed) 6%, transparent);
-  --shell-status-bg: color-mix(in srgb, var(--bg-elevated, #141414) 88%, transparent);
+  --shell-status-bg: var(--bg, #0a0a0a);
   --shell-status-border: color-mix(in srgb, var(--border, #262626) 86%, transparent);
 
   /* Typography scale */
@@ -226,20 +211,20 @@
   --glass-border: var(--border);
   --glass-border-hover: rgba(237, 237, 237, 0.12);
   --glass-shadow: rgba(0, 0, 0, 0.6);
-  --brand-glow: rgba(202, 58, 41, 0.15);
-  --brand-glow-subtle: rgba(202, 58, 41, 0.06);
+  --brand-glow: transparent;
+  --brand-glow-subtle: transparent;
   --brand-deep: #7a2319;
   --brand-chat: #943d37;
   --brand-contrast: #ffffff;
 
-  --shadow-2xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-xs: 0 2px 4px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 6px 20px rgba(0, 0, 0, 0.6);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7), 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 40px rgba(202, 58, 41, 0.06);
+  --shadow-2xs: none;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-2xl: 0 12px 32px rgba(0, 0, 0, 0.2);
 
   --kn-claw: var(--brand);
   --vscode-text: var(--text-primary);
@@ -1343,14 +1328,8 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(
-      circle at top,
-      color-mix(in srgb, var(--brand) 6%, transparent),
-      transparent 38%
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 16%);
-  opacity: 0.9;
+  background: none;
+  opacity: 0;
 }
 
 .shell-frame {
@@ -1359,8 +1338,6 @@ body {
   background: var(--shell-frame-bg);
   border-color: var(--shell-frame-border) !important;
   box-shadow: var(--shell-frame-shadow);
-  backdrop-filter: blur(20px) saturate(135%);
-  -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 /* Mobile edge-to-edge: safe-area padding keeps content clear of
@@ -1376,15 +1353,6 @@ body {
   .shell-frame {
     transform: translateZ(0);
   }
-}
-
-.shell-frame::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: var(--shell-frame-sheen);
-  opacity: 0.95;
 }
 
 .shell-frame > * {
@@ -1887,10 +1855,10 @@ p {
 @keyframes pulseGlow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 30%, transparent);
+    box-shadow: none;
   }
   50% {
-    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--brand) 15%, transparent);
+    box-shadow: none;
   }
 }
 
@@ -1901,7 +1869,7 @@ p {
   animation: fadeInLine 0.8s ease-out forwards;
 }
 .animate-glow {
-  animation: pulseGlow 2s ease-in-out infinite;
+  animation: none;
 }
 
 /* Typing indicator dots */
@@ -2607,17 +2575,11 @@ p {
    ══════════════════════════════════════════════════════════════════ */
 
 .welcome-screen {
-  background:
-    radial-gradient(
-      ellipse 80% 60% at 50% 40%,
-      color-mix(in srgb, var(--brand) 4%, transparent),
-      transparent
-    ),
-    var(--bg);
+  background: var(--bg);
 }
 
 .animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
+  animation: none;
 }
 
 .animate-sparkle {
@@ -2702,26 +2664,11 @@ p {
 }
 
 .knot-bg-glow {
-  position: absolute;
-  top: 15%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 500px;
-  height: 400px;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in srgb, var(--brand) 8%, transparent) 0%,
-    transparent 70%
-  );
-  filter: blur(60px);
+  display: none;
 }
 
 :root:not(.dark) .knot-bg-glow {
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in srgb, var(--brand) 5%, transparent) 0%,
-    transparent 70%
-  );
+  display: none;
 }
 
 :root:not(.dark) .knot-bg-logos {
@@ -3065,9 +3012,7 @@ p {
 .shell-mode-button--active {
   background: var(--bg);
   color: var(--shell-icon-active);
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px var(--border);
 }
 
 .shell-mode-controller-btn,
@@ -3082,7 +3027,7 @@ p {
   background: transparent;
   color: var(--text-secondary);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
   cursor: pointer;
   transition:
@@ -3101,12 +3046,8 @@ p {
 .shell-mode-controller-btn--active,
 .shell-view-controller-btn--active {
   color: var(--text-primary);
-  background:
-    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.08), transparent 38%),
-    color-mix(in srgb, var(--brand) 11%, var(--bg));
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 16%, transparent),
-    0 8px 18px -16px color-mix(in srgb, var(--brand) 35%, rgba(0, 0, 0, 0.4));
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--border);
 }
 
 [data-theme='supreme'] .folder-tab-strip {
@@ -3261,8 +3202,6 @@ p {
   position: relative;
   border-top: 1px solid var(--shell-status-border);
   background: var(--shell-status-bg);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
 }
 
 .shell-status-item {
@@ -3331,8 +3270,8 @@ p {
 }
 
 .shell-sidebar {
-  backdrop-filter: blur(18px) saturate(135%);
-  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .shell-sidebar--expanded {
@@ -3344,8 +3283,8 @@ p {
 .shell-sidebar--collapsed {
   border: 1px solid var(--shell-panel-border);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--shell-panel-bg) 88%, transparent);
-  box-shadow: var(--shadow-sm);
+  background: var(--shell-panel-bg);
+  box-shadow: none;
 }
 
 .codex-sidebar-icon-btn {
@@ -3393,7 +3332,7 @@ p {
 }
 
 .activity-bar-btn--active {
-  color: var(--brand);
+  color: var(--text-primary);
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -3403,9 +3342,9 @@ p {
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 2px;
+  width: 1px;
   height: 24px;
-  background: var(--brand);
+  background: var(--text-tertiary);
   border-radius: 0 2px 2px 0;
 }
 
@@ -3472,9 +3411,9 @@ p {
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 2px;
+  width: 1px;
   height: 18px;
-  background: var(--brand);
+  background: var(--text-tertiary);
   border-radius: 0 2px 2px 0;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -3487,7 +3426,7 @@ p {
   margin-bottom: 0.25rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--bg-elevated);
 }
 
@@ -3526,8 +3465,8 @@ p {
 .codex-sidebar-section-label {
   font-size: 11px;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text-disabled);
   padding: 0.25rem 0.5rem;
   margin-bottom: 0.25rem;

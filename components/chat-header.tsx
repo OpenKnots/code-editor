@@ -46,12 +46,8 @@ export function ChatHeader({
     <div className="shrink-0">
       <div className="flex items-center justify-between h-10 px-3 border-b border-[var(--border)] bg-[var(--sidebar-bg)]">
         <div className="flex flex-1 min-w-0 items-center gap-2">
-          {/* Streaming status indicator */}
           {isStreaming ? (
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--brand)] opacity-60" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--brand)]" />
-            </span>
+            <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)]" />
           ) : (
             <Icon
               icon="lucide:message-square"
@@ -60,7 +56,7 @@ export function ChatHeader({
               className="text-[var(--text-tertiary)] shrink-0"
             />
           )}
-          <span className="text-[14px] font-semibold text-[var(--text-primary)] truncate">
+          <span className="truncate text-[14px] font-medium text-[var(--text-primary)]">
             {title || 'Chat'}
           </span>
           {repoName && (

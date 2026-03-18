@@ -247,8 +247,8 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
             style={{
-              background: 'linear-gradient(135deg, var(--brand, #3b82f6), var(--accent, #8b5cf6))',
-              color: 'var(--brand-contrast, #fff)',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-secondary)',
             }}
             title={workspaceLabel || 'KnotCode'}
           >
@@ -263,7 +263,7 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                 <span className="codex-sidebar-hero__icon">
                   <Icon icon="lucide:command" width={15} height={15} />
                 </span>
-                <span className="truncate text-[14px] font-semibold text-[var(--text-primary)]">
+                <span className="truncate text-[14px] font-medium text-[var(--text-primary)]">
                   {workspaceLabel || 'KnotCode'}
                 </span>
               </div>
@@ -327,7 +327,12 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
                   )}
-                  <Icon icon={item.icon} width={16} height={16} className="shrink-0 relative z-10" />
+                  <Icon
+                    icon={item.icon}
+                    width={16}
+                    height={16}
+                    className="shrink-0 relative z-10"
+                  />
                   <span className="truncate relative z-10">{item.label}</span>
                   {item.id === 'git' && dirtyCount > 0 && (
                     <span className="ml-auto px-1.5 min-w-[20px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[10px] leading-[18px] font-bold shrink-0 relative z-10">
@@ -367,7 +372,12 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
                   )}
-                  <Icon icon={item.icon} width={16} height={16} className="shrink-0 relative z-10" />
+                  <Icon
+                    icon={item.icon}
+                    width={16}
+                    height={16}
+                    className="shrink-0 relative z-10"
+                  />
                   <span className="truncate relative z-10">{item.label}</span>
                   <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
                     {item.shortcut}
@@ -398,7 +408,12 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
                   )}
-                  <Icon icon={item.icon} width={16} height={16} className="shrink-0 relative z-10" />
+                  <Icon
+                    icon={item.icon}
+                    width={16}
+                    height={16}
+                    className="shrink-0 relative z-10"
+                  />
                   <span className="truncate relative z-10">{item.label}</span>
                   <span className="ml-auto text-[10px] text-[var(--text-disabled)] opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
                     {item.shortcut}

@@ -368,9 +368,9 @@ export function ChatInputBar({
 
           {/* Unified input container with drag-drop zone */}
           <div
-            className={`chat-input-shell input-focus-glow rounded-[18px] border bg-[var(--bg)] transition-all overflow-hidden ${
+            className={`chat-input-shell overflow-hidden rounded-[18px] border bg-[var(--bg)] transition-all ${
               inputDragOver
-                ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_4%,transparent)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--brand)_15%,transparent)]'
+                ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_3%,transparent)]'
                 : 'border-[var(--border)]'
             }`}
             onDragEnter={handleInputDragEnter}
@@ -405,7 +405,7 @@ export function ChatInputBar({
                     {imageAttachments.map((img, i) => (
                       <div
                         key={`img-${i}`}
-                        className="relative group/img rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] overflow-hidden cursor-pointer hover:border-[var(--brand)] transition-all hover:shadow-[0_0_12px_color-mix(in_srgb,var(--brand)_12%,transparent)]"
+                        className="relative group/img overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] transition-colors cursor-pointer hover:border-[var(--border-hover)]"
                         style={{ width: 88, height: 64 }}
                         onClick={() => setLightboxSrc(img.dataUrl)}
                       >
@@ -505,7 +505,7 @@ export function ChatInputBar({
             {/* Drop target indicator */}
             {inputDragOver && (
               <div
-                className="flex items-center justify-center gap-2 py-2 mx-2.5 mb-1 rounded-lg border border-dashed border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] animate-fade-in"
+                className="mx-2.5 mb-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_4%,transparent)] py-2 animate-fade-in"
                 style={{ animationDuration: '0.1s' }}
               >
                 <Icon

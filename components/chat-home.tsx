@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
 import { Icon } from '@iconify/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { KnotLogo } from '@/components/knot-logo'
-import { KnotBackground } from '@/components/knot-background'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
 import { PermissionsToggle } from '@/components/permissions-toggle'
@@ -328,37 +327,18 @@ export const ChatHome = memo(function ChatHome({
 
   return (
     <div className="flex-1 overflow-y-auto relative">
-      <KnotBackground />
-      {/* Particle animation background */}
-      <div className="particles absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {Array.from({ length: 18 }).map((_, i) => (
-          <div
-            key={i}
-            className="particle"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 8}s`,
-              animationDuration: `${15 + Math.random() * 10}s`,
-              opacity: 0.1 + Math.random() * 0.2,
-            }}
-          />
-        ))}
-      </div>
       <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[clamp(2.75rem,8vh,5rem)] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
-        {/* Header — Dynamic greeting + gradient tagline */}
+        {/* Header */}
         <div className="flex flex-col items-center mb-6 sm:mb-7">
-          {/* Logo with entrance animation and glow */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="mb-3"
           >
-            <KnotLogo size={40} color="var(--brand)" />
+            <KnotLogo size={34} color="var(--text-primary)" />
           </motion.div>
 
-          {/* Dynamic time-based greeting */}
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -368,18 +348,11 @@ export const ChatHome = memo(function ChatHome({
             {getGreeting()}
           </motion.p>
 
-          {/* Main tagline with gradient */}
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-center text-[28px] sm:text-[32px] font-bold tracking-[-0.04em] leading-none"
-            style={{
-              background: 'linear-gradient(135deg, #f0f0f0 0%, #3b82f6 50%, #8b5cf6 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
+            className="text-center text-[28px] sm:text-[32px] font-medium tracking-[-0.04em] leading-none text-[var(--text-primary)]"
           >
             What shall we build?
           </motion.h1>
@@ -589,17 +562,12 @@ export const ChatHome = memo(function ChatHome({
                 damping: 30,
               }}
               onClick={() => onSend(card.label, agentMode)}
-              className="codex-suggestion-card group flex flex-col gap-3 p-4 rounded-[20px] text-left cursor-pointer border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full"
-              style={{
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-              }}
+              className="codex-suggestion-card group flex w-full flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition-colors duration-200 cursor-pointer hover:border-[var(--border-hover)]"
             >
-              {/* Icon with colored glow background */}
               <div
-                className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
                 style={{
                   background: card.bg,
-                  boxShadow: `0 0 20px ${card.bg}`,
                 }}
               >
                 <Icon
@@ -607,10 +575,10 @@ export const ChatHome = memo(function ChatHome({
                   width={20}
                   height={20}
                   style={{ color: card.color }}
-                  className="opacity-90 group-hover:opacity-100 transition-opacity"
+                  className="opacity-90"
                 />
               </div>
-              <p className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] leading-[1.5] transition-colors line-clamp-2">
+              <p className="line-clamp-2 text-[13px] leading-[1.5] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
                 {card.label}
               </p>
             </motion.button>
@@ -624,7 +592,7 @@ export const ChatHome = memo(function ChatHome({
           transition={{ duration: 0.5, delay: 0.7 }}
           className="hidden sm:block mb-5"
         >
-          <p className="text-[11px] uppercase tracking-wider text-[var(--text-disabled)] font-medium mb-2.5 px-1">
+          <p className="mb-2.5 px-1 text-[11px] font-medium text-[var(--text-disabled)]">
             Recent Chats
           </p>
           <div className="space-y-2">
@@ -647,22 +615,20 @@ export const ChatHome = memo(function ChatHome({
           </div>
         </motion.div>
 
-        {/* Composer with enhanced focus glow */}
+        {/* Composer */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
           onClick={() => inputRef.current?.focus()}
-          className={`codex-composer rounded-[20px] border backdrop-blur-sm overflow-hidden transition-all duration-200 ${
+          className={`codex-composer overflow-hidden rounded-[20px] border transition-all duration-200 ${
             isFocused
               ? 'border-[var(--brand)]'
-              : 'border-[var(--border)] hover:border-[rgba(255,255,255,0.1)]'
+              : 'border-[var(--border)] hover:border-[var(--border-hover)]'
           }`}
           style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            boxShadow: isFocused
-              ? '0 0 0 1px var(--brand), 0 0 20px rgba(59, 130, 246, 0.1)'
-              : '0 4px 16px rgba(0, 0, 0, 0.2)',
+            background: 'var(--bg-elevated)',
+            boxShadow: isFocused ? '0 0 0 1px var(--brand)' : 'none',
           }}
         >
           <textarea
@@ -714,7 +680,7 @@ export const ChatHome = memo(function ChatHome({
                 {/* + button */}
                 <button
                   onClick={onImageAttach}
-                  className="codex-pill-btn flex items-center justify-center w-7 h-7 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] hover:border-[var(--text-disabled)] transition-all cursor-pointer"
+                  className="codex-pill-btn flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)] transition-colors cursor-pointer hover:border-[var(--border-hover)] hover:text-[var(--text-secondary)]"
                   title="Attach file"
                 >
                   <Icon icon="lucide:plus" width={14} height={14} />
@@ -752,15 +718,15 @@ export const ChatHome = memo(function ChatHome({
                 )}
               </div>
 
-              {/* Send button with enhanced size and animation */}
+              {/* Send button */}
               <motion.button
                 onClick={startOrSend}
                 whileTap={{ scale: 0.9 }}
                 aria-label={input.trim() ? 'Send message' : 'Start chat'}
-                className={`codex-send-btn flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
+                className={`codex-send-btn flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
                   input.trim()
-                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] shadow-[0_0_16px_rgba(59,130,246,0.3)]'
-                    : 'bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.12)]'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast,#fff)] hover:opacity-90'
+                    : 'bg-[var(--bg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-secondary)]'
                 }`}
               >
                 <Icon
@@ -773,7 +739,7 @@ export const ChatHome = memo(function ChatHome({
           </div>
         </motion.div>
 
-        {/* Workspace setup (no workspace) — desktop only with glass cards */}
+        {/* Workspace setup (no workspace) — desktop only */}
         {!hasWorkspace && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -785,9 +751,8 @@ export const ChatHome = memo(function ChatHome({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <motion.button
                 onClick={onSelectFolder}
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center gap-3 p-4 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
+                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition-colors duration-200 cursor-pointer hover:border-[var(--border-hover)]"
               >
                 <div className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
                   <Icon
@@ -808,9 +773,8 @@ export const ChatHome = memo(function ChatHome({
               </motion.button>
               <motion.button
                 onClick={onCloneRepo}
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center gap-3 p-4 rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] backdrop-blur-md hover:border-[rgba(255,255,255,0.12)] text-left cursor-pointer transition-all duration-200"
+                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition-colors duration-200 cursor-pointer hover:border-[var(--border-hover)]"
               >
                 <div className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
                   <Icon

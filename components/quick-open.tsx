@@ -170,7 +170,7 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-full sm:max-w-[560px] rounded-t-2xl sm:rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden max-h-[85vh] sm:max-h-none flex flex-col"
+        className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg sm:max-h-none sm:max-w-[560px] sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}

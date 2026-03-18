@@ -74,28 +74,10 @@ const PluginSlotRenderer = dynamic(
   { ssr: false },
 )
 
-const VIEW_ICONS: Record<string, { icon: string; label: string }> = {
-  chat: { icon: 'lucide:message-square', label: 'Chat' },
-  editor: { icon: 'lucide:code-2', label: 'Editor' },
-  preview: { icon: 'lucide:eye', label: 'Preview' },
-  diff: { icon: 'lucide:git-compare', label: 'Diff' },
-  git: { icon: 'lucide:git-branch', label: 'Git' },
-  skills: { icon: 'lucide:sparkles', label: 'Skills' },
-  prompts: { icon: 'lucide:book-open', label: 'Prompts' },
-  settings: { icon: 'lucide:settings', label: 'Settings' },
-  terminal: { icon: 'lucide:terminal', label: 'Gateway Terminal' },
-  kanban: { icon: 'lucide:kanban', label: 'Kanban' },
-  mcp: { icon: 'lucide:plug', label: 'MCP' },
-  workshop: { icon: 'lucide:hammer', label: 'Workshop' },
-}
-
-/** Primary view cycle: Chat → Editor → Terminal */
-const VIEW_CYCLE: ViewId[] = ['chat', 'editor', 'terminal']
-
 const MODE_BUTTONS: Array<{ id: AppMode; icon: string; label: string }> = [
-  { id: 'classic', icon: 'lucide:code-2', label: 'Classic' },
+  { id: 'classic', icon: 'lucide:code-2', label: 'Code' },
   { id: 'chat', icon: 'lucide:message-square', label: 'Chat' },
-  { id: 'tui', icon: 'lucide:terminal', label: 'TUI' },
+  { id: 'tui', icon: 'lucide:terminal', label: 'Terminal' },
 ]
 
 const TERMINAL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
@@ -119,7 +101,6 @@ export default function EditorLayout() {
   const { activeView, setView, direction } = useView()
   const { mode, spec: modeSpec, setMode } = useAppMode()
   const layout = useLayout()
-  const visibleViews = modeSpec.visibleViews
   const isMobile = layout.isAtMost('lte768')
   const [keyboardOffset, setKeyboardOffset] = useState(0)
   const sidebarCollapsed = !layout.isVisible('sidebar')
@@ -130,16 +111,6 @@ export default function EditorLayout() {
   const terminalRefreshToken = mode
   const useCenteredTerminal = modeSpec.terminalCenter && activeView === 'editor'
   const terminalStartupCommand = useCenteredTerminal ? 'openclaw tui' : undefined
-  const mobileViewTabs = useMemo(() => {
-    // On mobile, curate tabs to useful views + always include settings
-    const mobile = visibleViews.filter((v) => !['preview', 'diff', 'skills', 'prompts'].includes(v))
-    if (!mobile.includes('terminal')) mobile.push('terminal')
-    return mobile.slice(0, 5)
-  }, [visibleViews])
-  const activeViewMeta = VIEW_ICONS[activeView] ?? {
-    icon: 'lucide:layout-panel-top',
-    label: 'Workspace',
-  }
   const workspaceLabel = useMemo(
     () => repo?.fullName?.split('/').pop() ?? localRootPath?.split('/').pop() ?? 'KnotCode',
     [repo?.fullName, localRootPath],
@@ -497,76 +468,37 @@ export default function EditorLayout() {
             : 'border border-[var(--border)] shadow-[var(--shadow-sm)] rounded-xl'
         }`}
       >
-        {/* Mode accent line */}
-        <div
-          className="h-[2px] shrink-0 transition-colors duration-500"
-          style={{
-            background: `linear-gradient(90deg, transparent, var(--mode-accent, var(--brand)), transparent)`,
-            opacity: 0.4,
-          }}
-        />
-
         {/* Shell header / mobile title bar */}
         {!isMobile ? (
           <div
-            className={`border-b border-[var(--border)] px-4 py-3 ${isMacTauri ? 'pl-20 pr-4' : ''}`}
+            className={`border-b border-[var(--border)] bg-[var(--bg)] px-4 py-3 ${isMacTauri ? 'pl-20 pr-4' : ''}`}
             data-tauri-drag-region={isMacTauri ? true : undefined}
-            style={{ background: 'color-mix(in srgb, var(--header-glass-bg) 92%, transparent)' }}
           >
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--border)_88%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] text-[var(--brand)] shadow-sm">
-                  <KnotLogo size={18} />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-primary)]">
+                  <KnotLogo size={15} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-[17px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    <span className="truncate text-[16px] font-medium tracking-[-0.03em] text-[var(--text-primary)]">
                       {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                      className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                         status === 'connected'
-                          ? 'border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]'
+                          ? 'bg-[var(--success)]'
                           : status === 'connecting'
-                            ? 'border-[color-mix(in_srgb,var(--warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] text-[var(--warning)]'
-                            : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_72%,transparent)] text-[var(--text-disabled)]'
+                            ? 'bg-[var(--warning)]'
+                            : 'bg-[var(--text-disabled)]'
                       }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          status === 'connected'
-                            ? 'bg-[var(--success)]'
-                            : status === 'connecting'
-                              ? 'bg-[var(--warning)] animate-pulse'
-                              : 'bg-[var(--text-disabled)]'
-                        }`}
-                      />
-                      {status === 'connected'
-                        ? 'Gateway live'
-                        : status === 'connecting'
-                          ? 'Gateway waking'
-                          : 'Gateway offline'}
-                    </span>
-                    {terminalVisible && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--brand)_24%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
-                        <Icon
-                          icon="lucide:terminal"
-                          width={11}
-                          height={11}
-                          className="text-[var(--brand)]"
-                        />
-                        Terminal ready
-                      </span>
-                    )}
+                    />
                   </div>
-                  <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-secondary)]">
-                    Desktop coding cockpit with chat, editor, and first-class terminal workflows.
-                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="hidden lg:flex items-center rounded-[22px] border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+                <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-elevated)] p-0.5">
                   {MODE_BUTTONS.map((modeButton) => {
                     const active = mode === modeButton.id
                     return (
@@ -575,7 +507,7 @@ export default function EditorLayout() {
                         type="button"
                         onClick={() => setMode(modeButton.id)}
                         className={`shell-mode-controller-btn ${active ? 'shell-mode-controller-btn--active' : ''}`}
-                        title={`${modeButton.label} mode`}
+                        title={modeButton.label}
                       >
                         <Icon icon={modeButton.icon} width={15} height={15} />
                         <span>{modeButton.label}</span>
@@ -584,51 +516,13 @@ export default function EditorLayout() {
                   })}
                 </div>
 
-                <div className="hidden md:flex items-center rounded-[22px] border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] p-1 shadow-[var(--shadow-xs)]">
-                  {VIEW_CYCLE.map((v) => {
-                    const isActive = activeView === v || (v === 'terminal' && useCenteredTerminal)
-                    const meta = VIEW_ICONS[v]
-                    return (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => {
-                          if (v === 'terminal') layout.show('terminal')
-                          setView(v)
-                        }}
-                        className={`shell-view-controller-btn ${isActive ? 'shell-view-controller-btn--active' : ''}`}
-                        title={meta.label}
-                      >
-                        <Icon icon={meta.icon} width={15} height={15} />
-                        <span>{meta.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {!modeSpec.terminalCenter && (
-                  <button
-                    type="button"
-                    onClick={() => layout.toggle('terminal')}
-                    className={`inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-[12px] font-medium transition ${
-                      terminalVisible
-                        ? 'border-[color-mix(in_srgb,var(--brand)_36%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
-                        : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
-                    }`}
-                    title={`${terminalVisible ? 'Hide' : 'Show'} terminal`}
-                  >
-                    <Icon icon="lucide:terminal" width={16} height={16} />
-                    <span>{terminalVisible ? 'Hide Terminal' : 'Show Terminal'}</span>
-                  </button>
-                )}
-
                 <button
                   type="button"
                   onClick={() => setView('settings')}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                   title="Settings"
                 >
-                  <Icon icon="lucide:settings-2" width={17} height={17} />
+                  <Icon icon="lucide:settings-2" width={16} height={16} />
                 </button>
               </div>
             </div>
@@ -854,41 +748,27 @@ export default function EditorLayout() {
               overscrollBehavior: 'none',
             }}
           >
-            {/* Primary view cycle toggle: Chat → Editor → Terminal */}
-            <div className="flex items-center justify-center gap-1 px-3 py-2">
-              {VIEW_CYCLE.map((v) => {
-                const isActive = activeView === v
-                const meta = VIEW_ICONS[v]
-                return (
-                  <motion.button
-                    key={v}
-                    type="button"
-                    onClick={() => setView(v)}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 touch-manipulation ${
-                      isActive
-                        ? 'bg-[var(--brand)] text-[var(--brand-contrast)] shadow-[0_4px_16px_color-mix(in_srgb,var(--brand)_30%,transparent)]'
-                        : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-                    }`}
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
-                  >
-                    <Icon icon={meta.icon} width={18} height={18} />
-                    {isActive && (
-                      <motion.span
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: 'auto', opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden whitespace-nowrap"
-                      >
-                        {meta.label}
-                      </motion.span>
-                    )}
-                  </motion.button>
-                )
-              })}
+            <div className="flex items-center gap-2 px-3 py-2">
+              <div className="flex min-w-0 flex-1 items-center rounded-[20px] border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+                {MODE_BUTTONS.map((modeButton) => {
+                  const active = mode === modeButton.id
+                  return (
+                    <motion.button
+                      key={modeButton.id}
+                      type="button"
+                      onClick={() => setMode(modeButton.id)}
+                      whileTap={{ scale: 0.97 }}
+                      className={`shell-mode-controller-btn flex-1 justify-center ${active ? 'shell-mode-controller-btn--active' : ''}`}
+                      title={modeButton.label}
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <Icon icon={modeButton.icon} width={15} height={15} />
+                      <span>{modeButton.label}</span>
+                    </motion.button>
+                  )
+                })}
+              </div>
 
-              {/* More views overflow */}
               <motion.button
                 type="button"
                 onClick={() => setView('settings')}
@@ -896,7 +776,7 @@ export default function EditorLayout() {
                 className="flex items-center justify-center w-10 h-10 rounded-full text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors touch-manipulation"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
-                <Icon icon="lucide:more-horizontal" width={18} height={18} />
+                <Icon icon="lucide:settings-2" width={18} height={18} />
               </motion.button>
             </div>
           </div>

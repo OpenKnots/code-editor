@@ -116,12 +116,12 @@ export function FloatingPanel({
 
   return (
     <div
-      className="fixed rounded-3xl border-[1.5px] border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden flex flex-col"
+      className="fixed flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg"
       style={style}
       onMouseDown={onMouseDownBringFront}
     >
       <div
-        className="h-12 px-4 flex items-center justify-between gap-2.5 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)] cursor-move select-none"
+        className="flex h-12 cursor-move select-none items-center justify-between gap-2.5 border-b border-[var(--border)] bg-[var(--bg-elevated)] px-4"
         onMouseDown={onDragStart}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -133,14 +133,14 @@ export function FloatingPanel({
         <div className="flex items-center gap-1.5 tauri-no-drag">
           <button
             onClick={onDock}
-            className="p-2.5 rounded-xl hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-all hover:scale-110"
+            className="cursor-pointer rounded-lg p-2.5 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             title="Dock"
           >
             <Icon icon="lucide:pin" width={16} height={16} />
           </button>
           <button
             onClick={onClose}
-            className="p-2.5 rounded-xl hover:bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] text-[var(--text-tertiary)] hover:text-[var(--color-deletions)] cursor-pointer transition-all hover:scale-110"
+            className="cursor-pointer rounded-lg p-2.5 text-[var(--text-tertiary)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] hover:text-[var(--color-deletions)]"
             title="Close"
           >
             <Icon icon="lucide:x" width={16} height={16} />
@@ -151,7 +151,7 @@ export function FloatingPanel({
       <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
 
       <button
-        className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-lg cursor-nwse-resize hover:bg-[var(--bg-subtle)] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] flex items-center justify-center tauri-no-drag transition-all hover:scale-110"
+        className="absolute bottom-1.5 right-1.5 flex h-6 w-6 cursor-nwse-resize items-center justify-center rounded-lg text-[var(--text-disabled)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-secondary)] tauri-no-drag"
         onMouseDown={onResizeStart}
         aria-label="Resize"
         title="Resize"

@@ -510,7 +510,7 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-full sm:max-w-[640px] overflow-hidden rounded-t-2xl sm:rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl animate-scale-in max-h-[85vh] sm:max-h-none flex flex-col"
+        className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg animate-scale-in sm:max-h-none sm:max-w-[640px] sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
