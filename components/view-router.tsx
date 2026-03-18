@@ -40,6 +40,10 @@ const SplitPreviewChat = dynamic(
   () => import('@/components/split-preview-chat').then((m) => m.SplitPreviewChat),
   { ssr: false },
 )
+const PlannerView = dynamic(
+  () => import('@/components/views/planner-view').then((m) => m.PlannerView),
+  { ssr: false },
+)
 const WorkshopView = dynamic(
   () => import('@/components/views/workshop-view').then((m) => m.WorkshopView),
   { ssr: false },
@@ -48,6 +52,7 @@ const VIEW_ICONS: Record<string, { label: string }> = {
   chat: { label: 'Chat' },
   editor: { label: 'Editor' },
   preview: { label: 'Preview' },
+  planner: { label: 'Planner' },
   git: { label: 'Git' },
   kanban: { label: 'Kanban' },
   skills: { label: 'Skills' },
@@ -123,6 +128,7 @@ export function ViewRouter() {
               <>
                 {activeView === 'chat' && <AgentPanel />}
                 {(activeView === 'editor' || activeView === 'preview') && <EditorView />}
+                {activeView === 'planner' && <PlannerView />}
                 {activeView === 'git' && <GitView />}
                 {activeView === 'kanban' && <KanbanView />}
                 {activeView === 'skills' && <SkillsView />}

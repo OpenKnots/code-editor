@@ -65,6 +65,8 @@ import {
 
 // ChatMessage type imported from @/lib/chat-stream
 
+const AGENT_MODE_STORAGE_PREFIX = 'code-editor:agent-mode:'
+
 function AgentConnectPrompt() {
   const { status, error, connect } = useGateway()
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth <= 768
@@ -425,7 +427,17 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
     current: '',
     available: [],
   })
-  const [agentMode, setAgentMode] = useState<AgentMode>('ask')
+  const [agentMode, setAgentMode] = useState<AgentMode>(() => {
+    if (typeof window === 'undefined') return 'ask'
+    try {
+      return (
+        (localStorage.getItem(`${AGENT_MODE_STORAGE_PREFIX}${activeThreadId}`) as AgentMode) ||
+        'ask'
+      )
+    } catch {
+      return 'ask'
+    }
+  })
   const [contextTokens, setContextTokens] = useState(0)
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
   const [confirmClear, setConfirmClear] = useState(false)
@@ -473,7 +485,21 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
   useEffect(() => {
     setMessages(loadMessagesForThread(storageKey))
     sessionInitRef.current = false
+    try {
+      const storedMode = localStorage.getItem(
+        `${AGENT_MODE_STORAGE_PREFIX}${activeThreadId}`,
+      ) as AgentMode | null
+      setAgentMode(storedMode ?? 'ask')
+    } catch {
+      setAgentMode('ask')
+    }
   }, [activeThreadId, storageKey])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${AGENT_MODE_STORAGE_PREFIX}${activeThreadId}`, agentMode)
+    } catch {}
+  }, [activeThreadId, agentMode])
   useEffect(() => {
     sendingRef.current = sending
   }, [sending])
@@ -895,6 +921,12 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
     return on('focus-agent-input', () => inputRef.current?.focus())
   }, [])
 
+  useEffect(() => {
+    return on('agent-mode-change', (detail) => {
+      setAgentMode(detail.mode)
+    })
+  }, [])
+
   // ─── Build per-message context ────────────────────────────────
   const buildContext = useCallback(() => {
     const file = activeFile ? getFile(activeFile) : undefined
@@ -981,15 +1013,18 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
   // ─── Message helpers ──────────────────────────────────────────
   // parsePlanSteps moved to components/chat/message-list.tsx
 
-  // Persist messages to localStorage for current thread and notify sidebar to refresh list
+  // Persist messages to localStorage for current thread and notify sidebar to refresh list.
+  // If the thread is empty, remove it entirely so delete/clear actually deletes the chat.
   useEffect(() => {
-    if (messages.length > 0) {
-      try {
+    try {
+      if (messages.length > 0) {
         localStorage.setItem(storageKey, JSON.stringify(messages.slice(-50)))
-        emit('threads-updated')
-      } catch {
-        // Ignore storage errors
+      } else {
+        localStorage.removeItem(storageKey)
       }
+      emit('threads-updated')
+    } catch {
+      // Ignore storage errors
     }
   }, [messages, storageKey])
 
@@ -1301,6 +1336,7 @@ export function AgentPanel({ onClose }: { onClose?: () => void } = {}) {
       if (text === '/plan') {
         setAgentMode('plan')
         setInput('')
+        window.dispatchEvent(new CustomEvent('view-change', { detail: { view: 'planner' } }))
         return
       }
       if (text === '/clear') {

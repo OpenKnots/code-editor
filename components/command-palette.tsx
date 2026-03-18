@@ -28,6 +28,7 @@ type CommandId =
   // Navigation
   | 'view-editor'
   | 'view-preview'
+  | 'view-planner'
   | 'view-git'
   | 'view-skills'
   | 'view-prompts'
@@ -210,6 +211,14 @@ const COMMANDS: CommandItem[] = [
     hint: 'Switch to the preview view',
     keywords: ['preview', 'browser', 'live'],
     icon: 'lucide:eye',
+    group: 'navigate',
+  },
+  {
+    id: 'view-planner',
+    label: 'Go to Planner',
+    hint: 'Open the dedicated planning surface',
+    keywords: ['plan', 'planner', 'cursor', 'steps', 'approval'],
+    icon: 'lucide:list-checks',
     group: 'navigate',
   },
 

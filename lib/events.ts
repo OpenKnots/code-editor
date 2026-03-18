@@ -4,6 +4,7 @@
  */
 
 import type { EditProposal } from '@/lib/edit-parser'
+import type { AgentMode } from '@/components/mode-selector'
 
 // ─── Event definitions ───────────────────────────────────
 
@@ -30,6 +31,8 @@ export interface AppEvents {
   // Editor
   'show-inline-diff': { proposals: EditProposal[] }
   'set-agent-input': { text: string }
+  'agent-send': { text: string; mode?: AgentMode }
+  'agent-mode-change': { mode: AgentMode }
   'add-to-chat': { path: string; content: string; startLine: number; endLine: number }
   'inline-edit-request': {
     filePath: string

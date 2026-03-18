@@ -197,21 +197,51 @@ export default function EditorLayout() {
 
   // ─── Dev server detection ─────────────────────────────
   useEffect(() => {
-    const checkDevServer = async () => {
+    let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let failureCount = 0
+
+    const schedule = (ms: number) => {
+      if (cancelled) return
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(runCheck, ms)
+    }
+
+    const runCheck = async () => {
+      if (cancelled) return
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        schedule(30000)
+        return
+      }
+
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 2000)
-        await fetch('http://localhost:3000', { mode: 'no-cors', signal: controller.signal })
-        clearTimeout(timeoutId)
+        const abortId = setTimeout(() => controller.abort(), 1500)
+        await fetch('http://localhost:3000', {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        clearTimeout(abortId)
+        failureCount = 0
         setDevServerReady(true)
+        schedule(30000)
       } catch {
+        failureCount += 1
         setDevServerReady(false)
+        // Back off aggressively when the dev server is unavailable so we don't
+        // spam the console/network with pointless localhost retries.
+        const delay = failureCount >= 3 ? 120000 : 30000
+        schedule(delay)
       }
     }
 
-    checkDevServer()
-    const interval = setInterval(checkDevServer, 5000)
-    return () => clearInterval(interval)
+    runCheck()
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   // ─── Save file handler ─────────────────────────────────
@@ -886,6 +916,9 @@ export default function EditorLayout() {
               break
             case 'view-preview':
               setView('preview')
+              break
+            case 'view-planner':
+              setView('planner')
               break
             case 'view-git':
               setView('git')

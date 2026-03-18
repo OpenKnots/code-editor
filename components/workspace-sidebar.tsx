@@ -10,6 +10,7 @@ import { useEditor } from '@/context/editor-context'
 import { formatShortcut } from '@/lib/platform'
 import { isTauri, openExternal } from '@/lib/tauri'
 import { emit, on } from '@/lib/events'
+import { KnotLogo } from '@/components/knot-logo'
 
 const SIDEBAR_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
 const CHAT_PREFIX = 'code-editor:chat:'
@@ -185,6 +186,14 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
             title="Preview (⌘3)"
           >
             <Icon icon="lucide:eye" width={24} height={24} />
+          </button>
+
+          <button
+            onClick={() => setView('planner')}
+            className={`activity-bar-btn ${activeView === 'planner' ? 'activity-bar-btn--active' : ''}`}
+            title="Planner"
+          >
+            <Icon icon="lucide:list-checks" width={24} height={24} />
           </button>
 
           <button

@@ -272,6 +272,9 @@ export function handleChatEvent(
           },
         ])
         emit('agent-reply', { content: text, sessionKey: state.sessionKey, source: 'chat' })
+        if (planSteps?.length) {
+          window.dispatchEvent(new CustomEvent('view-change', { detail: { view: 'planner' } }))
+        }
       } else {
         debugLog('Final chat event had no assistant text', {
           idempotencyKey,
