@@ -274,7 +274,7 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
                         onClick={() => setThemeId(preset.id)}
                         className={`group relative overflow-hidden rounded-xl border px-3 py-3 text-left transition ${
                           active
-                            ? 'border-[var(--brand)] bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)]'
+                            ? 'border-[var(--brand)] bg-[var(--bg-elevated)]'
                             : 'border-[var(--border)] bg-[var(--bg)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-elevated)]'
                         }`}
                       >
@@ -370,7 +370,7 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
                 step={5}
                 value={editorBgOpacity}
                 onChange={(e) => setEditorBgOpacity(Number(e.target.value))}
-                className="w-full accent-[var(--brand)] h-1.5 rounded-full appearance-none bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:shadow-[0_0_4px_rgba(0,0,0,0.3)]"
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] accent-[var(--brand)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)]"
               />
             </div>
           )}

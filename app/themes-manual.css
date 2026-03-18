@@ -1498,3 +1498,32 @@
   --radius-md: 12px;
   --radius-lg: 18px;
 }
+
+.dark[data-theme='field-manual'],
+[data-theme='field-manual']:not(.dark),
+.dark[data-theme='navy-ops'],
+[data-theme='navy-ops']:not(.dark),
+.dark[data-theme='desert-storm'],
+[data-theme='desert-storm']:not(.dark),
+.dark[data-theme='blackout'],
+[data-theme='blackout']:not(.dark),
+.dark[data-theme='arctic-white'],
+[data-theme='arctic-white']:not(.dark),
+.dark[data-theme='recon-green'],
+[data-theme='recon-green']:not(.dark),
+.dark[data-theme='sigint'],
+[data-theme='sigint']:not(.dark),
+.dark[data-theme='air-force'],
+[data-theme='air-force']:not(.dark) {
+  --brand-glow: transparent;
+  --brand-glow-subtle: transparent;
+  --shadow-2xs: none;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-2xl: 0 12px 32px rgba(0, 0, 0, 0.2);
+  --header-glass-bg: var(--bg);
+}

@@ -987,10 +987,10 @@ export function WorkshopView() {
                               <span
                                 className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase ${
                                   tool.risk === 'high'
-                                    ? 'bg-red-500/10 text-red-500'
+                                    ? 'bg-[color-mix(in_srgb,var(--error)_10%,transparent)] text-[var(--error)]'
                                     : tool.risk === 'medium'
-                                      ? 'bg-amber-500/10 text-amber-500'
-                                      : 'bg-green-500/10 text-green-500'
+                                      ? 'bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] text-[var(--warning)]'
+                                      : 'bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]'
                                 }`}
                               >
                                 {tool.risk}

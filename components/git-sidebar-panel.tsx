@@ -65,9 +65,7 @@ function FileRow({
         }
       }}
       className={`codex-git-file group flex items-center gap-2 px-3 py-1.5 rounded-md text-left w-full transition-colors cursor-pointer ${
-        isSelected
-          ? 'bg-[var(--bg-subtle)]'
-          : 'hover:bg-[var(--bg-subtle)]'
+        isSelected ? 'bg-[var(--bg-subtle)]' : 'hover:bg-[var(--bg-subtle)]'
       }`}
     >
       <span
@@ -135,6 +133,8 @@ export function GitSidebarPanel() {
   const [tab, setTab] = useState<'uncommitted' | 'staged' | 'review'>('uncommitted')
   const [actionsOpen, setActionsOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [confirmDiscardPath, setConfirmDiscardPath] = useState<string | null>(null)
+  const [confirmDiscardAll, setConfirmDiscardAll] = useState(false)
   const actionsRef = useRef<HTMLDivElement>(null)
 
   const isLocalMode = local.localMode && local.rootPath && local.gitInfo?.is_repo
@@ -210,9 +210,9 @@ export function GitSidebarPanel() {
     if (!isLocalMode) return
     const paths = uncommitted.filter((e) => e.source === 'git').map((e) => e.path)
     if (paths.length === 0) return
-    if (!confirm(`Discard all ${paths.length} uncommitted changes?`)) return
     try {
       await local.discardChanges(paths)
+      setConfirmDiscardAll(false)
     } catch {}
   }, [isLocalMode, local, uncommitted])
 
@@ -232,7 +232,7 @@ export function GitSidebarPanel() {
     <div className="codex-git-sidebar flex flex-col h-full" style={{ width: panelWidth }}>
       {/* Resize handle (left edge) */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--brand)] transition-all z-10 opacity-0 hover:opacity-60 hover:w-1.5"
+        className="absolute bottom-0 left-0 top-0 z-10 w-1 cursor-col-resize bg-[var(--border)] opacity-30 transition-all hover:w-1.5 hover:bg-[var(--border-hover)] hover:opacity-100"
         onMouseDown={gitPanelResize.onResizeStart}
       />
 
@@ -367,10 +367,7 @@ export function GitSidebarPanel() {
                 }
                 onDiscard={
                   isLocalMode && tab === 'uncommitted'
-                    ? () => {
-                        if (confirm(`Discard changes to ${entry.path.split('/').pop()}?`))
-                          local.discardChanges([entry.path]).catch(() => {})
-                      }
+                    ? () => setConfirmDiscardPath(entry.path)
                     : undefined
                 }
               />
@@ -395,13 +392,31 @@ export function GitSidebarPanel() {
           </div>
         )}
 
-        <button
-          onClick={handleRevertAll}
-          disabled={uncommitted.length === 0}
-          className="codex-git-action-btn px-3 py-1.5 rounded-md text-[11px] font-medium text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-        >
-          Revert all
-        </button>
+        {confirmDiscardAll ? (
+          <>
+            <button
+              onClick={handleRevertAll}
+              disabled={uncommitted.length === 0}
+              className="rounded-md border border-[var(--color-deletions)] bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-deletions)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Confirm discard
+            </button>
+            <button
+              onClick={() => setConfirmDiscardAll(false)}
+              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setConfirmDiscardAll(true)}
+            disabled={uncommitted.length === 0}
+            className="codex-git-action-btn px-3 py-1.5 rounded-md text-[11px] font-medium text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            Revert all
+          </button>
+        )}
         <button
           onClick={handleStageAll}
           disabled={uncommitted.length === 0}
@@ -410,6 +425,44 @@ export function GitSidebarPanel() {
           + Stage all
         </button>
       </div>
+
+      {confirmDiscardPath && (
+        <div className="absolute inset-x-3 bottom-14 z-20 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 shadow-[var(--shadow-lg)]">
+          <div className="flex items-start gap-2">
+            <Icon
+              icon="lucide:triangle-alert"
+              width={14}
+              height={14}
+              className="mt-0.5 shrink-0 text-[var(--color-deletions)]"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium text-[var(--text-primary)]">
+                Discard changes to `{confirmDiscardPath.split('/').pop()}`
+              </p>
+              <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
+                This removes the uncommitted changes for this file.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <button
+              onClick={() => setConfirmDiscardPath(null)}
+              className="rounded-md border border-[var(--border)] px-2.5 py-1.5 text-[10px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                local.discardChanges([confirmDiscardPath]).catch(() => {})
+                setConfirmDiscardPath(null)
+              }}
+              className="rounded-md border border-[var(--color-deletions)] bg-[color-mix(in_srgb,var(--color-deletions)_8%,transparent)] px-2.5 py-1.5 text-[10px] font-medium text-[var(--color-deletions)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-deletions)_12%,transparent)] cursor-pointer"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

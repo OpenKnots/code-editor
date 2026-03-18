@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useLayoutEffect, useMemo } from 'react'
+import { useEffect, useState, useCallback, useLayoutEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@iconify/react'
@@ -8,7 +8,7 @@ import { useGateway } from '@/context/gateway-context'
 import { useRepo } from '@/context/repo-context'
 import { useEditor, detectFileKind, getMimeType } from '@/context/editor-context'
 import { useLocal } from '@/context/local-context'
-import { useView, type ViewId } from '@/context/view-context'
+import { useView } from '@/context/view-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
 import { useAppMode } from '@/context/app-mode-context'
 import { WorkspaceSidebar } from '@/components/workspace-sidebar'
@@ -125,9 +125,6 @@ export default function EditorLayout() {
   // ─── Minimal state ──────────────────────────────────
   const [isTauriDesktop, setIsTauriDesktop] = useState(false)
   const [isMacTauri, setIsMacTauri] = useState(false)
-  const [flashedTab, setFlashedTab] = useState<ViewId | null>(null)
-  const [connectionAnim, setConnectionAnim] = useState<'pop' | 'pulse' | null>(null)
-  const prevStatusRef = useRef(status)
   const [agentActive, setAgentActive] = useState(false)
   const [devServerReady, setDevServerReady] = useState(false)
 
@@ -137,7 +134,6 @@ export default function EditorLayout() {
   const [commandPaletteVisible, setCommandPaletteVisible] = useState(false)
   const [shortcutsVisible, setShortcutsVisible] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const dirtyCount = useMemo(() => files.filter((f) => f.dirty).length, [files])
   const ensureTuiTerminalVisible = useCallback(() => {
     layout.setFloating('terminal', false)
     layout.show('terminal')
@@ -192,16 +188,6 @@ export default function EditorLayout() {
   }, [local.remoteRepo, local.gitInfo?.branch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Connection state transitions ─────────────────────
-  useEffect(() => {
-    const prev = prevStatusRef.current
-    prevStatusRef.current = status
-    if (status === 'connected' && prev !== 'connected') {
-      setConnectionAnim('pop')
-      const t = setTimeout(() => setConnectionAnim(null), 600)
-      return () => clearTimeout(t)
-    }
-  }, [status])
-
   // ─── Agent activity detection ─────────────────────────
   useEffect(() => {
     return on('engine-status', (detail) => {
@@ -269,10 +255,7 @@ export default function EditorLayout() {
     onNewWindow: () => {
       openNewEditorInstance().catch((err) => console.error('Failed to open new window:', err))
     },
-    onFlashTab: (v) => {
-      setFlashedTab(v)
-      setTimeout(() => setFlashedTab(null), 400)
-    },
+    onFlashTab: (_v) => {},
     saveFile,
   })
 
@@ -471,17 +454,17 @@ export default function EditorLayout() {
         {/* Shell header / mobile title bar */}
         {!isMobile ? (
           <div
-            className={`border-b border-[var(--border)] bg-[var(--bg)] px-4 py-3 ${isMacTauri ? 'pl-20 pr-4' : ''}`}
+            className={`border-b border-[var(--border)] bg-[var(--bg)] px-4 py-2.5 ${isMacTauri ? 'pl-20 pr-4' : ''}`}
             data-tauri-drag-region={isMacTauri ? true : undefined}
           >
             <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0 flex items-center gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-primary)]">
-                  <KnotLogo size={15} />
+              <div className="min-w-0 flex items-center gap-2.5">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--text-primary)]">
+                  <KnotLogo size={14} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-[16px] font-medium tracking-[-0.03em] text-[var(--text-primary)]">
+                    <span className="truncate text-[15px] font-medium tracking-[-0.025em] text-[var(--text-primary)]">
                       {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                     </span>
                     <span
@@ -497,8 +480,8 @@ export default function EditorLayout() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-elevated)] p-0.5">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5 rounded-md border border-[var(--border)] bg-[var(--bg)] p-0.5">
                   {MODE_BUTTONS.map((modeButton) => {
                     const active = mode === modeButton.id
                     return (
@@ -507,7 +490,7 @@ export default function EditorLayout() {
                         type="button"
                         onClick={() => setMode(modeButton.id)}
                         className={`shell-mode-controller-btn ${active ? 'shell-mode-controller-btn--active' : ''}`}
-                        title={modeButton.label}
+                        title={`${modeButton.label} (${modeButton.id === 'classic' ? '1' : modeButton.id === 'chat' ? '2' : '3'})`}
                       >
                         <Icon icon={modeButton.icon} width={15} height={15} />
                         <span>{modeButton.label}</span>
@@ -519,7 +502,7 @@ export default function EditorLayout() {
                 <button
                   type="button"
                   onClick={() => setView('settings')}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                   title="Settings"
                 >
                   <Icon icon="lucide:settings-2" width={16} height={16} />
@@ -529,21 +512,21 @@ export default function EditorLayout() {
           </div>
         ) : (
           <div
-            className="shrink-0 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black)] px-4 pb-1.5"
+            className="shrink-0 border-b border-[var(--border)] bg-[var(--bg)] px-4 pb-2"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.25rem)', minHeight: 44 }}
           >
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[18px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
+                  <span className="text-[17px] font-medium tracking-[-0.02em] text-[var(--text-primary)]">
                     {workspaceLabel === 'KnotCode' ? 'Knot Code' : workspaceLabel}
                   </span>
                   <span
                     className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                       status === 'connected'
-                        ? 'bg-emerald-400'
+                        ? 'bg-[var(--success)]'
                         : status === 'connecting'
-                          ? 'bg-amber-400 animate-pulse'
+                          ? 'bg-[var(--warning)]'
                           : 'bg-[var(--text-disabled)]'
                     }`}
                   />
@@ -554,10 +537,10 @@ export default function EditorLayout() {
                 <button
                   type="button"
                   onClick={() => layout.toggle('terminal')}
-                  className={`hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
+                  className={`hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition ${
                     terminalVisible
-                      ? 'border-[color-mix(in_srgb,var(--brand)_36%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)]'
-                      : 'border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]'
+                      ? 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+                      : 'border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
                   }`}
                   title={`${terminalVisible ? 'Hide' : 'Show'} terminal`}
                 >
@@ -568,7 +551,7 @@ export default function EditorLayout() {
               <button
                 type="button"
                 onClick={() => setView('settings')}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                 title="Settings"
               >
                 <Icon icon="lucide:settings-2" width={18} height={18} />
@@ -664,7 +647,7 @@ export default function EditorLayout() {
                   animate={{ y: 0 }}
                   exit={{ y: 520 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                  className="fixed left-1.5 right-1.5 z-[80] overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl flex flex-col"
+                  className="fixed left-1.5 right-1.5 z-[80] flex flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-lg)]"
                   style={
                     {
                       bottom: mobileTerminalOffset,
@@ -690,7 +673,7 @@ export default function EditorLayout() {
                     </span>
                     <button
                       onClick={() => layout.hide('terminal')}
-                      className="p-2.5 rounded-xl hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] cursor-pointer tauri-no-drag hover:scale-110 transition-all"
+                      className="p-2.5 rounded-xl text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer tauri-no-drag"
                       title="Close"
                     >
                       <Icon icon="lucide:x" width={16} height={16} />
@@ -742,14 +725,14 @@ export default function EditorLayout() {
 
         {showMobileBottomTabs && (
           <div
-            className="shrink-0 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black)]"
+            className="shrink-0 border-t border-[var(--border)] bg-[var(--bg)]"
             style={{
               paddingBottom: 'env(safe-area-inset-bottom, 0px)',
               overscrollBehavior: 'none',
             }}
           >
             <div className="flex items-center gap-2 px-3 py-2">
-              <div className="flex min-w-0 flex-1 items-center rounded-[20px] border border-[color-mix(in_srgb,var(--border)_92%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_84%,transparent)] p-1 shadow-[var(--shadow-xs)]">
+              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-1">
                 {MODE_BUTTONS.map((modeButton) => {
                   const active = mode === modeButton.id
                   return (
@@ -837,7 +820,7 @@ export default function EditorLayout() {
                 <button
                   type="button"
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] text-[var(--text-secondary)] shadow-[var(--shadow-xs)] transition hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] hover:text-[var(--text-primary)]"
+                  className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
                   aria-label="Close workspace drawer"
                 >
                   <Icon icon="lucide:x" width={16} height={16} />
@@ -938,6 +921,16 @@ export default function EditorLayout() {
             case 'open-new-window':
               openNewEditorInstance().catch((err) =>
                 console.error('Failed to open new window:', err),
+              )
+              break
+            case 'format-document':
+            case 'find-in-file':
+            case 'replace-in-file':
+            case 'toggle-case-sensitive':
+            case 'toggle-whole-word':
+            case 'toggle-regex':
+              window.dispatchEvent(
+                new CustomEvent('editor-command', { detail: { commandId: cmdId } }),
               )
               break
           }

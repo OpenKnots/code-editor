@@ -87,16 +87,15 @@ export function ShortcutsOverlay({ open, onClose }: ShortcutsOverlayProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[520px] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl overflow-hidden animate-scale-in"
+        className="w-full max-w-[520px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)] relative">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand)] to-transparent opacity-30" />
           <div className="flex items-center gap-2">
             <Icon icon="lucide:keyboard" width={16} height={16} className="text-[var(--brand)]" />
             <span className="text-[14px] font-semibold text-[var(--text-primary)]">
@@ -134,7 +133,7 @@ export function ShortcutsOverlay({ open, onClose }: ShortcutsOverlayProps) {
                         {keys.map((key, i) => (
                           <kbd
                             key={i}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono border shadow-sm ${
+                            className={`rounded-md border px-1.5 py-0.5 text-[10px] font-mono ${
                               key.startsWith('/')
                                 ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] border-[color-mix(in_srgb,var(--brand)_25%,transparent)] text-[var(--brand)]'
                                 : 'bg-[var(--bg-subtle)] border-[var(--border)] text-[var(--text-primary)]'

@@ -116,12 +116,12 @@ export function FloatingPanel({
 
   return (
     <div
-      className="fixed flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg"
+      className="group fixed flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)]"
       style={style}
       onMouseDown={onMouseDownBringFront}
     >
       <div
-        className="flex h-12 cursor-move select-none items-center justify-between gap-2.5 border-b border-[var(--border)] bg-[var(--bg-elevated)] px-4"
+        className="flex h-11 cursor-move select-none items-center justify-between gap-2.5 border-b border-[var(--border)] bg-[var(--bg)] px-4"
         onMouseDown={onDragStart}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -151,7 +151,7 @@ export function FloatingPanel({
       <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
 
       <button
-        className="absolute bottom-1.5 right-1.5 flex h-6 w-6 cursor-nwse-resize items-center justify-center rounded-lg text-[var(--text-disabled)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-secondary)] tauri-no-drag"
+        className="absolute bottom-1.5 right-1.5 flex h-6 w-6 cursor-nwse-resize items-center justify-center rounded-lg border border-transparent text-[var(--text-disabled)] opacity-0 transition-all hover:border-[var(--border)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-secondary)] group-hover:opacity-100 tauri-no-drag"
         onMouseDown={onResizeStart}
         aria-label="Resize"
         title="Resize"

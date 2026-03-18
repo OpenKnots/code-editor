@@ -283,7 +283,7 @@ function YouTubeCompactControls({ pipActive }: { pipActive: boolean }) {
             })
           }
           disabled={!hasControls}
-          className="h-1 flex-1 cursor-pointer accent-[#FF0000]"
+          className="h-1 flex-1 cursor-pointer accent-[var(--brand)]"
           aria-label="YouTube volume"
         />
         <span className="w-8 text-right text-[9px] font-mono text-[var(--text-disabled)]">

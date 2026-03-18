@@ -119,7 +119,7 @@ function ResultPanel({
         : 'text-[var(--text-secondary)]'
 
   return (
-    <section className="min-h-[320px] rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
+    <section className="min-h-[320px] rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
@@ -168,7 +168,7 @@ function AgentLoadoutCard({
   const selectedPersona = PERSONA_PRESETS.find((preset) => preset.id === config.personaId)
 
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5">
       <div className="mb-4 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-lg">
           {selectedPersona?.emoji ?? '\u{2728}'}
@@ -211,7 +211,9 @@ function AgentLoadoutCard({
             ))}
           </select>
           {selectedPersona?.description && (
-            <p className="mt-2 text-xs text-[var(--text-tertiary)]">{selectedPersona.description}</p>
+            <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+              {selectedPersona.description}
+            </p>
           )}
         </label>
 
@@ -235,7 +237,9 @@ function AgentLoadoutCard({
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--text-disabled)]">
               Equipped Skills
             </span>
-            <span className="text-xs text-[var(--text-tertiary)]">{config.skillIds.length} selected</span>
+            <span className="text-xs text-[var(--text-tertiary)]">
+              {config.skillIds.length} selected
+            </span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {availableSkills.map((skill) => {
@@ -267,7 +271,9 @@ function AgentLoadoutCard({
                       className={active ? 'text-[var(--brand)]' : 'text-[var(--text-tertiary)]'}
                     />
                     <div>
-                      <div className="text-sm font-medium text-[var(--text-primary)]">{skill.title}</div>
+                      <div className="text-sm font-medium text-[var(--text-primary)]">
+                        {skill.title}
+                      </div>
                       <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                         {skill.shortDescription}
                       </p>
@@ -542,7 +548,7 @@ export function PlaygroundView() {
   return (
     <div className="h-full overflow-y-auto bg-[var(--sidebar-bg)]">
       <div className="flex w-full flex-col gap-6 px-4 py-6 lg:px-6">
-        <section className="rounded-3xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-sm)]">
+        <section className="rounded-3xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
@@ -565,7 +571,7 @@ export function PlaygroundView() {
               <div className="mt-1 flex items-center gap-2 text-sm font-medium">
                 <span
                   className={`inline-block h-2.5 w-2.5 rounded-full ${
-                    gatewayReady ? 'bg-[var(--color-additions,#22c55e)]' : 'bg-[var(--brand)]'
+                    gatewayReady ? 'bg-[var(--success)]' : 'bg-[var(--text-disabled)]'
                   }`}
                 />
                 <span className="text-[var(--text-primary)] capitalize">{status}</span>
@@ -595,7 +601,7 @@ export function PlaygroundView() {
             />
           </div>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-sm)]">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5">
             <div className="mb-4">
               <h2 className="text-sm font-semibold text-[var(--text-primary)]">Scenario</h2>
               <p className="mt-1 text-xs text-[var(--text-tertiary)]">
@@ -650,7 +656,12 @@ export function PlaygroundView() {
                 disabled={busy || !gatewayReady || !scenarioPrompt.trim()}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-[var(--brand-contrast)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Icon icon={busy && runMode === 'demo' ? 'lucide:loader-circle' : 'lucide:play'} width={16} height={16} className={busy && runMode === 'demo' ? 'animate-spin' : ''} />
+                <Icon
+                  icon={busy && runMode === 'demo' ? 'lucide:loader-circle' : 'lucide:play'}
+                  width={16}
+                  height={16}
+                  className={busy && runMode === 'demo' ? 'animate-spin' : ''}
+                />
                 Run Demo
               </button>
               <button

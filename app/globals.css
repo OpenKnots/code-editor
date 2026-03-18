@@ -130,7 +130,7 @@
 ):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px var(--focus-ring-soft);
+  box-shadow: none;
 }
 
 @media (max-width: 768px) {
@@ -1363,11 +1363,7 @@ body {
 .shell-topbar {
   background: var(--shell-topbar-bg);
   border-bottom: 1px solid var(--shell-status-border);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  box-shadow:
-    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  box-shadow: none;
 }
 
 .shell-utility-button {
@@ -1382,33 +1378,24 @@ body {
   color: var(--text-disabled);
   cursor: pointer;
   transition:
-    transform 180ms ease,
-    color 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease,
-    box-shadow 180ms ease;
+    color var(--transition-base),
+    border-color var(--transition-base),
+    background var(--transition-base);
 }
 
 .shell-utility-button:hover {
-  transform: translateY(-1px);
   color: var(--text-primary);
   border-color: var(--shell-chip-border);
   background: color-mix(in srgb, var(--shell-chip-bg) 86%, var(--shell-chip-hover));
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .dark[data-theme='supreme'] body {
-  background:
-    radial-gradient(circle at top left, rgba(210, 163, 79, 0.12), transparent 28%),
-    radial-gradient(circle at top right, rgba(123, 164, 255, 0.08), transparent 20%),
-    linear-gradient(180deg, #050608 0%, #080a0d 100%);
+  background: var(--bg);
 }
 
 [data-theme='supreme']:not(.dark) body {
-  background:
-    radial-gradient(circle at top left, rgba(210, 163, 79, 0.16), transparent 30%),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.95), transparent 22%),
-    linear-gradient(180deg, #f7f3ea 0%, #efe8dc 100%);
+  background: var(--bg);
 }
 
 /* Theme-tinted application background — subtle brand wash */
@@ -1425,12 +1412,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  background: radial-gradient(
-    ellipse 80% 60% at 50% 0%,
-    color-mix(in srgb, var(--brand) var(--theme-bg-intensity), transparent),
-    transparent 70%
-  );
-  transition: background 0.5s ease;
+  background: none;
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1543,8 +1526,8 @@ p {
 
 .surface-interactive:hover {
   border-color: var(--border-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  box-shadow: none;
+  transform: none;
 }
 
 .surface-interactive:active {
@@ -1596,8 +1579,6 @@ p {
 
 .glass-header {
   background: var(--header-glass-bg);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -1631,7 +1612,7 @@ p {
 .glass-input:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--brand-glow-subtle);
+  box-shadow: none;
 }
 
 .glass-input:disabled {
@@ -1673,38 +1654,38 @@ p {
   background: var(--brand);
   border-color: var(--brand);
   color: var(--brand-contrast, white);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 25%, transparent);
+  box-shadow: none;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--brand-hover);
   border-color: var(--brand-hover);
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 35%, transparent);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--brand) 20%, transparent);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
   background: var(--bg-subtle);
   border: 1.5px solid var(--border-hover);
   color: var(--text-secondary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .btn-secondary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--text-tertiary) 10%, var(--bg-subtle));
   border-color: var(--text-tertiary);
   color: var(--text-primary);
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
+  transform: none;
 }
 
 .btn-ghost {
@@ -3021,8 +3002,8 @@ p {
   align-items: center;
   gap: 0.5rem;
   height: 2rem;
-  border: 0;
-  border-radius: 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   padding: 0 0.8rem;
   background: transparent;
   color: var(--text-secondary);
@@ -3031,23 +3012,22 @@ p {
   letter-spacing: -0.01em;
   cursor: pointer;
   transition:
-    color 180ms ease,
-    background 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
+    color var(--transition-base),
+    background var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .shell-mode-controller-btn:hover,
 .shell-view-controller-btn:hover {
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  background: var(--bg-subtle);
 }
 
 .shell-mode-controller-btn--active,
 .shell-view-controller-btn--active {
   color: var(--text-primary);
   background: var(--bg-elevated);
-  box-shadow: 0 0 0 1px var(--border);
+  border-color: var(--border);
 }
 
 [data-theme='supreme'] .folder-tab-strip {
@@ -3056,11 +3036,7 @@ p {
   padding: 4px;
   border: 1px solid var(--shell-pill-border);
   border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--shell-pill-bg) 94%, white 4%),
-    color-mix(in srgb, var(--shell-pill-bg) 96%, black 4%)
-  );
+  background: var(--shell-pill-bg);
   box-shadow: var(--shell-pill-shadow);
 }
 
@@ -3089,28 +3065,19 @@ p {
 }
 
 [data-theme='supreme'] .folder-tab:hover:not(.folder-tab--active) {
-  transform: translateY(-1px);
   color: var(--text-primary);
 }
 
 [data-theme='supreme'] .folder-tab--active {
-  background:
-    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.14), transparent 34%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--shell-active-fill) 86%, white 5%),
-      color-mix(in srgb, var(--shell-active-fill) 96%, black 4%)
-    );
+  background: var(--shell-active-fill);
   color: var(--shell-icon-active);
   box-shadow: var(--shell-active-ambient);
 }
 
 [data-theme='supreme'] .folder-tab--active::before {
-  background:
-    linear-gradient(var(--shell-active-fill), var(--shell-active-fill)) padding-box,
-    var(--shell-active-ring) border-box;
-  border: 1px solid transparent;
-  box-shadow: var(--shell-active-ring-shadow);
+  background: transparent;
+  border: 1px solid var(--shell-active-ring);
+  box-shadow: none;
 }
 
 [data-theme='supreme'] .folder-tab--active::after {
@@ -3126,11 +3093,7 @@ p {
   gap: 0;
   padding: 3px;
   border: 1px solid var(--shell-pill-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--shell-pill-bg) 94%, white 4%),
-    color-mix(in srgb, var(--shell-pill-bg) 96%, black 4%)
-  );
+  background: var(--shell-pill-bg);
   box-shadow: var(--shell-pill-shadow);
   isolation: isolate;
 }
@@ -3154,42 +3117,21 @@ p {
 }
 
 [data-theme='supreme'] .shell-mode-button:hover {
-  background: transparent;
-  color: color-mix(in srgb, var(--shell-icon-active) 85%, white 15%);
-  transform: translateY(-0.5px);
+  background: var(--shell-pill-hover);
+  color: var(--shell-icon-active);
 }
 
 [data-theme='supreme'] .shell-mode-button--active {
-  background:
-    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.16), transparent 38%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--shell-active-fill) 86%, white 5%),
-      color-mix(in srgb, var(--shell-active-fill) 96%, black 4%)
-    );
+  background: var(--shell-active-fill);
   box-shadow: var(--shell-active-ambient);
 }
 
 [data-theme='supreme'] .shell-mode-button--active::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 18px;
-  padding: 1.5px;
-  background: var(--shell-active-ring);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
+  content: none;
 }
 
 [data-theme='supreme'] .shell-mode-button--active svg {
-  filter: drop-shadow(0 0 10px rgba(210, 163, 79, 0.18));
+  filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3276,13 +3218,14 @@ p {
 
 .shell-sidebar--expanded {
   background: var(--shell-panel-bg);
-  border-radius: 20px;
+  border-radius: 20px 0 0 20px;
   box-shadow: var(--shell-panel-shadow);
 }
 
 .shell-sidebar--collapsed {
   border: 1px solid var(--shell-panel-border);
-  border-radius: 999px;
+  border-right: none;
+  border-radius: 999px 0 0 999px;
   background: var(--shell-panel-bg);
   box-shadow: none;
 }
@@ -3328,12 +3271,12 @@ p {
 
 .activity-bar-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-subtle);
 }
 
 .activity-bar-btn--active {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-elevated);
 }
 
 .activity-bar-btn--active::before {
@@ -3344,7 +3287,7 @@ p {
   transform: translateY(-50%);
   width: 1px;
   height: 24px;
-  background: var(--text-tertiary);
+  background: var(--brand);
   border-radius: 0 2px 2px 0;
 }
 
@@ -3397,7 +3340,7 @@ p {
 
 .sidebar-view-nav:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-subtle);
 }
 
 .sidebar-view-nav--active {
@@ -3413,7 +3356,7 @@ p {
   transform: translateY(-50%);
   width: 1px;
   height: 18px;
-  background: var(--text-tertiary);
+  background: var(--brand);
   border-radius: 0 2px 2px 0;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -5808,7 +5751,7 @@ p {
   height: 3px;
   border-radius: 50%;
   background: var(--brand);
-  animation: wave-typing 1.2s ease-in-out infinite;
+  animation: none;
 }
 
 .typing-wave span:nth-child(2) {
@@ -5862,11 +5805,11 @@ p {
   position: absolute;
   top: 0;
   left: 0;
-  width: 25%;
+  width: 16%;
   height: 100%;
   background: var(--brand);
   border-radius: 2px;
-  animation: progress-indeterminate 1.5s ease-in-out infinite;
+  animation: progress-indeterminate 2.4s linear infinite;
 }
 
 /* ─── Message avatar ring (brand glow around KnotLogo) ─────────── */
@@ -5878,9 +5821,8 @@ p {
   height: 22px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--brand) 10%, var(--bg-elevated));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--brand) 20%, transparent),
-    0 0 6px 0 var(--brand-glow);
+  border: 1px solid color-mix(in srgb, var(--brand) 14%, var(--border));
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -5909,7 +5851,6 @@ p {
     color 0.15s ease,
     background 0.15s ease;
   z-index: 2;
-  backdrop-filter: blur(4px);
 }
 
 .code-block-wrapper:hover .code-block-copy {
@@ -5998,15 +5939,11 @@ p {
 }
 
 .home-composer-focused {
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--brand) 8%, transparent),
-    0 4px 24px -4px color-mix(in srgb, var(--brand) 6%, rgba(0, 0, 0, 0.15));
+  box-shadow: none;
 }
 
 .home-composer-typing {
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--brand) 12%, transparent),
-    0 4px 32px -4px color-mix(in srgb, var(--brand) 10%, rgba(0, 0, 0, 0.2));
+  box-shadow: none;
 }
 
 .home-action-card {
@@ -6018,9 +5955,9 @@ p {
 }
 
 .home-action-card:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--brand) 20%, var(--border));
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--brand) 6%, rgba(0, 0, 0, 0.1));
+  transform: none;
+  border-color: color-mix(in srgb, var(--brand) 14%, var(--border));
+  box-shadow: none;
 }
 
 .home-action-card:active {
@@ -6057,9 +5994,9 @@ p {
 }
 
 .quick-action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 10%, rgba(0, 0, 0, 0.12));
-  border-color: color-mix(in srgb, var(--brand) 30%, var(--border));
+  transform: none;
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--brand) 16%, var(--border));
 }
 
 .quick-action-card:active {

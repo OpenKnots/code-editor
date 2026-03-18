@@ -45,12 +45,12 @@ function FileContextMenu({
   return (
     <div
       ref={ref}
-      className="fixed z-[9999] min-w-[140px] py-1 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl animate-fade-in"
+      className="fixed z-[9999] min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] py-1 shadow-[var(--shadow-lg)] animate-fade-in"
       style={{ top: menu.y, left: menu.x, animationDuration: '0.1s' }}
     >
       <button
         onClick={onDelete}
-        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] text-red-400 hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-[var(--color-deletions)] transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer"
       >
         <Icon icon="lucide:trash-2" width={13} height={13} />
         Delete
@@ -89,12 +89,17 @@ function DeleteConfirmDialog({
       <div
         ref={ref}
         onClick={(e) => e.stopPropagation()}
-        className="w-[340px] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl p-5 animate-fade-in"
+        className="w-[340px] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-xl)] animate-fade-in"
         style={{ animationDuration: '0.15s' }}
       >
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="p-2 rounded-lg bg-red-500/10">
-            <Icon icon="lucide:trash-2" width={16} height={16} className="text-red-400" />
+          <div className="rounded-lg bg-[color-mix(in_srgb,var(--color-deletions)_10%,transparent)] p-2">
+            <Icon
+              icon="lucide:trash-2"
+              width={16}
+              height={16}
+              className="text-[var(--color-deletions)]"
+            />
           </div>
           <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">
             Delete {isDir ? 'folder' : 'file'}?
@@ -129,17 +134,17 @@ function DeleteConfirmDialog({
 // ─── File icon mapping ──────────────────────────────────────────
 
 const FILE_ICONS: Record<string, { icon: string; color: string }> = {
-  ts: { icon: 'lucide:file-code', color: '#3178c6' },
-  tsx: { icon: 'lucide:file-code', color: '#3178c6' },
-  js: { icon: 'lucide:file-code', color: '#f7df1e' },
-  jsx: { icon: 'lucide:file-code', color: '#f7df1e' },
-  json: { icon: 'lucide:file-json', color: '#5da545' },
-  md: { icon: 'lucide:file-text', color: '#519aba' },
-  css: { icon: 'lucide:file-code', color: '#563d7c' },
-  html: { icon: 'lucide:file-code', color: '#e34c26' },
-  py: { icon: 'lucide:file-code', color: '#3572a5' },
-  rs: { icon: 'lucide:file-code', color: '#dea584' },
-  go: { icon: 'lucide:file-code', color: '#00add8' },
+  ts: { icon: 'lucide:file-code', color: 'var(--syntax-type)' },
+  tsx: { icon: 'lucide:file-code', color: 'var(--syntax-type)' },
+  js: { icon: 'lucide:file-code', color: 'var(--syntax-number)' },
+  jsx: { icon: 'lucide:file-code', color: 'var(--syntax-number)' },
+  json: { icon: 'lucide:file-json', color: 'var(--syntax-string)' },
+  md: { icon: 'lucide:file-text', color: 'var(--info)' },
+  css: { icon: 'lucide:file-code', color: 'var(--syntax-keyword)' },
+  html: { icon: 'lucide:file-code', color: 'var(--error)' },
+  py: { icon: 'lucide:file-code', color: 'var(--syntax-function)' },
+  rs: { icon: 'lucide:file-code', color: 'var(--warning)' },
+  go: { icon: 'lucide:file-code', color: 'var(--info)' },
 }
 
 function getFileIcon(path: string) {
@@ -239,23 +244,23 @@ function DirItem({
         data-path={dir.path}
         data-depth={depth}
         data-expanded={expanded}
-        className="flex items-center gap-1.5 w-full text-left py-[3px] hover:bg-[var(--bg-subtle)] rounded-sm transition-all duration-150 cursor-pointer group"
+        className="group flex w-full items-center gap-1.5 rounded-sm py-[3px] text-left transition-colors hover:bg-[var(--bg-subtle)] focus:bg-[var(--bg-subtle)] cursor-pointer"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         <Icon
           icon={expanded ? 'lucide:chevron-down' : 'lucide:chevron-right'}
           width={12}
           height={12}
-          className="text-[var(--text-tertiary)] shrink-0 transition-transform duration-200"
+          className="shrink-0 text-[var(--text-tertiary)]"
           style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(0deg)' }}
         />
         <Icon
           icon={expanded ? 'lucide:folder-open' : 'lucide:folder'}
           width={14}
           height={14}
-          className="text-[var(--brand)] shrink-0 transition-transform duration-150 group-hover:scale-110"
+          className="shrink-0 text-[var(--brand)]"
         />
-        <span className="text-[12px] text-[var(--text-secondary)] truncate group-hover:text-[var(--text-primary)] transition-colors">
+        <span className="truncate text-[12px] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">
           {dir.name}
         </span>
         {!expanded && childFileCount + childDirCount > 0 && (
@@ -338,7 +343,7 @@ function FileItem({
       data-explorer-item="file"
       data-path={file.path}
       data-depth={depth}
-      className={`flex items-center gap-1.5 w-full text-left py-[3px] rounded-sm transition-all duration-150 cursor-pointer group ${
+      className={`group flex w-full items-center gap-1.5 rounded-sm py-[3px] text-left transition-colors focus:bg-[var(--bg-subtle)] cursor-pointer ${
         isActive
           ? 'bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
           : 'hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)]'
@@ -350,7 +355,7 @@ function FileItem({
         width={14}
         height={14}
         style={{ color: icon.color }}
-        className="shrink-0 transition-transform duration-150 group-hover:scale-110"
+        className="shrink-0"
       />
       <span
         className={`text-[12px] truncate group-hover:text-[var(--text-primary)] transition-colors ${
@@ -619,27 +624,27 @@ export function FileExplorer() {
   return (
     <div className="flex flex-col h-full bg-[var(--sidebar-bg)]">
       {/* Brand accent bar */}
-      <div className="h-[2px] shrink-0 bg-gradient-to-r from-[var(--brand)] via-[color-mix(in_srgb,var(--brand)_50%,transparent)] to-transparent opacity-70" />
+      <div className="h-px shrink-0 bg-[var(--border)]" />
       {/* Header with project name + folder trigger */}
-      <div className="px-3 py-2 border-b border-[color-mix(in_srgb,var(--brand)_20%,var(--border))] bg-[color-mix(in_srgb,var(--brand)_4%,var(--sidebar-bg))] shrink-0">
+      <div className="shrink-0 border-b border-[var(--border)] bg-[var(--sidebar-bg)] px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => local.openFolder()}
-            className="flex items-center gap-1.5 min-w-0 rounded-md px-1 py-0.5 -mx-1 hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer group"
+            className="group -mx-1 flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer"
             title={local.rootPath ?? 'Open folder'}
           >
             <Icon
               icon="lucide:folder-open"
               width={13}
               height={13}
-              className="text-[var(--brand)] shrink-0 group-hover:scale-110 transition-transform"
+              className="shrink-0 text-[var(--brand)]"
             />
             <span className="text-[11px] font-semibold text-[var(--text-primary)] truncate">
               {local.rootPath?.split('/').pop() ||
                 (repo ? repo.repo.split('/').pop() : 'Open Folder')}
             </span>
             {fileCount > 0 && (
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--text-tertiary)] border border-[color-mix(in_srgb,var(--brand)_15%,transparent)] shrink-0">
+              <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[9px] font-mono text-[var(--text-tertiary)]">
                 {fileCount}
               </span>
             )}
@@ -647,14 +652,14 @@ export function FileExplorer() {
           <button
             disabled={treeLoading}
             onClick={() => (local.localMode ? local.refresh() : loadTree())}
-            className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer shrink-0"
+            className="shrink-0 rounded p-1 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer"
             title="Refresh"
           >
             <Icon
               icon={treeLoading ? 'lucide:loader-2' : 'lucide:refresh-cw'}
               width={12}
               height={12}
-              className={`transition-transform ${treeLoading ? 'animate-spin' : 'hover:rotate-45'}`}
+              className={treeLoading ? 'animate-spin' : ''}
             />
           </button>
         </div>

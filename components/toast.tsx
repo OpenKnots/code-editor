@@ -28,10 +28,10 @@ const ICONS = {
 }
 
 const COLORS = {
-  info: '#3b82f6',
-  success: '#10b981',
-  error: '#ef4444',
-  warning: '#f59e0b',
+  info: 'var(--info)',
+  success: 'var(--success)',
+  error: 'var(--error)',
+  warning: 'var(--warning)',
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -78,9 +78,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   stiffness: 500,
                   damping: 35,
                 }}
-                className="pointer-events-auto flex flex-col rounded-xl border shadow-[var(--shadow-xl)] backdrop-blur-xl max-w-[360px] overflow-hidden"
+                className="pointer-events-auto flex max-w-[360px] flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-xl)]"
                 style={{
-                  background: 'color-mix(in srgb, var(--bg-elevated) 88%, transparent)',
+                  background: 'var(--bg-elevated)',
                   borderColor: 'var(--border)',
                   borderLeftWidth: '3px',
                   borderLeftColor: COLORS[t.type],

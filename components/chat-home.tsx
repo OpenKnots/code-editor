@@ -6,10 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { KnotLogo } from '@/components/knot-logo'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
-import { PermissionsToggle } from '@/components/permissions-toggle'
+import { ProviderSelector } from '@/components/provider-selector'
 import { useRepo, type RepoInfo } from '@/context/repo-context'
 import { useLocal } from '@/context/local-context'
-import { useGateway } from '@/context/gateway-context'
 import { useGitHubAuth } from '@/context/github-auth-context'
 import { useEditor } from '@/context/editor-context'
 import { useView } from '@/context/view-context'
@@ -124,7 +123,6 @@ export const ChatHome = memo(function ChatHome({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { repo, setRepo } = useRepo()
   const local = useLocal()
-  const { status } = useGateway()
   const { setView } = useView()
   const { files: openFiles } = useEditor()
   const { token: ghToken, authenticated: ghAuthenticated } = useGitHubAuth()
@@ -329,40 +327,31 @@ export const ChatHome = memo(function ChatHome({
     <div className="flex-1 overflow-y-auto relative">
       <div className="min-h-full w-full max-w-[720px] mx-auto flex flex-col justify-start pt-[clamp(2.75rem,8vh,5rem)] sm:justify-center sm:pt-0 px-4 sm:px-6 py-4 sm:py-10 md:py-12 relative z-[1]">
         {/* Header */}
-        <div className="flex flex-col items-center mb-6 sm:mb-7">
+        <div className="mb-6 flex flex-col items-center sm:mb-7">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-3"
+            className="mb-4"
           >
-            <KnotLogo size={34} color="var(--text-primary)" />
+            <KnotLogo size={28} color="var(--text-primary)" />
           </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-[13px] text-[var(--text-secondary)] mb-2 font-medium"
-          >
-            {getGreeting()}
-          </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-center text-[28px] sm:text-[32px] font-medium tracking-[-0.04em] leading-none text-[var(--text-primary)]"
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-center text-[28px] font-medium leading-none tracking-[-0.04em] text-[var(--text-primary)] sm:text-[32px]"
           >
-            What shall we build?
+            How can I help with this project?
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-2 max-w-[28rem] text-center text-[12px] leading-5 text-[var(--text-disabled)] sm:text-[13px]"
           >
-            Open a project or describe changes, and we&apos;ll help you shape it.
+            Ask a question, describe a change, or open a workspace to get started.
           </motion.p>
 
           {/* Workspace dropdown — hidden on mobile */}
@@ -531,7 +520,7 @@ export const ChatHome = memo(function ChatHome({
         </div>
 
         {/* Quick links — desktop only */}
-        <div className="hidden sm:flex justify-end gap-4 mb-2">
+        <div className="mb-3 hidden sm:flex justify-end gap-4">
           <button
             onClick={() => setView('prompts')}
             className="inline-flex items-center gap-1 text-[12px] text-[var(--text-disabled)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
@@ -548,7 +537,7 @@ export const ChatHome = memo(function ChatHome({
         </div>
 
         {/* Suggestion cards — hidden on mobile, 2x2 grid desktop with staggered animation */}
-        <div className="codex-suggestion-grid hidden sm:grid grid-cols-2 gap-3.5 mb-4">
+        <div className="codex-suggestion-grid mb-4 hidden grid-cols-2 gap-3 sm:grid">
           {suggestions.map((card, i) => (
             <motion.button
               key={i}
@@ -562,10 +551,10 @@ export const ChatHome = memo(function ChatHome({
                 damping: 30,
               }}
               onClick={() => onSend(card.label, agentMode)}
-              className="codex-suggestion-card group flex w-full flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition-colors duration-200 cursor-pointer hover:border-[var(--border-hover)]"
+              className="codex-suggestion-card group flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 text-left transition-colors duration-200 hover:border-[var(--border-hover)]"
             >
               <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                 style={{
                   background: card.bg,
                 }}
@@ -578,7 +567,7 @@ export const ChatHome = memo(function ChatHome({
                   className="opacity-90"
                 />
               </div>
-              <p className="line-clamp-2 text-[13px] leading-[1.5] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+              <p className="line-clamp-2 text-[13px] leading-[1.55] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">
                 {card.label}
               </p>
             </motion.button>
@@ -592,9 +581,7 @@ export const ChatHome = memo(function ChatHome({
           transition={{ duration: 0.5, delay: 0.7 }}
           className="hidden sm:block mb-5"
         >
-          <p className="mb-2.5 px-1 text-[11px] font-medium text-[var(--text-disabled)]">
-            Recent Chats
-          </p>
+          <p className="mb-2.5 px-1 text-[11px] text-[var(--text-disabled)]">Recent Chats</p>
           <div className="space-y-2">
             {MOCK_RECENT_CHATS.map((chat) => (
               <button
@@ -621,7 +608,7 @@ export const ChatHome = memo(function ChatHome({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
           onClick={() => inputRef.current?.focus()}
-          className={`codex-composer overflow-hidden rounded-[20px] border transition-all duration-200 ${
+          className={`codex-composer overflow-hidden rounded-2xl border transition-all duration-200 ${
             isFocused
               ? 'border-[var(--brand)]'
               : 'border-[var(--border)] hover:border-[var(--border-hover)]'
@@ -646,7 +633,7 @@ export const ChatHome = memo(function ChatHome({
                 : PLACEHOLDER_TEXTS[placeholderIndex]
             }
             aria-label="Chat input"
-            className="w-full bg-transparent px-4 pt-3.5 pb-2 text-[14px] leading-[1.6] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none resize-none min-h-[48px] max-h-[200px] overflow-y-auto placeholder:transition-opacity placeholder:duration-500"
+            className="min-h-[48px] max-h-[200px] w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-3.5 text-[14px] leading-[1.65] text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none placeholder:transition-opacity placeholder:duration-500"
             key={placeholderIndex}
           />
 
@@ -680,7 +667,7 @@ export const ChatHome = memo(function ChatHome({
                 {/* + button */}
                 <button
                   onClick={onImageAttach}
-                  className="codex-pill-btn flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)] transition-colors cursor-pointer hover:border-[var(--border-hover)] hover:text-[var(--text-secondary)]"
+                  className="codex-pill-btn flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-disabled)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-secondary)]"
                   title="Attach file"
                 >
                   <Icon icon="lucide:plus" width={14} height={14} />
@@ -692,30 +679,10 @@ export const ChatHome = memo(function ChatHome({
                 {/* Divider — desktop only */}
                 <div className="hidden sm:block w-px h-4 bg-[var(--border)]" />
 
-                {/* Gateway status — desktop only */}
-                <span
-                  className={`codex-pill hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border cursor-default ${
-                    status === 'connected'
-                      ? 'text-[var(--text-secondary)] border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]'
-                      : 'text-[var(--text-disabled)] border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_3%,transparent)]'
-                  }`}
-                >
-                  <Icon icon="lucide:monitor" width={12} height={12} />
-                  {status === 'connected' ? 'Local' : 'Offline'}
-                </span>
-
-                {/* Permissions — desktop only */}
+                {/* Provider selector — desktop only */}
                 <span className="hidden sm:inline-flex">
-                  <PermissionsToggle size="sm" />
+                  <ProviderSelector size="sm" />
                 </span>
-
-                {/* Branch pill — desktop only */}
-                {branchName && (
-                  <span className="codex-pill hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[var(--text-secondary)] border border-[var(--border)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] cursor-default">
-                    <Icon icon="lucide:git-branch" width={12} height={12} />
-                    {branchName}
-                  </span>
-                )}
               </div>
 
               {/* Send button */}
@@ -747,12 +714,12 @@ export const ChatHome = memo(function ChatHome({
             transition={{ duration: 0.5, delay: 0.8 }}
             className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 hidden sm:block"
           >
-            <div className="h-px bg-[rgba(255,255,255,0.06)]" />
+            <div className="h-px bg-[var(--border)]" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <motion.button
                 onClick={onSelectFolder}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition-colors duration-200 cursor-pointer hover:border-[var(--border-hover)]"
+                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 text-left transition-colors duration-200 hover:border-[var(--border-hover)]"
               >
                 <div className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
                   <Icon
@@ -774,7 +741,7 @@ export const ChatHome = memo(function ChatHome({
               <motion.button
                 onClick={onCloneRepo}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-left transition-colors duration-200 cursor-pointer hover:border-[var(--border-hover)]"
+                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 text-left transition-colors duration-200 hover:border-[var(--border-hover)]"
               >
                 <div className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] border border-[var(--border)] flex items-center justify-center shrink-0">
                   <Icon
@@ -798,16 +765,6 @@ export const ChatHome = memo(function ChatHome({
         )}
 
         {/* Footer — subtle branding */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 1 }}
-          className="mt-6 sm:mt-8 hidden sm:flex justify-center"
-        >
-          <span className="text-[10px] font-mono tracking-[0.08em] text-[var(--text-disabled)] opacity-20 uppercase">
-            Built with KnotCode
-          </span>
-        </motion.div>
       </div>
     </div>
   )

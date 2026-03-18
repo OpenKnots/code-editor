@@ -3,43 +3,44 @@
 import { useState, useCallback, useRef } from 'react'
 import { Icon } from '@iconify/react'
 import { useEditor } from '@/context/editor-context'
+import { useView } from '@/context/view-context'
 import { formatShortcut } from '@/lib/platform'
 
 const EXT_ICONS: Record<string, { icon: string; color: string }> = {
-  ts: { icon: 'lucide:file-code', color: '#3178c6' },
-  tsx: { icon: 'lucide:file-code', color: '#3178c6' },
-  js: { icon: 'lucide:file-code', color: '#f7df1e' },
-  jsx: { icon: 'lucide:file-code', color: '#f7df1e' },
-  css: { icon: 'lucide:palette', color: '#264de4' },
-  scss: { icon: 'lucide:palette', color: '#cd6799' },
-  json: { icon: 'lucide:braces', color: '#f7df1e' },
-  md: { icon: 'lucide:file-text', color: '#519aba' },
-  mdx: { icon: 'lucide:file-text', color: '#519aba' },
-  html: { icon: 'lucide:globe', color: '#e44d26' },
-  svg: { icon: 'lucide:image', color: '#ffb13b' },
-  py: { icon: 'lucide:file-code', color: '#3776ab' },
-  rs: { icon: 'lucide:file-code', color: '#dea584' },
-  toml: { icon: 'lucide:settings', color: '#9c4121' },
-  yml: { icon: 'lucide:settings', color: '#cb171e' },
-  yaml: { icon: 'lucide:settings', color: '#cb171e' },
-  sh: { icon: 'lucide:terminal', color: '#4eaa25' },
-  png: { icon: 'lucide:image', color: '#a855f7' },
-  jpg: { icon: 'lucide:image', color: '#a855f7' },
-  jpeg: { icon: 'lucide:image', color: '#a855f7' },
-  gif: { icon: 'lucide:image', color: '#a855f7' },
-  webp: { icon: 'lucide:image', color: '#a855f7' },
-  avif: { icon: 'lucide:image', color: '#a855f7' },
-  ico: { icon: 'lucide:image', color: '#a855f7' },
-  bmp: { icon: 'lucide:image', color: '#a855f7' },
-  mp4: { icon: 'lucide:video', color: '#ef4444' },
-  webm: { icon: 'lucide:video', color: '#ef4444' },
-  mov: { icon: 'lucide:video', color: '#ef4444' },
-  mkv: { icon: 'lucide:video', color: '#ef4444' },
-  mp3: { icon: 'lucide:music', color: '#22c55e' },
-  wav: { icon: 'lucide:music', color: '#22c55e' },
-  ogg: { icon: 'lucide:music', color: '#22c55e' },
-  m4a: { icon: 'lucide:music', color: '#22c55e' },
-  flac: { icon: 'lucide:music', color: '#22c55e' },
+  ts: { icon: 'lucide:file-code', color: 'var(--syntax-type)' },
+  tsx: { icon: 'lucide:file-code', color: 'var(--syntax-type)' },
+  js: { icon: 'lucide:file-code', color: 'var(--syntax-number)' },
+  jsx: { icon: 'lucide:file-code', color: 'var(--syntax-number)' },
+  css: { icon: 'lucide:palette', color: 'var(--syntax-keyword)' },
+  scss: { icon: 'lucide:palette', color: 'var(--brand)' },
+  json: { icon: 'lucide:braces', color: 'var(--syntax-string)' },
+  md: { icon: 'lucide:file-text', color: 'var(--info)' },
+  mdx: { icon: 'lucide:file-text', color: 'var(--info)' },
+  html: { icon: 'lucide:globe', color: 'var(--error)' },
+  svg: { icon: 'lucide:image', color: 'var(--warning)' },
+  py: { icon: 'lucide:file-code', color: 'var(--syntax-function)' },
+  rs: { icon: 'lucide:file-code', color: 'var(--warning)' },
+  toml: { icon: 'lucide:settings', color: 'var(--text-secondary)' },
+  yml: { icon: 'lucide:settings', color: 'var(--error)' },
+  yaml: { icon: 'lucide:settings', color: 'var(--error)' },
+  sh: { icon: 'lucide:terminal', color: 'var(--success)' },
+  png: { icon: 'lucide:image', color: 'var(--brand)' },
+  jpg: { icon: 'lucide:image', color: 'var(--brand)' },
+  jpeg: { icon: 'lucide:image', color: 'var(--brand)' },
+  gif: { icon: 'lucide:image', color: 'var(--brand)' },
+  webp: { icon: 'lucide:image', color: 'var(--brand)' },
+  avif: { icon: 'lucide:image', color: 'var(--brand)' },
+  ico: { icon: 'lucide:image', color: 'var(--brand)' },
+  bmp: { icon: 'lucide:image', color: 'var(--brand)' },
+  mp4: { icon: 'lucide:video', color: 'var(--error)' },
+  webm: { icon: 'lucide:video', color: 'var(--error)' },
+  mov: { icon: 'lucide:video', color: 'var(--error)' },
+  mkv: { icon: 'lucide:video', color: 'var(--error)' },
+  mp3: { icon: 'lucide:music', color: 'var(--success)' },
+  wav: { icon: 'lucide:music', color: 'var(--success)' },
+  ogg: { icon: 'lucide:music', color: 'var(--success)' },
+  m4a: { icon: 'lucide:music', color: 'var(--success)' },
+  flac: { icon: 'lucide:music', color: 'var(--success)' },
 }
 
 function getFileIcon(path: string) {
@@ -49,6 +50,8 @@ function getFileIcon(path: string) {
 
 export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => void }) {
   const { files, activeFile, setActiveFile, closeFile, reorderFiles } = useEditor()
+  const { activeView, setView } = useView()
+  const previewActive = activeView === 'preview'
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<number | null>(null)
   const dragNode = useRef<HTMLDivElement | null>(null)
@@ -85,7 +88,7 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
     <div className="relative flex items-center border-b border-[var(--border)] bg-[var(--bg)] overflow-x-auto no-scrollbar shrink-0 h-[42px]">
       {files.map((file, index) => {
         const name = file.path.split('/').pop() ?? file.path
-        const isActive = file.path === activeFile
+        const isActive = !previewActive && file.path === activeFile
         const isDragTarget = dropTarget === index && dragIndex !== null && dragIndex !== index
         const { icon, color } = getFileIcon(file.path)
 
@@ -98,20 +101,21 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
             onDragOver={(e) => handleDragOver(e, index)}
             onDragLeave={() => setDropTarget(null)}
             className={`
-              group relative flex items-center gap-2.5 px-5 h-full cursor-pointer transition-all duration-150 select-none min-w-0 shrink-0
+              group relative flex items-center gap-2.5 px-4 h-full cursor-pointer transition-colors duration-150 select-none min-w-0 shrink-0 border-b border-transparent
               ${
                 isActive
                   ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
               }
-              ${isDragTarget ? 'border-l-2 border-l-[var(--brand)]' : 'border-l-0'}
+              ${isDragTarget ? 'border-b-[var(--brand)] bg-[var(--bg-subtle)]' : ''}
             `}
             onClick={() => {
               setActiveFile(file.path)
+              setView('editor')
               onTabSelect?.(file.path)
             }}
           >
-            {/* Active indicator — bottom bar with gradient edges */}
+            {/* Active indicator */}
             {isActive && (
               <div className="absolute bottom-0 left-0 right-0 h-[3px]">
                 <div className="h-full bg-[var(--brand)] rounded-t-full" />
@@ -146,7 +150,7 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
                 e.stopPropagation()
                 closeFile(file.path)
               }}
-              className="ml-1 cursor-pointer rounded-lg p-1.5 opacity-0 transition-all hover:bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] group-hover:opacity-100"
+              className="ml-1 cursor-pointer rounded-lg p-1.5 opacity-0 transition-colors hover:bg-[var(--bg)] group-hover:opacity-100 focus:opacity-100"
               title={`Close (${formatShortcut('meta+W')})`}
             >
               <Icon icon="lucide:x" width={14} height={14} />
@@ -159,6 +163,31 @@ export function EditorTabs({ onTabSelect }: { onTabSelect?: (path: string) => vo
           </div>
         )
       })}
+
+      <div
+        className={`
+          group relative flex items-center gap-2.5 px-4 h-full cursor-pointer transition-colors duration-150 select-none min-w-0 shrink-0
+          ${
+            previewActive
+              ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
+          }
+        `}
+        onClick={() => setView('preview')}
+      >
+        {previewActive && (
+          <div className="absolute bottom-0 left-0 right-0 h-[3px]">
+            <div className="h-full bg-[var(--brand)] rounded-t-full" />
+          </div>
+        )}
+        <Icon
+          icon="lucide:eye"
+          width={17}
+          height={17}
+          className={`transition-colors duration-150 ${previewActive ? 'text-[var(--brand)]' : 'text-[var(--text-tertiary)]'}`}
+        />
+        <span className="text-[13px] font-medium truncate max-w-[140px]">Preview</span>
+      </div>
 
       {/* Tab count indicator when many tabs are open */}
       {files.length > 6 && (

@@ -67,16 +67,16 @@ export function SessionPresence({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  if (clients.length === 0) return null
+  if (status !== 'connected' || clients.length === 0) return null
 
   if (compact) {
     return (
-      <div className="presence-compact" title={`${clients.length} device(s) connected`}>
-        <div className="presence-compact__avatars">
+      <div className="flex items-center" title={`${clients.length} device(s) connected`}>
+        <div className="flex items-center">
           {clients.slice(0, 3).map((c, i) => (
             <div
               key={c.clientId}
-              className="presence-compact__avatar"
+              className={`-ml-[5px] flex h-[18px] w-[18px] items-center justify-center rounded-full border-[1.5px] border-[var(--bg)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] ${i === 0 ? 'ml-0' : ''}`}
               style={{ zIndex: 3 - i }}
               title={c.displayName || c.clientId}
             >
@@ -84,110 +84,37 @@ export function SessionPresence({ compact = false }: { compact?: boolean }) {
             </div>
           ))}
           {clients.length > 3 && (
-            <div className="presence-compact__more">+{clients.length - 3}</div>
+            <div className="-ml-[5px] flex h-[18px] w-[18px] items-center justify-center rounded-full border-[1.5px] border-[var(--bg)] bg-[var(--brand)] text-[8px] font-bold text-[var(--brand-contrast)]">
+              +{clients.length - 3}
+            </div>
           )}
         </div>
-
-        <style jsx>{`
-          .presence-compact {
-            display: flex;
-            align-items: center;
-          }
-          .presence-compact__avatars {
-            display: flex;
-          }
-          .presence-compact__avatar {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--bg-elevated);
-            border: 1.5px solid var(--bg-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-tertiary);
-            margin-left: -5px;
-          }
-          .presence-compact__avatar:first-child {
-            margin-left: 0;
-          }
-          .presence-compact__more {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--brand);
-            border: 1.5px solid var(--bg-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 8px;
-            font-weight: 700;
-            margin-left: -5px;
-          }
-        `}</style>
       </div>
     )
   }
 
   return (
-    <div className="session-presence">
-      <div className="session-presence__header">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-secondary)]">
         <Icon icon="lucide:users" width={14} />
         <span>{clients.length} connected</span>
       </div>
-      <div className="session-presence__list">
+      <div className="flex flex-col gap-1">
         {clients.map((client) => (
-          <div key={client.clientId} className="session-presence__client">
+          <div
+            key={client.clientId}
+            className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[12px] text-[var(--text-secondary)]"
+          >
             <Icon icon={deviceIcon(client.clientMode)} width={14} />
-            <span className="session-presence__name">{client.displayName || client.clientId}</span>
-            <span className="session-presence__mode">{client.clientMode}</span>
+            <span className="flex-1 truncate font-medium text-[var(--text-primary)]">
+              {client.displayName || client.clientId}
+            </span>
+            <span className="text-[10px] uppercase tracking-wide text-[var(--text-disabled)]">
+              {client.clientMode}
+            </span>
           </div>
         ))}
       </div>
-
-      <style jsx>{`
-        .session-presence {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .session-presence__header {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--text-secondary);
-        }
-        .session-presence__list {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .session-presence__client {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 10px;
-          font-size: 12px;
-          color: var(--text-secondary);
-          background: var(--bg-elevated);
-          border-radius: 8px;
-          border: 1px solid var(--border);
-        }
-        .session-presence__name {
-          flex: 1;
-          color: var(--text-primary);
-          font-weight: 500;
-        }
-        .session-presence__mode {
-          font-size: 10px;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-      `}</style>
     </div>
   )
 }

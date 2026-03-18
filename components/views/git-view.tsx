@@ -1294,7 +1294,7 @@ export function GitView() {
                 disabled={!commitReady}
                 className={`w-full flex items-center justify-center gap-1.5 h-[32px] rounded-[var(--radius-sm)] text-[11px] font-semibold transition-all cursor-pointer ${
                   commitReady
-                    ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)] shadow-[var(--shadow-sm)]'
+                    ? 'bg-[var(--brand)] text-[var(--brand-contrast)] hover:bg-[var(--brand-hover)]'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-disabled)] cursor-not-allowed'
                 }`}
               >

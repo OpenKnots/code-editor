@@ -698,10 +698,10 @@ const BOARD_TEMPLATES: BoardTemplate[] = [
 ]
 
 const PRIORITY_CONFIG = {
-  P0: { label: 'Critical', color: '#ef4444', icon: 'lucide:alert-triangle' },
-  P1: { label: 'High', color: '#f97316', icon: 'lucide:arrow-up' },
-  P2: { label: 'Medium', color: '#eab308', icon: 'lucide:minus' },
-  P3: { label: 'Low', color: '#6b7280', icon: 'lucide:arrow-down' },
+  P0: { label: 'Critical', color: 'var(--error)', icon: 'lucide:alert-triangle' },
+  P1: { label: 'High', color: 'var(--warning)', icon: 'lucide:arrow-up' },
+  P2: { label: 'Medium', color: 'var(--brand)', icon: 'lucide:minus' },
+  P3: { label: 'Low', color: 'var(--text-disabled)', icon: 'lucide:arrow-down' },
 }
 
 const COLUMN_ICON_FALLBACKS: Record<string, string> = {
@@ -809,7 +809,7 @@ function calculateBoardHealth(cards: KanbanCard[], columns: KanbanColumn[]): Boa
   if (cards.length === 0) {
     return {
       score: 100,
-      color: '#22c55e',
+      color: 'var(--success)',
       breakdown: { wip: 100, labels: 100, descriptions: 100, stale: 100, overdue: 100 },
     }
   }
@@ -842,10 +842,9 @@ function calculateBoardHealth(cards: KanbanCard[], columns: KanbanColumn[]): Boa
 
   const totalScore = (wipScore + labelScore + descScore + staleScore + overdueScore) / 5
 
-  let color = '#22c55e' // green
-  if (totalScore < 50)
-    color = '#ef4444' // red
-  else if (totalScore < 75) color = '#f59e0b' // amber
+  let color = 'var(--success)'
+  if (totalScore < 50) color = 'var(--error)'
+  else if (totalScore < 75) color = 'var(--warning)'
 
   return {
     score: Math.round(totalScore),
@@ -1337,9 +1336,9 @@ function CardDetailPanel({
                 onChange={(e) => setDueDate(e.target.value)}
                 className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:border-[var(--brand)] ${
                   dueDateStatus === 'overdue'
-                    ? 'border-[#ef4444] bg-[#ef444410] text-[#ef4444]'
+                    ? 'border-[var(--error)] bg-[color-mix(in_srgb,var(--error)_10%,transparent)] text-[var(--error)]'
                     : dueDateStatus === 'soon'
-                      ? 'border-[#f59e0b] bg-[#f59e0b10] text-[#f59e0b]'
+                      ? 'border-[var(--warning)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] text-[var(--warning)]'
                       : 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
                 }`}
               />
@@ -1364,7 +1363,7 @@ function CardDetailPanel({
                   className="rounded-full px-3 py-1 text-xs font-medium transition-all duration-200"
                   style={{
                     backgroundColor: active ? label.color : 'transparent',
-                    color: active ? '#fff' : label.color,
+                    color: active ? 'var(--brand-contrast)' : label.color,
                     border: `1.5px solid ${label.color}`,
                     opacity: active ? 1 : 0.7,
                   }}
@@ -1665,16 +1664,16 @@ function RecommendationsPanel({
   onDismiss: (id: string) => void
 }) {
   const categoryColors = {
-    workflow: '#3b82f6',
-    hygiene: '#f59e0b',
-    productivity: '#22c55e',
-    suggestion: '#a855f7',
+    workflow: 'var(--info)',
+    hygiene: 'var(--warning)',
+    productivity: 'var(--success)',
+    suggestion: 'var(--brand)',
   }
 
   const priorityBorderColors = {
-    high: '#ef4444',
-    medium: '#f59e0b',
-    low: '#3b82f6',
+    high: 'var(--error)',
+    medium: 'var(--warning)',
+    low: 'var(--info)',
   }
 
   return (

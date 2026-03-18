@@ -67,6 +67,14 @@ function formatAge(ts: number): string {
   return `${weeks}w`
 }
 
+function formatThreadMeta(thread: ThreadPreview): string {
+  const parts = [formatAge(thread.timestamp)]
+  if (thread.messageCount > 0) {
+    parts.push(`${thread.messageCount} msg${thread.messageCount === 1 ? '' : 's'}`)
+  }
+  return parts.join(' · ')
+}
+
 interface Props {
   collapsed?: boolean
   onToggle?: () => void
@@ -279,10 +287,10 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 mt-1 mb-1">
+            <div className="mb-1 mt-1 flex items-center gap-1.5">
               <button
                 onClick={handleNewThread}
-                className="codex-sidebar-new-thread flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[var(--text-primary)] transition-all cursor-pointer"
+                className="codex-sidebar-new-thread flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 <Icon
                   icon="lucide:circle-plus"
@@ -333,9 +341,9 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                     height={16}
                     className="shrink-0 relative z-10"
                   />
-                  <span className="truncate relative z-10">{item.label}</span>
+                  <span className="relative z-10 truncate">{item.label}</span>
                   {item.id === 'git' && dirtyCount > 0 && (
-                    <span className="ml-auto px-1.5 min-w-[20px] text-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)] text-[10px] leading-[18px] font-bold shrink-0 relative z-10">
+                    <span className="relative z-10 ml-auto min-w-[20px] rounded-full bg-[var(--brand)] px-1.5 text-center text-[10px] leading-[18px] font-bold text-[var(--brand-contrast)] shrink-0">
                       {dirtyCount}
                     </span>
                   )}
@@ -448,19 +456,19 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                     <button
                       key={thread.id}
                       onClick={() => handleSelectThread(thread.id)}
-                      className={`codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer w-full ${
+                      className={`codex-sidebar-thread group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors cursor-pointer ${
                         activeThreadId === thread.id
-                          ? 'bg-[var(--bg-subtle)] text-[var(--text-primary)]'
+                          ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)]'
                           : 'hover:bg-[var(--bg-subtle)]'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
+                        <div className="truncate text-[13px] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">
                           {thread.title}
                         </div>
                       </div>
-                      <span className="text-[10px] text-[var(--text-disabled)] font-mono shrink-0">
-                        {formatAge(thread.timestamp)}
+                      <span className="shrink-0 text-[10px] text-[var(--text-disabled)]">
+                        {formatThreadMeta(thread)}
                       </span>
                     </button>
                   ))}
@@ -474,19 +482,19 @@ export function WorkspaceSidebar({ collapsed, onToggle, repoName }: Props) {
                   <button
                     key={thread.id}
                     onClick={() => handleSelectThread(thread.id)}
-                    className={`codex-sidebar-thread group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer w-full ${
+                    className={`codex-sidebar-thread group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors cursor-pointer ${
                       activeThreadId === thread.id
-                        ? 'bg-[var(--bg-subtle)] text-[var(--text-primary)]'
+                        ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)]'
                         : 'hover:bg-[var(--bg-subtle)]'
                     }`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate transition-colors">
+                      <div className="truncate text-[13px] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">
                         {thread.title}
                       </div>
                     </div>
-                    <span className="text-[10px] text-[var(--text-disabled)] font-mono shrink-0">
-                      {formatAge(thread.timestamp)}
+                    <span className="shrink-0 text-[10px] text-[var(--text-disabled)]">
+                      {formatThreadMeta(thread)}
                     </span>
                   </button>
                 ))}

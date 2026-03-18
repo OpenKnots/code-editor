@@ -8,6 +8,7 @@ import { useEditor } from '@/context/editor-context'
 import { useLocal } from '@/context/local-context'
 import { useRepo } from '@/context/repo-context'
 import { useLayout, usePanelResize } from '@/context/layout-context'
+import { useView } from '@/context/view-context'
 import { EditorTabs } from '@/components/editor-tabs'
 import { FloatingPanel } from '@/components/floating-panel'
 import { KnotBackground } from '@/components/knot-background'
@@ -25,6 +26,10 @@ const CodeEditor = dynamic(() => import('@/components/code-editor').then((m) => 
 const AgentPanel = dynamic(() => import('@/components/agent-panel').then((m) => m.AgentPanel), {
   ssr: false,
 })
+const PreviewPanel = dynamic(
+  () => import('@/components/preview/preview-panel').then((m) => m.PreviewPanel),
+  { ssr: false },
+)
 
 const PANEL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35 }
 
@@ -86,6 +91,7 @@ function MainEditorPane({
   isDesktop,
   isNarrow,
   branchName,
+  showPreview,
   onBrowse,
   onOpenFolder,
 }: {
@@ -94,6 +100,7 @@ function MainEditorPane({
   isDesktop: boolean
   isNarrow: boolean
   branchName: string | null
+  showPreview: boolean
   onBrowse: () => void
   onOpenFolder: () => void
 }) {
@@ -101,11 +108,11 @@ function MainEditorPane({
     return <NoCodebasePane isDesktop={isDesktop} onOpenFolder={onOpenFolder} />
   }
 
-  return hasFiles ? (
+  return hasFiles || showPreview ? (
     <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--bg)]">
       <EditorTabs />
       <div className="flex-1 min-h-0 flex flex-col">
-        <CodeEditor />
+        {showPreview ? <PreviewPanel /> : <CodeEditor />}
       </div>
       <div className="flex items-center h-8 px-3 border-t border-[var(--border)] bg-[var(--bg-elevated)] shrink-0 gap-2">
         {branchName && (
@@ -158,6 +165,7 @@ function MainEditorPane({
 
 export function EditorView() {
   const { files, activeFile } = useEditor()
+  const { activeView } = useView()
   const local = useLocal()
   const { repo } = useRepo()
   const layout = useLayout()
@@ -180,6 +188,7 @@ export function EditorView() {
   const hasFiles = files.length > 0 || !!activeFile
   const hasCodebase = !!repo || !!local.rootPath
   const branchName = repo?.branch ?? local.gitInfo?.branch ?? null
+  const showPreview = activeView === 'preview'
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -285,6 +294,7 @@ export function EditorView() {
             isDesktop={isDesktop}
             isNarrow={isNarrow}
             branchName={branchName}
+            showPreview={showPreview}
             onBrowse={() => layout.show('tree')}
             onOpenFolder={() => local.openFolder()}
           />

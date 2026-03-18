@@ -283,7 +283,7 @@ function AutocompleteDropdown({
 
 // ─── Entry renderer ──────────────────────────────────────
 
-const ENTRY_BACKDROP = 'rounded-md px-3 py-1.5'
+const ENTRY_BACKDROP = 'rounded-md px-2.5 py-1.5'
 const ENTRY_BG = 'color-mix(in srgb, var(--bg) 55%, transparent)'
 
 function EntryView({ entry, hasBg }: { entry: TerminalEntry; hasBg: boolean }) {
@@ -850,21 +850,16 @@ export function GatewayTerminal() {
         </>
       )}
       {/* Terminal Header */}
-      <div
-        className={`border-b border-[var(--border)] shrink-0 ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
-        style={
-          hasBgImage ? { background: 'color-mix(in srgb, var(--bg) 74%, transparent)' } : undefined
-        }
-      >
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg)]">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <Icon
               icon="lucide:terminal"
-              width={16}
-              height={16}
+              width={15}
+              height={15}
               className="shrink-0 text-[var(--text-tertiary)]"
             />
-            <span className="truncate text-[14px] font-medium text-[var(--text-primary)]">
+            <span className="truncate text-[13px] font-medium tracking-[-0.01em] text-[var(--text-primary)]">
               Terminal
             </span>
             <span
@@ -883,40 +878,21 @@ export function GatewayTerminal() {
       {/* Output */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-2.5 min-h-0 relative"
+        className="relative min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-5 py-5"
         onClick={() => inputRef.current?.focus()}
       >
         {entries.map((entry) => (
           <EntryView key={entry.id} entry={entry} hasBg={hasBgImage} />
         ))}
         {sending && !streamId.current && (
-          <div className="flex items-center gap-2 text-[12px] text-[var(--text-disabled)] pl-1">
-            <span className="inline-flex gap-1">
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse"
-                style={{ animationDelay: '0ms' }}
-              />
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse"
-                style={{ animationDelay: '200ms' }}
-              />
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse"
-                style={{ animationDelay: '400ms' }}
-              />
-            </span>
+          <div className="pl-1 text-[12px] text-[var(--text-disabled)]">
             <span>Processing…</span>
           </div>
         )}
       </div>
 
       {/* Input */}
-      <div
-        className={`relative z-[1] shrink-0 border-t border-[var(--border)] ${hasBgImage ? 'backdrop-blur-xl' : ''}`}
-        style={
-          hasBgImage ? { background: 'color-mix(in srgb, var(--bg) 70%, transparent)' } : undefined
-        }
-      >
+      <div className="relative z-[1] shrink-0 border-t border-[var(--border)] bg-[var(--bg)]">
         <AutocompleteDropdown
           query={input}
           selectedIndex={acIdx}
@@ -928,8 +904,10 @@ export function GatewayTerminal() {
           }}
           visible={acOpen}
         />
-        <div className="flex items-center gap-3 px-4 py-3.5">
-          <span className="shrink-0 select-none text-[14px] text-[var(--text-disabled)]">❯</span>
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className="shrink-0 select-none text-[13px] text-[var(--text-disabled)]">
+            {'>'}
+          </span>
           <input
             ref={inputRef}
             type="text"
@@ -942,7 +920,7 @@ export function GatewayTerminal() {
                 ? 'Type a command or ask a question…'
                 : 'Not connected — waiting for gateway…'
             }
-            className="flex-1 bg-transparent text-[14.5px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none min-w-0"
+            className="min-w-0 flex-1 bg-transparent text-[14px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-disabled)] outline-none"
             style={{ fontFamily: MONO, letterSpacing: '-0.01em' }}
             autoComplete="off"
             spellCheck={false}

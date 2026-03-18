@@ -13,6 +13,7 @@ import {
 import { Icon } from '@iconify/react'
 import { ModeSelector } from '@/components/mode-selector'
 import type { AgentMode } from '@/components/mode-selector'
+import { ProviderSelector } from '@/components/provider-selector'
 import { formatShortcut } from '@/lib/platform'
 import { InlinePicker, type PickerItem } from '@/components/chat/inline-picker'
 
@@ -149,7 +150,7 @@ export function ChatInputBar({
   imageAttachments,
   setImageAttachments,
   contextTokens,
-  modelInfo,
+  modelInfo: _modelInfo,
   activeFile,
   atMenuOpen,
   setAtMenuOpen,
@@ -175,9 +176,6 @@ export function ChatInputBar({
   onImageAttach,
 }: ChatInputBarProps) {
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(-1)
-  const [modelMenuOpen, setModelMenuOpen] = useState(false)
-  const [modelMenuPos, setModelMenuPos] = useState<{ left: number; bottom: number } | null>(null)
-  const modelBtnRef = useRef<HTMLButtonElement>(null)
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [inputDragOver, setInputDragOver] = useState(false)
@@ -296,14 +294,19 @@ export function ChatInputBar({
                   setInput(s.cmd + ' ')
                   setActiveSuggestionIdx(-1)
                 }}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] transition-colors cursor-pointer ${
+                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] transition-colors ${
                   i === activeSuggestionIdx
-                    ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--text-primary)]'
-                    : 'bg-[var(--bg-subtle)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--brand)]'
+                    ? 'border-[var(--border-hover)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
                 }`}
               >
-                <Icon icon={s.icon} width={12} height={12} className="text-[var(--brand)]" />
-                <span className="font-mono text-[12px] text-[var(--brand)]">{s.cmd}</span>
+                <Icon
+                  icon={s.icon}
+                  width={12}
+                  height={12}
+                  className="text-[var(--text-tertiary)]"
+                />
+                <span className="font-mono text-[12px] text-[var(--text-primary)]">{s.cmd}</span>
                 <span className="text-[11px] text-[var(--text-tertiary)]">{s.desc}</span>
               </button>
             ))}
@@ -368,7 +371,7 @@ export function ChatInputBar({
 
           {/* Unified input container with drag-drop zone */}
           <div
-            className={`chat-input-shell overflow-hidden rounded-[18px] border bg-[var(--bg)] transition-all ${
+            className={`chat-input-shell overflow-hidden rounded-[18px] border bg-[var(--bg)] transition-colors ${
               inputDragOver
                 ? 'border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_3%,transparent)]'
                 : 'border-[var(--border)]'
@@ -384,12 +387,12 @@ export function ChatInputBar({
             {/* Active file context pill */}
             {activeFile && contextAttachments.length === 0 && imageAttachments.length === 0 && (
               <div className="flex items-center gap-1.5 px-2.5 pt-1.5">
-                <span className="inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--brand)_12%,transparent)] bg-[color-mix(in_srgb,var(--brand)_6%,transparent)] px-2 py-1 text-[10px] font-mono text-[var(--text-tertiary)]">
+                <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-1 text-[10px] font-mono text-[var(--text-tertiary)]">
                   <Icon
                     icon={getFileTypeIcon(activeFile)}
                     width={9}
                     height={9}
-                    className="text-[var(--brand)]"
+                    className="text-[var(--text-tertiary)]"
                   />
                   Editing: {activeFile.split('/').pop()}
                 </span>
@@ -464,14 +467,14 @@ export function ChatInputBar({
                           key={i}
                           className="group/chip flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-1 hover:border-[color-mix(in_srgb,var(--brand)_30%,var(--border))] transition-colors"
                         >
-                          <div className="w-5 h-5 rounded-md bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] flex items-center justify-center shrink-0">
+                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[var(--bg)]">
                             <Icon
                               icon={
                                 isSelection ? 'lucide:text-cursor-input' : getFileTypeIcon(att.path)
                               }
                               width={10}
                               height={10}
-                              className="text-[var(--brand)]"
+                              className="text-[var(--text-tertiary)]"
                             />
                           </div>
                           <div className="min-w-0 flex flex-col">
@@ -505,16 +508,18 @@ export function ChatInputBar({
             {/* Drop target indicator */}
             {inputDragOver && (
               <div
-                className="mx-2.5 mb-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_4%,transparent)] py-2 animate-fade-in"
+                className="mx-2.5 mb-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-hover)] bg-[var(--bg-elevated)] py-2 animate-fade-in"
                 style={{ animationDuration: '0.1s' }}
               >
                 <Icon
                   icon="lucide:download"
                   width={13}
                   height={13}
-                  className="text-[var(--brand)]"
+                  className="text-[var(--text-tertiary)]"
                 />
-                <span className="text-[11px] text-[var(--brand)] font-medium">Drop to attach</span>
+                <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+                  Drop to attach
+                </span>
               </div>
             )}
 
@@ -633,73 +638,14 @@ export function ChatInputBar({
           </div>
         </div>
 
-        {/* Bottom bar — mode + model (model hidden on mobile) */}
+        {/* Bottom bar — mode + provider */}
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center gap-1.5">
             <ModeSelector mode={agentMode} onChange={setAgentMode} />
             <span className="hidden sm:inline text-[9px] text-[var(--text-disabled)]">⇧Tab</span>
           </div>
           <div className="hidden sm:flex items-center gap-2">
-            {modelInfo.current && (
-              <div className="relative">
-                <button
-                  ref={modelBtnRef}
-                  onClick={() => {
-                    setModelMenuOpen((v) => {
-                      if (!v && modelBtnRef.current) {
-                        const rect = modelBtnRef.current.getBoundingClientRect()
-                        setModelMenuPos({
-                          left: rect.left,
-                          bottom: window.innerHeight - rect.top + 4,
-                        })
-                      }
-                      return !v
-                    })
-                  }}
-                  className="flex items-center gap-1 text-[10px] text-[var(--text-disabled)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer"
-                >
-                  <Icon icon="lucide:sparkles" width={11} height={11} />
-                  {modelInfo.current
-                    .replace(/^.*\//, '')
-                    .replace(/(claude-|gpt-)/, '')
-                    .slice(0, 12)}
-                  <Icon icon="lucide:chevron-down" width={9} height={9} />
-                </button>
-                {modelMenuOpen && modelMenuPos && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-[9990]"
-                      onClick={() => setModelMenuOpen(false)}
-                    />
-                    <div
-                      className="fixed z-[9991] w-52 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-xl py-1"
-                      style={{ left: modelMenuPos.left, bottom: modelMenuPos.bottom }}
-                    >
-                      {modelInfo.available.slice(0, 4).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setModelMenuOpen(false)
-                          }}
-                          className={`w-full text-left px-3 py-2 text-[12px] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] transition-colors cursor-pointer ${
-                            m === modelInfo.current
-                              ? 'text-[var(--brand)]'
-                              : 'text-[var(--text-secondary)]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {m === modelInfo.current && (
-                              <Icon icon="lucide:check" width={12} height={12} />
-                            )}
-                            <span className="font-mono">{m.replace(/^.*\//, '')}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+            <ProviderSelector size="sm" />
           </div>
         </div>
       </div>

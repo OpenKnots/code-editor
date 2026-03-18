@@ -270,7 +270,7 @@ export function MessageList({
       {/* Image lightbox */}
       {lightboxSrc && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm cursor-zoom-out animate-fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 cursor-zoom-out animate-fade-in"
           style={{ animationDuration: '0.15s' }}
           onClick={() => setLightboxSrc(null)}
         >
@@ -281,14 +281,14 @@ export function MessageList({
             <img
               src={lightboxSrc}
               alt="Preview"
-              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+              className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-[var(--shadow-xl)]"
             />
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 setLightboxSrc(null)
               }}
-              className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-lg hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+              className="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-lg)] transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer"
             >
               <Icon
                 icon="lucide:x"
@@ -309,7 +309,7 @@ export function MessageList({
         {showScrollToBottom && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-4 right-4 z-10 w-10 h-10 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl flex items-center justify-center text-[var(--brand)] hover:bg-[var(--bg-subtle)] transition-all hover:scale-105 cursor-pointer animate-fade-in"
+            className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] shadow-[var(--shadow-lg)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer animate-fade-in"
             style={{ animationDuration: '0.2s' }}
             title="Scroll to bottom"
           >
@@ -396,7 +396,7 @@ export function MessageList({
                 {/* Date separator */}
                 {showDateSeparator && (
                   <div className="flex justify-center my-4">
-                    <div className="px-3 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] text-[10px] font-medium text-[var(--text-tertiary)]">
+                    <div className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1 text-[10px] font-medium text-[var(--text-disabled)]">
                       {getDateLabel(currentDate)}
                     </div>
                   </div>
@@ -431,7 +431,7 @@ export function MessageList({
                     {menuOpenId === msg.id && (
                       <div
                         ref={menuRef}
-                        className={`absolute ${isUser ? 'right-0' : 'left-0'} top-6 z-50 w-44 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1 animate-fade-in`}
+                        className={`absolute ${isUser ? 'right-0' : 'left-0'} top-6 z-50 w-44 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] py-1 shadow-[var(--shadow-lg)] animate-fade-in`}
                         style={{ animationDuration: '0.1s' }}
                       >
                         <button
@@ -476,7 +476,7 @@ export function MessageList({
 
                     {/* Message bubble */}
                     <div
-                      className={`rounded-xl px-3 py-2 leading-relaxed ${bubbleClass} ${isUser ? 'transition-transform hover:scale-[1.005]' : ''}`}
+                      className={`rounded-xl px-3 py-2 leading-relaxed ${bubbleClass}`}
                       style={
                         isUser || isAssistant
                           ? { fontSize: `${chatFontSize}px`, fontFamily: chatFontCss }
@@ -511,7 +511,7 @@ export function MessageList({
                                   key={`${chip.path}-${chipIdx}`}
                                   className="inline-flex max-w-[220px] items-start gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--border)_85%,transparent)] bg-[color-mix(in_srgb,var(--bg)_76%,transparent)] px-2.5 py-1.5"
                                 >
-                                  <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-deletions,#ef4444)_12%,transparent)] text-[var(--color-deletions,#ef4444)]">
+                                  <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-secondary)]">
                                     <Icon
                                       icon={getFileTypeIcon(chip.path, chip.kind)}
                                       width={9}
@@ -535,14 +535,14 @@ export function MessageList({
                               {msg.images.map((img, imgIdx) => (
                                 <div
                                   key={imgIdx}
-                                  className="relative group/msgimg rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-[var(--brand)] transition-all"
+                                  className="relative group/msgimg overflow-hidden rounded-lg border border-[var(--border)] cursor-pointer transition-colors hover:border-[var(--border-hover)]"
                                   style={{ width: 96, height: 72 }}
                                   onClick={() => setLightboxSrc(img.dataUrl)}
                                 >
                                   <img
                                     src={img.dataUrl}
                                     alt={img.name}
-                                    className="w-full h-full object-cover transition-transform duration-200 group-hover/msgimg:scale-105"
+                                    className="h-full w-full object-cover"
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/msgimg:opacity-100 transition-opacity flex items-end p-1.5">
                                     <span className="text-[8px] text-white/90 font-mono truncate leading-tight">
@@ -707,7 +707,14 @@ export function MessageList({
                     <div className="prose-chat">
                       <MarkdownPreview content={streamBuffer} streaming />
                     </div>
-                    <span className="inline-block w-1.5 h-3.5 bg-[var(--brand)] animate-pulse ml-0.5 align-text-bottom rounded-sm" />
+                    <span className="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center align-text-bottom">
+                      <Icon
+                        icon="lucide:loader-circle"
+                        width={12}
+                        height={12}
+                        className="animate-spin text-[var(--text-disabled)]"
+                      />
+                    </span>
                   </div>
                 </div>
               ) : (
@@ -772,12 +779,12 @@ export function MessageList({
                     </details>
                   )}
                   <div className="flex items-center gap-2">
-                    <div className="typing-wave">
-                      <span />
-                      <span />
-                      <span />
-                      <span />
-                    </div>
+                    <Icon
+                      icon="lucide:loader-circle"
+                      width={14}
+                      height={14}
+                      className="shrink-0 animate-spin text-[var(--text-disabled)]"
+                    />
                     <span className="text-[11px] text-[var(--text-tertiary)] shimmer-text">
                       {thinkingTrail.length > 0
                         ? thinkingTrail[thinkingTrail.length - 1]

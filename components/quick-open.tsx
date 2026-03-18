@@ -16,6 +16,33 @@ interface QuickOpenProps {
   onSelect: (path: string, sha: string) => void
 }
 
+const FILE_ICON_MAP: Record<string, string> = {
+  ts: 'lucide:file-code',
+  tsx: 'lucide:file-code',
+  js: 'lucide:file-code',
+  jsx: 'lucide:file-code',
+  json: 'lucide:file-json',
+  md: 'lucide:file-text',
+  mdx: 'lucide:file-text',
+  css: 'lucide:palette',
+  scss: 'lucide:palette',
+  html: 'lucide:globe',
+  py: 'lucide:file-code',
+  rs: 'lucide:file-code',
+  go: 'lucide:file-code',
+  sh: 'lucide:terminal',
+  png: 'lucide:image',
+  jpg: 'lucide:image',
+  jpeg: 'lucide:image',
+  gif: 'lucide:image',
+  webp: 'lucide:image',
+}
+
+function getQuickOpenIcon(path: string) {
+  const ext = path.split('.').pop()?.toLowerCase() ?? ''
+  return FILE_ICON_MAP[ext] ?? 'lucide:file'
+}
+
 function fuzzyMatch(
   query: string,
   target: string,
@@ -166,11 +193,11 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-start justify-center sm:pt-[15vh]"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-start sm:pt-[15vh]"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg sm:max-h-none sm:max-w-[560px] sm:rounded-xl"
+        className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] sm:max-h-none sm:max-w-[560px] sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
@@ -224,7 +251,7 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
                 }`}
               >
                 <Icon
-                  icon="lucide:file"
+                  icon={getQuickOpenIcon(r.node.path)}
                   width={14}
                   height={14}
                   className="text-[var(--text-tertiary)] shrink-0"

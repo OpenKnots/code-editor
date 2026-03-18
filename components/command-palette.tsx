@@ -510,11 +510,16 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg animate-scale-in sm:max-h-none sm:max-w-[640px] sm:rounded-xl"
+        className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] animate-scale-in sm:max-h-none sm:max-w-[640px] sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
-          <Icon icon="lucide:command" width={16} height={16} className="text-[var(--brand)]" />
+          <Icon
+            icon="lucide:command"
+            width={16}
+            height={16}
+            className="text-[var(--text-tertiary)]"
+          />
           <input
             ref={inputRef}
             type="text"
@@ -568,16 +573,14 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
                     onClick={() => run(command)}
                     className={cn(
                       'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-all duration-100 cursor-pointer',
-                      isSelected
-                        ? 'bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]'
-                        : 'hover:bg-[var(--bg-subtle)]',
+                      isSelected ? 'bg-[var(--bg-elevated)]' : 'hover:bg-[var(--bg-subtle)]',
                     )}
                   >
                     <div
                       className={cn(
                         'w-7 h-7 rounded-md flex items-center justify-center shrink-0',
                         isSelected
-                          ? 'bg-[color-mix(in_srgb,var(--brand)_18%,transparent)] text-[var(--brand)]'
+                          ? 'bg-[var(--bg)] text-[var(--text-primary)]'
                           : 'bg-[var(--bg-subtle)] text-[var(--text-tertiary)]',
                       )}
                     >

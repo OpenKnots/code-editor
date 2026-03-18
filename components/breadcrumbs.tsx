@@ -15,11 +15,15 @@ export function Breadcrumbs({ filePath, repoName, onClick }: BreadcrumbsProps) {
   const dirs = segments
 
   return (
-    <div className="flex items-center gap-1 px-3 py-1 text-[11px] text-[var(--text-tertiary)] overflow-x-auto scrollbar-none select-none">
+    <div className="flex items-center gap-1 overflow-x-auto px-3 py-1 text-[10px] text-[var(--text-tertiary)] scrollbar-none select-none">
       {repoName && (
         <>
           <span className="text-[var(--text-disabled)] shrink-0">{repoName}</span>
-          <Icon icon="lucide:chevron-right" width={12} className="text-[var(--text-disabled)] shrink-0" />
+          <Icon
+            icon="lucide:chevron-right"
+            width={12}
+            className="text-[var(--text-disabled)] shrink-0"
+          />
         </>
       )}
       {dirs.map((dir, i) => {
@@ -28,7 +32,7 @@ export function Breadcrumbs({ filePath, repoName, onClick }: BreadcrumbsProps) {
           <span key={i} className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => onClick?.(dir, fullPath)}
-              className="hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+              className="rounded px-1 py-0.5 transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-secondary)] cursor-pointer"
             >
               {dir}
             </button>
@@ -39,7 +43,7 @@ export function Breadcrumbs({ filePath, repoName, onClick }: BreadcrumbsProps) {
       {/* Active (last) segment with file icon */}
       <span className="flex items-center gap-1.5 shrink-0">
         <Icon icon="lucide:file-code" width={12} className="text-[var(--brand)]" />
-        <span className="text-[var(--text-primary)] font-medium">{fileName}</span>
+        <span className="font-medium text-[var(--text-primary)]">{fileName}</span>
       </span>
     </div>
   )

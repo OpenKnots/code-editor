@@ -29,10 +29,6 @@ const SettingsPanel = dynamic(
   () => import('@/components/settings-panel').then((m) => m.SettingsPanel),
   { ssr: false },
 )
-const PreviewPanel = dynamic(
-  () => import('@/components/preview/preview-panel').then((m) => m.PreviewPanel),
-  { ssr: false },
-)
 const AgentPanel = dynamic(() => import('@/components/agent-panel').then((m) => m.AgentPanel), {
   ssr: false,
 })
@@ -126,8 +122,7 @@ export function ViewRouter() {
             ) : (
               <>
                 {activeView === 'chat' && <AgentPanel />}
-                {activeView === 'editor' && <EditorView />}
-                {activeView === 'preview' && <PreviewPanel />}
+                {(activeView === 'editor' || activeView === 'preview') && <EditorView />}
                 {activeView === 'git' && <GitView />}
                 {activeView === 'kanban' && <KanbanView />}
                 {activeView === 'skills' && <SkillsView />}
