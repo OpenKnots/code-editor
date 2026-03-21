@@ -53,9 +53,18 @@ tauriConf.version = version
 writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n')
 console.log(`  tauri.conf.json     → ${version}`)
 
+// ── Bump src-tauri/Cargo.toml ─────────────────────────────────────────────
+const cargoTomlPath = resolve(root, 'src-tauri/Cargo.toml')
+const cargoTomlPrev = readFileSync(cargoTomlPath, 'utf8')
+const cargoTomlNext = cargoTomlPrev.replace(/^(version\s*=\s*")[^"]+("\s*)$/m, `$1${version}$2`)
+if (cargoTomlNext !== cargoTomlPrev) {
+  writeFileSync(cargoTomlPath, cargoTomlNext)
+  console.log(`  Cargo.toml          → ${version}`)
+}
+
 // ── Commit & tag ──────────────────────────────────────────────────────────
 const tag = `v${version}`
-execSync('git add package.json src-tauri/tauri.conf.json', { stdio: 'inherit', cwd: root })
+execSync('git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml', { stdio: 'inherit', cwd: root })
 execSync(`git commit -m "chore: release ${tag}"`, { stdio: 'inherit', cwd: root })
 execSync(`git tag ${tag}`, { stdio: 'inherit', cwd: root })
 console.log(`\n  Tagged ${tag}`)

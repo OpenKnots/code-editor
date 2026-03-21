@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.10.0"
+version = "1.11.0"
 description = "Knot Code — AI-native desktop code editor by OpenKnot"
 authors = ["OpenKnot"]
 license = ""
