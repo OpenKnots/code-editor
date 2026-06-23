@@ -519,6 +519,9 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
         className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] animate-scale-in sm:max-h-none sm:max-w-[640px] sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -551,6 +554,12 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
               }
             }}
             placeholder="Run a command..."
+            role="combobox"
+            aria-label="Run a command"
+            aria-expanded="true"
+            aria-autocomplete="list"
+            aria-controls="command-palette-list"
+            aria-activedescendant={flatList[selectedIndex] ? `command-palette-item-${selectedIndex}` : undefined}
             className="flex-1 bg-transparent text-[14px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
           />
           <kbd className="rounded border border-[var(--border)] bg-[var(--bg-subtle)] px-1.5 py-0.5 text-[9px] text-[var(--text-tertiary)]">
@@ -558,7 +567,7 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
           </kbd>
         </div>
 
-        <div ref={listRef} className="max-h-[420px] overflow-y-auto p-1.5">
+        <div ref={listRef} id="command-palette-list" role="listbox" aria-label="Commands" className="max-h-[420px] overflow-y-auto p-1.5">
           {flatList.length === 0 && (
             <div className="px-3 py-5 text-center text-[12px] text-[var(--text-tertiary)]">
               No matching commands
@@ -578,6 +587,9 @@ export function CommandPalette({ open, onClose, onRun }: CommandPaletteProps) {
                 return (
                   <button
                     key={`${key}-${command.id}`}
+                    id={`command-palette-item-${idx}`}
+                    role="option"
+                    aria-selected={isSelected}
                     data-selected={isSelected}
                     onClick={() => run(command)}
                     className={cn(

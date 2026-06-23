@@ -197,6 +197,9 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Go to file"
         className="flex max-h-[85vh] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow-xl)] sm:max-h-none sm:max-w-[560px] sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -218,6 +221,12 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
             }}
             onKeyDown={handleKeyDown}
             placeholder="Search files by name..."
+            role="combobox"
+            aria-label="Search files"
+            aria-expanded="true"
+            aria-autocomplete="list"
+            aria-controls="quick-open-list"
+            aria-activedescendant={results[selected] ? `quick-open-item-${selected}` : undefined}
             className="flex-1 bg-transparent text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
           />
           <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] border border-[var(--border)] text-[var(--text-tertiary)]">
@@ -226,7 +235,7 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[400px] overflow-y-auto py-1">
+        <div ref={listRef} id="quick-open-list" role="listbox" aria-label="Files" className="max-h-[400px] overflow-y-auto py-1">
           {results.length === 0 && (
             <div className="px-4 py-6 text-center text-[12px] text-[var(--text-tertiary)]">
               {query ? 'No matching files' : 'No files in tree'}
@@ -240,6 +249,9 @@ export function QuickOpen({ open, onClose, onSelect }: QuickOpenProps) {
             return (
               <button
                 key={r.node.path}
+                id={`quick-open-item-${i}`}
+                role="option"
+                aria-selected={i === selected}
                 onClick={() => {
                   onSelect(r.node.path, r.node.sha)
                   onClose()
