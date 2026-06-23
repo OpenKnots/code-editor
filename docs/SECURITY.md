@@ -1,5 +1,7 @@
 # Security Runbook
 
+> **Reporting a vulnerability?** See [`../SECURITY.md`](../SECURITY.md) for the disclosure policy and contact info.
+
 This document defines how KnotCode handles secrets, responds to leaks, and manages git author privacy.
 
 ## Secret Handling Policy

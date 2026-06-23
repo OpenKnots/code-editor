@@ -8,9 +8,13 @@ If you discover a security vulnerability in KnotCode, please report it responsib
 
 Instead, DM [**@BunsDev**](https://x.com/BunsDev) or use [GitHub's private vulnerability reporting](https://github.com/OpenKnots/code-editor/security/advisories/new).
 
-<!-- Instead, email **security@openknot.ai** or use [GitHub's private vulnerability reporting](https://github.com/OpenKnots/code-editor/security/advisories/new). -->
-
 We will acknowledge your report within 48 hours and aim to release a fix within 7 days for critical issues.
+
+## Supported Versions
+
+KnotCode ships as a continuously-updated static app, so security fixes land in
+the latest release. Please make sure you're on the most recent version before
+reporting an issue, and upgrade to pick up any fix.
 
 ## Scope
 
